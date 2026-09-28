@@ -21,3 +21,12 @@ See `docs/` before implementing features. The approved Amaal specifications defi
 ## Implementation rule
 
 The system is database-first and authorization-first. Do not build fake dashboards, fake authentication, fake inventory or client-side-only business behavior.
+
+## Current build status
+
+- Domain model, state machines, authorization matrix and event catalog are defined.
+- Core PostgreSQL and RLS foundations are prepared.
+- Supabase `AMAAL ERP` is connected, healthy and currently empty; no production schema has been applied yet.
+- GitHub ZIP synchronization is operational and removes the input ZIP after extraction.
+
+See `docs/AMAAL_DATABASE_IMPLEMENTATION_STATUS.md` for the current database gate.

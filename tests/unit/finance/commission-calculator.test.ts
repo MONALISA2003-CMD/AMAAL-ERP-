@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { calculateCommissionAmount } from '../../../services/finance/src/commission-rules.ts';
+import { calculateCommissionAmount } from '../../../services/finance/src/commission-rules.js';
 
 test('fixed commission uses the policy amount and rounds to cents', () => {
   assert.equal(calculateCommissionAmount({ calculation_type: 'FIXED_AMOUNT', amount: 12500.456 }, 700000), 12500.46);

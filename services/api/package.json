@@ -14,7 +14,9 @@
     "@amaal/shared": "workspace:*",
     "@amaal/approvals": "workspace:*",
     "@amaal/finance": "workspace:*",
-    "@amaal/inventory": "workspace:*"
+    "@amaal/inventory": "workspace:*",
+    "@amaal/recovery": "workspace:*",
+    "@amaal/business-rules": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

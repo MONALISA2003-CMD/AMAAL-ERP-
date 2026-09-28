@@ -12,3 +12,9 @@ coverage/
 .DS_Store
 *.log
 supabase/.temp/
+
+# Package-manager/runtime output
+node_modules/
+.next/
+dist/
+.turbo/

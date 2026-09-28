@@ -3,7 +3,7 @@ import {
   canTransitionImei,
   canTransitionRecovery,
   canTransitionSale,
-} from "@amaal/business-rules";
+} from "../../../packages/business-rules/src/index.js";
 
 if (!canTransitionImei("ALLOCATED_TO_AGENT", "SOLD")) throw new Error("Expected Agent-held IMEI to be sellable.");
 if (canTransitionImei("SOLD", "ALLOCATED_TO_AGENT")) throw new Error("SOLD -> field allocation must be rejected.");

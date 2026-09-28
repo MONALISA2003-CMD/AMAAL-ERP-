@@ -15,8 +15,8 @@ Render Web Service settings:
 - Region: Frankfurt
 - Runtime: Node
 - Root directory: repository root
-- Build command: `corepack enable && pnpm install --no-frozen-lockfile`
-- Start command: `pnpm render:api`
+- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile --allow-build=esbuild`
+- Start command: `./node_modules/.bin/tsx services/api/src/http.ts`
 - `AMAAL_API_AUTOSTART=true`
 - `PORT` is supplied by Render
 
@@ -28,10 +28,21 @@ Render Background Worker settings:
 - Region: Frankfurt
 - Runtime: Node
 - Root directory: repository root
-- Build command: `corepack enable && pnpm install --no-frozen-lockfile`
-- Start command: `pnpm render:worker`
+- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile --allow-build=esbuild`
+- Start command: `./node_modules/.bin/tsx services/outbox-worker/src/runner.ts`
 
 The worker claims the transactional outbox with row locking, publishes scoped realtime events through the `realtime_events` table, updates read models, and runs the 15-second inventory reconciliation safety net.
+
+## pnpm build-script policy
+
+This repository uses pnpm 12.7 and explicitly allows only the dependency build script required by the current toolchain:
+
+```yaml
+allowBuilds:
+  esbuild: true
+```
+
+Do not replace this with `dangerouslyAllowAllBuilds`; Render installs must remain explicitly allowlisted.
 
 ## Database connection
 
@@ -43,7 +54,3 @@ Set the same database URL in:
 - `SUPABASE_DB_URL` if a separate alias is needed by a caller
 
 Never put a Supabase service-role/secret key in the browser.
-### TypeScript version pin
-
-The repository pins TypeScript to `6.0.3`, a published stable release. Do not use the nonexistent `6.0.0` version in workspace manifests.
-

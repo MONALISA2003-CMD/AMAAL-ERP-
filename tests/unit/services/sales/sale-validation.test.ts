@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateCreateSale } from '@amaal/sales';
+import { validateCreateSale } from '../../../../services/sales/src/index.js';
 
 test('rejects sales with no lines', () => {
   assert.throws(() => validateCreateSale({ sellerUserId: 'u', customerId: 'c', paymentType: 'CASH', lines: [] }));

@@ -55,3 +55,16 @@ API
 ## Supabase security note
 
 Current Supabase guidance requires RLS on exposed tables, correct grants in addition to policies, and hardened `SECURITY DEFINER` functions when they are genuinely required. The repository follows those principles in the draft security foundation, but final policy coverage remains an application/domain implementation task.
+
+
+## Repository synchronization safeguard
+
+As of the current foundation stage, the GitHub ZIP synchronization workflow is designed to preserve approved Markdown and Word documentation when a future ZIP omits a document accidentally. A document at the same path contained in the new ZIP replaces the prior version. ZIP archives themselves are treated as temporary inputs and are deleted after extraction.
+
+## API and Jarvis contract gate
+
+The repository now contains the pre-implementation API and Jarvis tool contracts. Core services should be implemented against these contracts rather than allowing UI-driven table CRUD to define the business boundary.
+
+## Documentation preservation
+
+All approved source specifications are preserved under `docs/source-specifications/`. The ZIP synchronization workflow also preserves existing Markdown and Word documentation if a future package accidentally omits it.

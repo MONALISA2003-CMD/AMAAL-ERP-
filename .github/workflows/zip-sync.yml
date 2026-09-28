@@ -3,13 +3,14 @@ name: Sync repository from ZIP
 on:
   push:
     paths:
-      - '*.zip'
-      - '**/*.zip'
-      - '.github/workflows/zip-sync.yml'
+      - "*.zip"
+      - "**/*.zip"
+      - ".github/workflows/zip-sync.yml"
+
   workflow_dispatch:
     inputs:
       zip_name:
-        description: 'Optional path to the ZIP file. Leave blank to auto-detect.'
+        description: "Optional ZIP path. Leave blank to auto-detect."
         required: false
         type: string
 
@@ -43,17 +44,18 @@ jobs:
 
           ZIP_PATH=""
 
-          # 1. Manual run with an explicit ZIP path.
+          # Manual workflow run with an explicit ZIP path.
           if [ -n "${ZIP_INPUT}" ]; then
             if [ ! -f "${ZIP_INPUT}" ]; then
               echo "ERROR: ZIP file not found: ${ZIP_INPUT}"
               exit 1
             fi
+
             ZIP_PATH="${ZIP_INPUT}"
           fi
 
-          # 2. Push event: find the ZIP changed by this commit.
-          #    Only select a ZIP that actually exists in the checkout.
+          # Automatic run:
+          # find the ZIP changed by the triggering commit.
           if [ -z "${ZIP_PATH}" ] && [ "${EVENT_NAME}" = "push" ]; then
             while IFS= read -r candidate; do
               if [ -f "${candidate}" ]; then
@@ -61,15 +63,22 @@ jobs:
                 break
               fi
             done < <(
-              git diff-tree --no-commit-id --name-only -r "${SHA}" \
-                | grep -Ei '\\.zip$' || true
+              git diff-tree \
+                --no-commit-id \
+                --name-only \
+                -r \
+                "${SHA}" \
+                | grep -Ei '\.zip$' || true
             )
           fi
 
-          # 3. Fallback: if there is exactly one ZIP in the repository.
+          # Fallback:
+          # if exactly one ZIP exists, use it.
           if [ -z "${ZIP_PATH}" ]; then
             mapfile -t ZIP_FILES < <(
-              find . -type f -iname '*.zip' \
+              find . \
+                -type f \
+                -iname '*.zip' \
                 -not -path './.git/*' \
                 -not -path './.sync-staging/*' \
                 -not -path './.sync-backup/*' \
@@ -78,14 +87,16 @@ jobs:
 
             if [ "${#ZIP_FILES[@]}" -eq 1 ]; then
               ZIP_PATH="${ZIP_FILES[0]}"
+
             elif [ "${#ZIP_FILES[@]}" -eq 0 ]; then
-              echo "ERROR: No ZIP package was found in the repository."
+              echo "ERROR: No ZIP package was found."
               exit 1
+
             else
               echo "ERROR: Multiple ZIP packages were found:"
               printf '  %s\n' "${ZIP_FILES[@]}"
               echo ""
-              echo "Run the workflow manually and provide the ZIP path in 'zip_name'."
+              echo "Provide the ZIP path using workflow_dispatch."
               exit 1
             fi
           fi
@@ -93,15 +104,20 @@ jobs:
           ZIP_PATH="${ZIP_PATH#./}"
 
           echo "ZIP_PATH=${ZIP_PATH}" >> "${GITHUB_ENV}"
-          echo "Selected ZIP: ${ZIP_PATH}"
+
+          echo "Selected ZIP:"
+          echo "${ZIP_PATH}"
 
       - name: Validate ZIP
         shell: bash
         run: |
           set -euo pipefail
+
+          echo "Validating ${ZIP_PATH}"
+
           unzip -t "${ZIP_PATH}"
 
-      - name: Extract ZIP to staging
+      - name: Extract ZIP
         shell: bash
         run: |
           set -euo pipefail
@@ -111,7 +127,7 @@ jobs:
 
           unzip -q "${ZIP_PATH}" -d .sync-staging
 
-      - name: Detect extracted project root
+      - name: Detect project root
         shell: bash
         run: |
           set -euo pipefail
@@ -119,20 +135,39 @@ jobs:
           ROOT=".sync-staging"
 
           mapfile -t TOP_LEVEL < <(
-            find .sync-staging -mindepth 1 -maxdepth 1 -printf '%f\n' | sort
+            find .sync-staging \
+              -mindepth 1 \
+              -maxdepth 1 \
+              -printf '%f\n' \
+              | sort
           )
 
-          # Supports both:
-          # 1. ZIP containing project files directly
-          # 2. ZIP containing one wrapper directory
-          if [ "${#TOP_LEVEL[@]}" -eq 1 ] && [ -d ".sync-staging/${TOP_LEVEL[0]}" ]; then
+          # Supports:
+          #
+          # ZIP
+          # ├── apps/
+          # ├── packages/
+          # └── package.json
+          #
+          # and:
+          #
+          # ZIP
+          # └── amaal-ERP/
+          #     ├── apps/
+          #     └── package.json
+
+          if [ "${#TOP_LEVEL[@]}" -eq 1 ] \
+             && [ -d ".sync-staging/${TOP_LEVEL[0]}" ]; then
+
             ROOT=".sync-staging/${TOP_LEVEL[0]}"
           fi
 
           echo "SYNC_ROOT=${ROOT}" >> "${GITHUB_ENV}"
-          echo "Extracted project root: ${ROOT}"
 
-      - name: Backup source ZIP and workflow
+          echo "Project root:"
+          echo "${ROOT}"
+
+      - name: Preserve workflow
         shell: bash
         run: |
           set -euo pipefail
@@ -140,64 +175,83 @@ jobs:
           rm -rf .sync-backup
           mkdir -p .sync-backup/workflow
 
-          cp "${ZIP_PATH}" .sync-backup/source.zip
-          cp ".github/workflows/zip-sync.yml" \
-             .sync-backup/workflow/zip-sync.yml
+          cp \
+            ".github/workflows/zip-sync.yml" \
+            ".sync-backup/workflow/zip-sync.yml"
 
-          echo "ZIP_RELATIVE_PATH=${ZIP_PATH}" >> "${GITHUB_ENV}"
-
-      - name: Replace old repository with extracted project
+      - name: Replace old repository
         shell: bash
         run: |
           set -euo pipefail
 
-          # Delete the previous extracted project.
-          find . -mindepth 1 -maxdepth 1 \
-            ! -name '.git' \
-            ! -name '.sync-staging' \
-            ! -name '.sync-backup' \
+          echo "Removing previous repository contents..."
+
+          find . \
+            -mindepth 1 \
+            -maxdepth 1 \
+            ! -name ".git" \
+            ! -name ".sync-staging" \
+            ! -name ".sync-backup" \
             -exec rm -rf {} +
 
-          # Copy the complete new Amaal ERP project.
+          echo "Copying new repository..."
+
           cp -a "${SYNC_ROOT}"/. .
 
-          # Prevent the ZIP from introducing extra GitHub workflows.
+          # ZIP files must never become part of the final repository.
+          find . \
+            -type f \
+            -iname '*.zip' \
+            -not -path './.git/*' \
+            -delete
+
+          # Do not allow the uploaded ZIP to introduce
+          # arbitrary GitHub Actions workflows.
           rm -rf .github/workflows
+
           mkdir -p .github/workflows
 
-          # Keep the working sync workflow.
-          cp .sync-backup/workflow/zip-sync.yml \
-             .github/workflows/zip-sync.yml
+          # Restore only this trusted synchronization workflow.
+          cp \
+            ".sync-backup/workflow/zip-sync.yml" \
+            ".github/workflows/zip-sync.yml"
 
-          # Restore the ZIP that was used for this deployment,
-          # keeping its original filename/path.
-          mkdir -p "$(dirname "${ZIP_RELATIVE_PATH}")"
-          cp .sync-backup/source.zip "${ZIP_RELATIVE_PATH}"
-
-      - name: Remove temporary sync files
-        shell: bash
-        run: |
-          rm -rf .sync-staging .sync-backup
-
-      - name: Commit repository replacement
+      - name: Remove temporary files
         shell: bash
         run: |
           set -euo pipefail
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf .sync-staging
+          rm -rf .sync-backup
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config \
+            user.name \
+            "github-actions[bot]"
+
+          git config \
+            user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add -A
 
           if git diff --cached --quiet; then
-            echo "No repository changes detected."
+            echo "No changes detected."
             exit 0
           fi
 
-          git commit -m "chore: sync repository from ZIP"
+          git commit \
+            -m "chore: sync repository from ZIP"
 
-      - name: Push replacement
+      - name: Push changes
         shell: bash
         run: |
           set -euo pipefail
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+          git push \
+            origin \
+            "HEAD:${GITHUB_REF_NAME}"

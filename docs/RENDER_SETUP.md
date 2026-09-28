@@ -43,3 +43,7 @@ Set the same database URL in:
 - `SUPABASE_DB_URL` if a separate alias is needed by a caller
 
 Never put a Supabase service-role/secret key in the browser.
+### TypeScript version pin
+
+The repository pins TypeScript to `6.0.3`, a published stable release. Do not use the nonexistent `6.0.0` version in workspace manifests.
+

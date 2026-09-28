@@ -16,7 +16,7 @@ The approved architecture originally described PostgreSQL 18/Aurora. The connect
 - Customers/sales: `customers`, `sales`, `sale_items`, `receivables`, `payments`, `receipts`
 - Earnings: `commission_policies`, `commissions`, `bonus_policies`, `bonus_awards`
 - Recovery: `recovery_cases`, `recovery_activities`
-- Governance: `approval_requests`, `approval_decisions`, `audit_events`
+- Governance: `approval_requests`, `approval_decisions`, `audit_events`, `payment_reversals`, `idempotency_keys`
 - Events: `outbox_events`, `consumer_receipts`
 
 ## Transactional principle
@@ -42,6 +42,8 @@ Completed sales, receipts, payments, movement history, recovery history, commiss
 `outbox_events` records committed domain facts for downstream workers. Consumers record `(consumer_name, event_id)` in `consumer_receipts` to support idempotency.
 
 ## Not yet frozen
+
+Recovery lineage is tied to the IMEI movement ledger through `inventory_movements.recovery_case_id`; active recovery cases are unique per IMEI.
 
 The following remain policy decisions before production migration freeze:
 

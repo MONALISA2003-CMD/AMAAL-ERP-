@@ -1,0 +1,19 @@
+{
+  "name": "@amaal/sales",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@amaal/business-rules": "workspace:*",
+    "@amaal/database": "workspace:*",
+    "@amaal/permissions": "workspace:*",
+    "@amaal/shared": "workspace:*",
+    "@amaal/finance": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

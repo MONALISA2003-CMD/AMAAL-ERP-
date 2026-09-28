@@ -1,6 +1,6 @@
 # Amaal API Contract
 
-Status: Engineering contract — pre-implementation
+Status: Engineering contract — Phase 1 implementation active
 
 ## 1. Purpose
 
@@ -89,6 +89,7 @@ POST /api/v1/inventory/transfers
 POST /api/v1/inventory/adjustments
 POST /api/v1/inventory/write-offs
 POST /api/v1/inventory/returns
+POST /api/v1/inventory/corrections
 ```
 
 Inventory mutation endpoints must delegate to an inventory domain service that locks and validates the IMEI state.
@@ -168,6 +169,28 @@ POST /api/v1/approvals
 POST /api/v1/approvals/:id/approve
 POST /api/v1/approvals/:id/reject
 POST /api/v1/approvals/:id/cancel
+
+### Phase 1 HTTP routes currently live in the backend service
+
+```text
+POST /v1/sales/cash
+POST /v1/sales/:id/reverse
+POST /v1/inventory/allocations
+POST /v1/inventory/allocations/:id/approve
+POST /v1/inventory/allocations/:id/dispatch
+POST /v1/inventory/allocations/:id/receive
+POST /v1/inventory/allocations/:id/cancel
+POST /v1/inventory/allocations/:id/reject
+POST /v1/inventory/returns
+POST /v1/inventory/corrections
+POST /v1/recovery/cases
+POST /v1/recovery/cases/:id/assign
+POST /v1/recovery/cases/:id/activity
+POST /v1/recovery/cases/:id/accept
+POST /v1/recovery/cases/:id/close
+POST /v1/approvals
+POST /v1/approvals/:id/decision
+```
 ```
 
 Requesters and approvers should be distinct where policy requires it.
@@ -205,7 +228,7 @@ Do not expose raw SQL errors, internal stack traces, authorization helper detail
 
 ## 6. Idempotency
 
-Mutation endpoints that may be retried by clients or workers should accept an idempotency key.
+Mutation endpoints that may be retried by clients or workers accept an optional `X-Idempotency-Key` header. When provided, the server binds the key to the authenticated actor, operation and canonical request fingerprint inside the same PostgreSQL transaction as the business mutation.
 
 At minimum:
 

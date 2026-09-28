@@ -116,10 +116,11 @@ REQUESTED → APPROVED
 REQUESTED → REJECTED
 REQUESTED → CANCELLED
 APPROVED → IN_TRANSIT
+APPROVED → CANCELLED
 IN_TRANSIT → RECEIVED
 ```
 
-The specification does not define whether every role can approve every allocation. That is an authorization/policy decision and must be enforced independently of this lifecycle.
+The specification does not define whether every role can approve every allocation. That is an authorization/policy decision and must be enforced independently of this lifecycle. In the current implementation, approval and physical dispatch are separate commands so the audit trail records both decisions.
 
 ## 4. Sale lifecycle
 

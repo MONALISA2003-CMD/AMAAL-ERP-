@@ -1,70 +1,34 @@
 # Amaal Database Implementation Status
 
-**Date:** 28 September 2026  
-**Status:** Pre-migration validation
+## Completed
 
-## Verified Supabase environment
+- PostgreSQL core schema applied to Supabase.
+- 47 public tables created, including transactional, approval, payment-reversal, idempotency, realtime and read-model tables.
+- Core enums, constraints and indexes created.
+- Organization/role/permission foundation seeded.
+- RLS enabled on all 47 public tables.
+- Anonymous table privileges revoked.
+- Authenticated table writes revoked; server-side domain services own authoritative writes.
+- Security advisor is clean.
+- Payment reversal, idempotency, recovery lineage, realtime event and read-model tables have explicit client policies consistent with the server-authoritative write boundary.
+- Recovery lineage links inventory movements to recovery cases and enforces one active recovery case per IMEI.
+- Realtime events are included in the Supabase realtime publication.
+- Master Amaal organization and Master Warehouse bootstrap records created.
+- Recovery states aligned with the approved handoff vocabulary.
+- Supabase Auth MFA remains the identity factor provider; server-side AAL is checked for privileged operations.
+- Supabase Auth MFA remains the identity factor provider; server-side AAL is checked for privileged operations.
 
-- Project: `AMAAL ERP`
-- Project ref: `kwaggfdjdgcjzizhmvbd`
-- Region: `eu-central-1`
-- Status: `ACTIVE_HEALTHY`
-- PostgreSQL: `17.6.1.166` (major 17)
-- Existing public tables: none
-- Existing migrations: none
-- Security advisor findings: none at verification time
-- Performance advisor findings: none at verification time
+## Current performance status
 
-## Repository database work completed
+The database performance advisor reports informational unused-index notices because the database has not yet carried realistic operational traffic. No unindexed-FK or duplicate-index issue remains after the latest hardening.
 
-- Core PostgreSQL foundation migration created.
-- RLS/authorization foundation created.
-- Domain model, state machines, authorization matrix and event catalog created.
-- RLS helper functions were hardened with an unexposed `private` schema and an empty `search_path` for `SECURITY DEFINER` helpers.
-- Agent/Shop Owner scope was tightened so same-team access does not automatically become same-team customer/sales/IMEI access.
-- RLS negative-test checklist added under `supabase/tests/`.
+## Next
 
-## Important boundary
+- Positive authenticated integration tests using controlled role/scope identities.
+- Full lifecycle integration tests for inventory return, adjustment, write-off and recovery.
+- Commission/bonus and loan/receivable policy execution after policy freeze.
+- Realtime reconnect/reconciliation tests under representative workloads.
 
-The live Supabase project has **not** been modified by these repository files yet. The first migration should be applied only after the SQL is reviewed as a single transactional change and the resulting RLS behavior is tested with representative identities.
+## Infrastructure gate
 
-## Current implementation sequence
-
-```text
-Domain model
-    ↓
-State machines
-    ↓
-Authorization matrix
-    ↓
-Event catalog
-    ↓
-Core PostgreSQL migration
-    ↓
-RLS foundation
-    ↓
-RLS negative tests
-    ↓
-First Supabase migration
-    ↓
-Domain transaction functions/services
-    ↓
-API
-```
-
-## Supabase security note
-
-Current Supabase guidance requires RLS on exposed tables, correct grants in addition to policies, and hardened `SECURITY DEFINER` functions when they are genuinely required. The repository follows those principles in the draft security foundation, but final policy coverage remains an application/domain implementation task.
-
-
-## Repository synchronization safeguard
-
-As of the current foundation stage, the GitHub ZIP synchronization workflow is designed to preserve approved Markdown and Word documentation when a future ZIP omits a document accidentally. A document at the same path contained in the new ZIP replaces the prior version. ZIP archives themselves are treated as temporary inputs and are deleted after extraction.
-
-## API and Jarvis contract gate
-
-The repository now contains the pre-implementation API and Jarvis tool contracts. Core services should be implemented against these contracts rather than allowing UI-driven table CRUD to define the business boundary.
-
-## Documentation preservation
-
-All approved source specifications are preserved under `docs/source-specifications/`. The ZIP synchronization workflow also preserves existing Markdown and Word documentation if a future package accidentally omits it.
+Vercel and Render provisioning is the next infrastructure stage, after the API and worker pass the representative integration gate.

@@ -23,7 +23,8 @@ create type public.payment_status as enum ('PENDING','COMPLETED','REVERSED','ADJ
 create type public.receivable_status as enum ('OPEN','PARTIALLY_PAID','PAID','DEFAULTED','CANCELLED');
 create type public.approval_status as enum ('PENDING','APPROVED','REJECTED','CANCELLED');
 create type public.approval_type as enum ('DISCOUNT','PRICE_CHANGE','INVENTORY_ADJUSTMENT','WRITE_OFF','COMMISSION_OVERRIDE','BONUS_OVERRIDE','IMEI_EXCEPTION','FINANCIAL_CORRECTION','ROLE_CHANGE','WAREHOUSE_CORRECTION');
-create type public.recovery_status as enum ('OPEN','ASSIGNED','IN_PROGRESS','PROMISED','RECOVERED','CLOSED','CANCELLED');
+create type public.recovery_status as enum ('OPEN','ASSIGNED','IN_PROGRESS','PROMISED_RETURN','RECOVERED','PARTIALLY_RECOVERED','NOT_FOUND','ESCALATED','CLOSED','CANCELLED');
+create type public.recovery_activity_type as enum ('CONTACTED','VISITED','PROMISE_TO_RETURN','FAILED_ATTEMPT','RECOVERED','ESCALATED');
 create type public.aging_status as enum ('GREEN','ORANGE','RED','DARK_RED');
 
 create table public.organizations (
@@ -43,6 +44,35 @@ create table public.profiles (
   status public.record_status not null default 'ACTIVE',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+create table public.company_settings (
+  organization_id uuid primary key references public.organizations(id) on delete restrict,
+  settings jsonb not null default '{}'::jsonb,
+  updated_by uuid references auth.users(id) on delete restrict,
+  updated_at timestamptz not null default now()
+);
+
+create table public.roles (
+  key public.role_key primary key,
+  display_name text not null,
+  description text
+);
+
+insert into public.roles(key, display_name) values
+('CEO','CEO'),('ADMIN','Admin'),('REGIONAL_MANAGER','Regional Manager'),
+('MANAGER','Manager'),('TEAM_LEADER','Team Leader'),('AGENT','Agent'),
+('SHOP_OWNER','Shop Owner'),('RECOVERY_OFFICER','Recovery Officer');
+
+create table public.permissions (
+  key text primary key,
+  description text
+);
+
+create table public.role_permissions (
+  role public.role_key not null references public.roles(key) on delete cascade,
+  permission_key text not null references public.permissions(key) on delete cascade,
+  primary key (role, permission_key)
 );
 
 create table public.regions (
@@ -168,6 +198,8 @@ create table public.products (
   id uuid primary key default gen_random_uuid(),
   brand_id uuid not null references public.brands(id) on delete restrict,
   model_name text not null,
+  category text,
+  description text,
   status public.record_status not null default 'ACTIVE',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -315,8 +347,13 @@ create table public.customers (
   customer_number text not null unique,
   full_name text not null,
   phone text not null,
+  alternative_phone text,
   email text,
   address text,
+  customer_type text,
+  identity_reference text,
+  consent_status text,
+  created_by uuid not null references public.profiles(user_id) on delete restrict,
   status public.record_status not null default 'ACTIVE',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -453,12 +490,15 @@ create table public.bonus_awards (
 
 create table public.recovery_cases (
   id uuid primary key default gen_random_uuid(),
+  case_number text not null unique,
   imei_id uuid not null references public.imei_units(id) on delete restrict,
   customer_id uuid references public.customers(id) on delete restrict,
   assigned_officer_user_id uuid references public.profiles(user_id) on delete restrict,
   status public.recovery_status not null default 'OPEN',
   priority integer not null default 0,
+  reason text,
   opened_at timestamptz not null default now(),
+  due_at timestamptz,
   closed_at timestamptz,
   notes text,
   created_at timestamptz not null default now(),
@@ -472,7 +512,7 @@ create table public.recovery_activities (
   id uuid primary key default gen_random_uuid(),
   recovery_case_id uuid not null references public.recovery_cases(id) on delete restrict,
   officer_user_id uuid not null references public.profiles(user_id) on delete restrict,
-  activity_type text not null,
+  activity_type public.recovery_activity_type not null,
   result text,
   verified_imei text,
   notes text,
@@ -501,6 +541,36 @@ create table public.approval_decisions (
   decided_at timestamptz not null default now()
 );
 
+create table public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  recipient_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  type text not null,
+  severity text not null default 'INFO',
+  title text not null,
+  message text not null,
+  resource_type text,
+  resource_id uuid,
+  status text not null default 'UNREAD',
+  created_at timestamptz not null default now(),
+  read_at timestamptz
+);
+
+create table public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  task_number text not null unique,
+  assigned_to uuid references public.profiles(user_id) on delete restrict,
+  created_by uuid not null references public.profiles(user_id) on delete restrict,
+  task_type text not null,
+  priority integer not null default 0,
+  status text not null default 'OPEN',
+  due_at timestamptz,
+  resource_type text,
+  resource_id uuid,
+  completed_at timestamptz,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
 create table public.audit_events (
   id uuid primary key default gen_random_uuid(),
   actor_user_id uuid references public.profiles(user_id) on delete restrict,
@@ -527,6 +597,7 @@ create table public.outbox_events (
   region_id uuid references public.regions(id) on delete restrict,
   team_id uuid references public.teams(id) on delete restrict,
   actor_user_id uuid references public.profiles(user_id) on delete restrict,
+  sequence_number bigint generated always as identity unique,
   occurred_at timestamptz not null default now(),
   schema_version integer not null default 1,
   payload jsonb not null,

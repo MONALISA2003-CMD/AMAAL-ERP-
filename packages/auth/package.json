@@ -1,0 +1,11 @@
+{
+  "name": "@amaal/auth",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": { ".": "./src/server.ts" },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

@@ -1,0 +1,5 @@
+{
+  "name":"@amaal/outbox-worker","private":true,"version":"0.0.0","type":"module","exports":{".":"./src/index.ts"},
+  "dependencies":{"@amaal/database":"workspace:*"},
+  "scripts":{"typecheck":"tsc --noEmit"}
+}

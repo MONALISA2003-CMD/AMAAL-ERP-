@@ -1,33 +1,78 @@
-# Amaal ERP Repository Documentation Manifest
+# Amaal Repository Document Manifest
 
-This manifest exists to make documentation loss visible during ZIP synchronization.
+Total Markdown/document files: 72
 
-## Approved source specifications
+The ZIP-sync process preserves existing documentation when an incoming ZIP omits it; a newer document at the same path replaces the older version.
 
-Preserved under `docs/source-specifications/`:
-
-- `AMAAL_MASTER_SYSTEM_SPECIFICATION-1.md`
-- `AMAAL_DATABASE_AND_AUTHORIZATION_BLUEPRINT-1.md`
-- `AMAAL_LLM_HANDOFF_MASTER.md`
-
-These files are preserved as source contracts and should not be silently rewritten.
-
-## Current engineering documentation
-
-- `AMAAL_DOMAIN_FOUNDATION.md`
-- `AMAAL_DOMAIN_MODEL.md`
-- `AMAAL_STATE_MACHINES.md`
-- `AMAAL_AUTHORIZATION_MATRIX.md`
-- `AMAAL_EVENT_CATALOG.md`
-- `AMAAL_DATABASE_SCHEMA.md`
-- `AMAAL_RLS_AND_AUTHORIZATION.md`
-- `AMAAL_DATABASE_IMPLEMENTATION_STATUS.md`
-- `AMAAL_INFRASTRUCTURE_MAPPING.md`
-- `AMAAL_PHASE1_ARCHITECTURE.md`
-- `AMAAL_REPOSITORY_BLUEPRINT.md`
-- `AMAAL_DOCUMENTATION_PRESERVATION.md`
-- `REPOSITORY_STATUS.md`
-
-## Rule
-
-Do not remove or replace documentation merely because it is absent from an incoming ZIP. The synchronization workflow preserves missing documentation until the final documentation cleanup/release stage.
+- `.github/workflows/README.md`
+- `README.md`
+- `ai/agents/README.md`
+- `ai/evaluation/README.md`
+- `ai/governance/README.md`
+- `ai/memory/README.md`
+- `ai/prompts/README.md`
+- `ai/rag/README.md`
+- `ai/tools/README.md`
+- `apps/jarvis/README.md`
+- `apps/web/README.md`
+- `database/README.md`
+- `database/functions/README.md`
+- `database/migrations/README.md`
+- `database/policies/README.md`
+- `database/seeds/README.md`
+- `docs/AMAAL_API_CONTRACT.md`
+- `docs/AMAAL_AUTHORIZATION_MATRIX.md`
+- `docs/AMAAL_DATABASE_IMPLEMENTATION_STATUS.md`
+- `docs/AMAAL_DATABASE_SCHEMA.md`
+- `docs/AMAAL_DOCUMENTATION_PRESERVATION.md`
+- `docs/AMAAL_DOMAIN_FOUNDATION.md`
+- `docs/AMAAL_DOMAIN_MODEL.md`
+- `docs/AMAAL_DOMAIN_SERVICE_STATUS.md`
+- `docs/AMAAL_EVENT_CATALOG.md`
+- `docs/AMAAL_IMPLEMENTATION_STATUS.md`
+- `docs/AMAAL_INFRASTRUCTURE_MAPPING.md`
+- `docs/AMAAL_JARVIS_TOOL_CONTRACT.md`
+- `docs/AMAAL_PHASE1_ARCHITECTURE.md`
+- `docs/AMAAL_REPOSITORY_BLUEPRINT.md`
+- `docs/AMAAL_REPOSITORY_DOCUMENT_MANIFEST.md`
+- `docs/AMAAL_RLS_AND_AUTHORIZATION.md`
+- `docs/AMAAL_SCHEMA_VERIFICATION.md`
+- `docs/AMAAL_STATE_MACHINES.md`
+- `docs/AMAAL_TRANSACTION_SERVICE_CONTRACT.md`
+- `docs/REPOSITORY_STATUS.md`
+- `docs/source-specifications/AMAAL_DATABASE_AND_AUTHORIZATION_BLUEPRINT-1.md`
+- `docs/source-specifications/AMAAL_LLM_HANDOFF_MASTER.md`
+- `docs/source-specifications/AMAAL_MASTER_SYSTEM_SPECIFICATION-1.md`
+- `docs/source-specifications/README.md`
+- `infrastructure/deployment/README.md`
+- `infrastructure/render/README.md`
+- `infrastructure/vercel/README.md`
+- `ml/datasets/README.md`
+- `ml/evaluation/README.md`
+- `ml/models/README.md`
+- `ml/training/README.md`
+- `packages/auth/README.md`
+- `packages/business-rules/README.md`
+- `packages/database/README.md`
+- `packages/observability/README.md`
+- `packages/permissions/README.md`
+- `packages/realtime/README.md`
+- `packages/shared/README.md`
+- `packages/ui/README.md`
+- `scripts/README.md`
+- `services/api/README.md`
+- `services/finance/README.md`
+- `services/inventory/README.md`
+- `services/notifications/README.md`
+- `services/recovery/README.md`
+- `services/sales/README.md`
+- `tests/ai/README.md`
+- `tests/authorization/README.md`
+- `tests/e2e/README.md`
+- `tests/integration/README.md`
+- `tests/performance/README.md`
+- `tests/security/README.md`
+- `tests/unit/README.md`
+- `workers/jobs/README.md`
+- `workers/main/README.md`
+- `workers/schedulers/README.md`

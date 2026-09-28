@@ -1,6 +1,6 @@
 # Amaal Jarvis Tool Contract
 
-Status: Engineering contract — pre-implementation
+Status: Engineering contract — gateway implemented; LLM orchestration pending
 
 ## 1. Purpose
 
@@ -173,7 +173,13 @@ Prepares an approval request for a business action.
 
 Risk: HIGH
 
-## 6. Approval boundary
+## 6. Gateway implementation status
+
+The server-side gateway is implemented for all specified read tools and governed action/prepare tools. Read queries apply explicit organization scope because the backend DB connection is privileged and therefore cannot rely on browser RLS alone.
+
+Unauthorized IMEI existence is hidden, sold-device history falls back through authorized sale visibility, and reports are scoped before aggregation.
+
+## 7. Approval boundary
 
 Jarvis may:
 
@@ -200,7 +206,7 @@ domain service
 transaction
 ```
 
-## 7. Tool result rules
+## 8. Tool result rules
 
 Tool responses must be structured and should distinguish:
 
@@ -212,7 +218,7 @@ Tool responses must be structured and should distinguish:
 
 Jarvis must not present a prediction or recommendation as if it were an authoritative transactional fact.
 
-## 8. Audit
+## 9. Audit
 
 Every tool invocation should be auditable with:
 
@@ -232,15 +238,15 @@ timestamp
 
 Sensitive payloads should be minimized.
 
-## 9. RAG boundary
+## 10. RAG boundary
 
 RAG retrieval is permission-aware. A document is eligible only when both semantic relevance and current authorization permit access.
 
-## 10. Memory boundary
+## 11. Memory boundary
 
 Jarvis memory may store conversation/task context, but remembered information never grants permission. Current authorization is always re-evaluated.
 
-## 11. No raw SQL tool
+## 12. No raw SQL tool
 
 There is deliberately no `run_sql()` or unrestricted database tool in the Jarvis contract.
 

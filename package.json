@@ -11,11 +11,19 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "render:api": "tsx services/api/src/http.ts",
+    "render:worker": "tsx services/outbox-worker/src/runner.ts"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",
     "typescript": "^6.0.0"
+  },
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "dependencies": {
+    "tsx": "4.23.15"
   }
 }

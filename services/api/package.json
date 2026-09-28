@@ -1,0 +1,22 @@
+{
+  "name": "@amaal/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@amaal/auth": "workspace:*",
+    "@amaal/database": "workspace:*",
+    "@amaal/permissions": "workspace:*",
+    "@amaal/sales": "workspace:*",
+    "@amaal/shared": "workspace:*",
+    "@amaal/approvals": "workspace:*",
+    "@amaal/finance": "workspace:*",
+    "@amaal/inventory": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

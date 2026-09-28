@@ -1,0 +1,12 @@
+{
+  "name": "@amaal/database",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./postgres": "./src/postgres.ts" },
+  "dependencies": {
+    "kysely": "^0.29.0",
+    "pg": "^8.16.3"
+  },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

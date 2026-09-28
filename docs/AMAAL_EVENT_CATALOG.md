@@ -47,9 +47,13 @@ The first two events and `ROLE_CHANGED` are specified examples. Additional organ
 | Event | Aggregate | Meaning |
 |---|---|---|
 | `STOCK_RECEIVED` | IMEI Unit | Stock received into Amaal inventory |
-| `STOCK_ALLOCATED` | IMEI Unit / Allocation | Stock allocated to an authorized scope/holder |
+| `STOCK_ALLOCATION_REQUESTED` | Stock Allocation | Requested allocation reserved for an approved transfer workflow |
+| `STOCK_ALLOCATED` | IMEI Unit / Allocation | Stock allocation completed and accepted by the target scope |
 | `STOCK_TRANSFERRED` | IMEI Unit / Transfer | Custody/location transfer completed |
+| `STOCK_TRANSFER_DISPATCHED` | Stock Allocation | Approved allocation entered physical transit |
 | `IMEI_TRANSFERRED` | IMEI Unit | Explicit IMEI custody transfer fact used by audit/integration where needed |
+| `STOCK_ALLOCATION_CANCELLED` | Stock Allocation | Requested allocation cancelled and stock restored to source |
+| `STOCK_ALLOCATION_REJECTED` | Stock Allocation | Requested allocation rejected and stock restored to source |
 | `STOCK_ADJUSTED` | IMEI Unit / Inventory Ledger | Approved inventory adjustment |
 | `STOCK_RETURNED` | IMEI Unit | Approved return movement |
 | `STOCK_WRITTEN_OFF` | IMEI Unit | Approved write-off |
@@ -81,6 +85,8 @@ The blueprint explicitly names `STOCK_RECEIVED`, `STOCK_ALLOCATED` and `STOCK_TR
 | `RECOVERY_CREATED` | Recovery Case | Recovery case created |
 | `RECOVERY_ASSIGNED` | Recovery Case | Recovery Officer assigned |
 | `RECOVERY_COMPLETED` | Recovery Case | Verified recovery process completed and accepted |
+| `RECOVERY_CLOSED` | Recovery Case | Recovery case formally closed after warehouse acceptance |
+| `RECOVERY_ACTIVITY_RECORDED` | Recovery Case | Recovery field activity recorded |
 
 `STOCK_APPROACHING_AGE`, `STOCK_OVERDUE`, `RECOVERY_CREATED` and `RECOVERY_COMPLETED` are explicitly listed in the blueprint. Assignment is implied by the specified recovery workflow and should be treated as a committed business fact when implemented.
 

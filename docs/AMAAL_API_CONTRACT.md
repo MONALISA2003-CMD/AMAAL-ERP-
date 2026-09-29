@@ -43,6 +43,20 @@ Response
 - Completed business history is corrected through reversal, adjustment, cancellation, write-off or archive mechanisms rather than destructive deletion.
 - API handlers call domain services; they do not contain scattered business rules.
 
+## 3.1 Operational probes
+
+These are infrastructure probes rather than ERP endpoints and therefore do not require authentication:
+
+```text
+GET /health
+GET /ready
+GET /api/health
+```
+
+`/health` is a shallow liveness probe and should remain cheap enough for Render and uptime monitoring. `/ready` performs a simple PostgreSQL connectivity check and returns `503` when the authoritative database cannot be reached. `/api/health` is a compatibility alias for `/health`.
+
+Recognized ERP routes remain authenticated. Unknown non-ERP paths return `404` instead of triggering an authentication challenge.
+
 ## 4. Initial endpoint groups
 
 ### Identity and session

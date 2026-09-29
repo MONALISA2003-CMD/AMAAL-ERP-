@@ -11,6 +11,7 @@ import {
   completeCashSale,
   createApiServices,
   createApprovalRequest,
+  checkDatabaseReadiness,
   decideApproval,
   dispatchInventoryAllocation,
   receiveInventoryAllocation,
@@ -106,10 +107,28 @@ function domainStatus(error: DomainError): number {
   }
 }
 
+function requestPath(req: IncomingMessage): string {
+  const rawPath = (req.url ?? '/').split('?', 1)[0] || '/';
+  // The public API contract uses /api/v1, while the Phase 1 implementation
+  // currently uses /v1. Normalize both at the HTTP boundary so clients can
+  // follow the contract without duplicating handlers.
+  if (rawPath === '/api') return '/';
+  if (rawPath.startsWith('/api/')) return rawPath.slice('/api'.length) || '/';
+  return rawPath;
+}
+
+function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
+  if (!pathname.startsWith('/v1/')) return false;
+  if (method === 'GET' && (pathname === '/v1/me' || pathname === '/v1/me/scope')) return true;
+  if (method === 'POST' && (pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals')) return true;
+  if (method !== 'POST') return false;
+  return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
+}
+
 export function createApiServer() {
   const services = createApiServices();
   const authClient = createAuthClient();
-  return createServer(async (req,res) => {
+  const server = createServer(async (req,res) => {
     const requestId=req.headers['x-request-id']?.toString()||randomUUID();
     res.setHeader('x-request-id',requestId);
     const allowedOrigin = process.env.AMAAL_WEB_ORIGIN?.trim();
@@ -121,14 +140,27 @@ export function createApiServer() {
     }
     try {
       if(req.method==='OPTIONS'){ res.statusCode=204; res.end(); return; }
-      if(req.method==='GET'&&req.url==='/health'){ json(res,200,{ok:true,service:'amaal-api'}); return; }
+      const pathname = requestPath(req);
+      const publicHealthPaths = new Set(['/health','/ready']);
+      if (publicHealthPaths.has(pathname)) {
+        if (req.method !== 'GET') { json(res,405,{error:'METHOD_NOT_ALLOWED',message:'Health endpoints accept GET requests only.',requestId}); return; }
+        if (pathname === '/health') { json(res,200,{ok:true,service:'amaal-api'}); return; }
+        try {
+          const databaseReady = await checkDatabaseReadiness(services);
+          if (databaseReady) { json(res,200,{ok:true,ready:true,service:'amaal-api',checks:{database:'ok'}}); return; }
+          json(res,503,{ok:false,ready:false,service:'amaal-api',checks:{database:'failed'},requestId}); return;
+        } catch {
+          json(res,503,{ok:false,ready:false,service:'amaal-api',checks:{database:'failed'},requestId}); return;
+        }
+      }
+      if (!isPotentialApiRoute(req.method, pathname)) { json(res,404,{error:'NOT_FOUND',requestId}); return; }
       const authorizationHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;
       const user = await authenticateBearerToken(authClient,authorizationHeader);
 
-      if(req.method==='GET'&&(req.url==='/v1/me'||req.url==='/v1/me/scope')){
+      if(req.method==='GET'&&(pathname==='/v1/me'||pathname==='/v1/me/scope')){
         const scope = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
         const privileged = scope.roles.includes('CEO') || scope.roles.includes('ADMIN');
-        if(req.url==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired:privileged}); return; }
+        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired:privileged}); return; }
         json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired:privileged && user.aal !== 'aal2'}); return;
       }
 
@@ -139,18 +171,18 @@ export function createApiServer() {
       }
       const idempotencyKey = typeof req.headers['x-idempotency-key'] === 'string' ? req.headers['x-idempotency-key'].trim() || undefined : undefined;
 
-      if(req.method==='POST'&&req.url==='/v1/sales/cash'){
+      if(req.method==='POST'&&pathname==='/v1/sales/cash'){
         const body=await readJson(req);
         const result=await completeCashSale(services,requestId,user.id,{sellerUserId:user.id,customerId:requiredString(body,'customerId'),paymentType:'CASH',lines:[{imeiId:requiredString(body,'imeiId'),productVariantId:requiredString(body,'productVariantId'),unitPrice:requiredNumber(body,'unitPrice')}],...(typeof body.externalPaymentReference==='string'&&body.externalPaymentReference.trim()?{externalPaymentReference:body.externalPaymentReference.trim()}:{})},idempotencyKey);
         json(res,201,{requestId,...result}); return;
       }
 
-      if(req.method==='POST'&&req.url==='/v1/inventory/allocations'){
+      if(req.method==='POST'&&pathname==='/v1/inventory/allocations'){
         const result=await requestInventoryAllocation(services,requestId,user.id,allocationCommand(await readJson(req)),idempotencyKey);
         json(res,201,{requestId,...result}); return;
       }
 
-      const allocationMatch=req.method==='POST'?req.url?.match(/^\/v1\/inventory\/allocations\/([^/]+)\/(approve|dispatch|receive|cancel|reject)$/):null;
+      const allocationMatch=req.method==='POST'?pathname.match(/^\/v1\/inventory\/allocations\/([^/]+)\/(approve|dispatch|receive|cancel|reject)$/):null;
       if(allocationMatch){
         const [,allocationId,action]=allocationMatch;
         if (!allocationId || !action) throw new Error('Allocation action is required.');
@@ -165,13 +197,13 @@ export function createApiServer() {
         json(res,200,{requestId,allocationId,status}); return;
       }
 
-      if(req.method==='POST'&&req.url==='/v1/inventory/returns'){
+      if(req.method==='POST'&&pathname==='/v1/inventory/returns'){
         const body=await readJson(req);
         const result=await returnInventoryToWarehouse(services,requestId,user.id,{imeiId:requiredString(body,'imeiId'),warehouseId:requiredString(body,'warehouseId'),reason:requiredString(body,'reason'),approvalId:typeof body.approvalId==='string'&&body.approvalId.trim()?body.approvalId.trim():undefined},idempotencyKey);
         json(res,200,{requestId,status:'RETURNED',...result}); return;
       }
 
-      if(req.method==='POST'&&req.url==='/v1/inventory/corrections'){
+      if(req.method==='POST'&&pathname==='/v1/inventory/corrections'){
         const body=await readJson(req);
         const movementType=body.movementType==='WRITE_OFF'?'WRITE_OFF':'ADJUSTMENT';
         const targetState=requiredImeiState(body,'targetState');
@@ -189,7 +221,7 @@ export function createApiServer() {
         json(res,200,{requestId,status:'EXECUTED',...result}); return;
       }
 
-      const reverseMatch=req.method==='POST'?req.url?.match(/^\/v1\/sales\/([^/]+)\/reverse$/):null;
+      const reverseMatch=req.method==='POST'?pathname.match(/^\/v1\/sales\/([^/]+)\/reverse$/):null;
       if(reverseMatch){
         const body=await readJson(req);
         const reason=requiredString(body,'reason');
@@ -200,13 +232,13 @@ export function createApiServer() {
       }
 
 
-      if(req.method==='POST'&&req.url==='/v1/recovery/cases'){
+      if(req.method==='POST'&&pathname==='/v1/recovery/cases'){
         const body=await readJson(req);
         const caseId=await createRecoveryCase(services,requestId,user.id,{imeiId:requiredString(body,'imeiId'),customerId:typeof body.customerId==='string'&&body.customerId.trim()?body.customerId.trim():undefined,reason:requiredString(body,'reason'),priority:typeof body.priority==='number'?body.priority:undefined,dueAt:typeof body.dueAt==='string'&&body.dueAt.trim()?body.dueAt.trim():undefined,notes:typeof body.notes==='string'&&body.notes.trim()?body.notes.trim():undefined},idempotencyKey);
         json(res,201,{requestId,caseId,status:'OPEN'}); return;
       }
 
-      const recoveryMatch=req.method==='POST'?req.url?.match(/^\/v1\/recovery\/cases\/([^/]+)\/(assign|activity|accept|close)$/):null;
+      const recoveryMatch=req.method==='POST'?pathname.match(/^\/v1\/recovery\/cases\/([^/]+)\/(assign|activity|accept|close)$/):null;
       if(recoveryMatch){
         const [,caseId,action]=recoveryMatch;
         if(!caseId||!action) throw new Error('Recovery case action is required.');
@@ -230,7 +262,7 @@ export function createApiServer() {
         json(res,200,{requestId,caseId,status:'CLOSED'}); return;
       }
 
-      if(req.method==='POST'&&req.url==='/v1/approvals'){
+      if(req.method==='POST'&&pathname==='/v1/approvals'){
         const body=await readJson(req);
         const requestedChanges=body.requestedChanges;
         if(!requestedChanges||typeof requestedChanges!=='object'||Array.isArray(requestedChanges)) throw new Error('requestedChanges object is required.');
@@ -239,7 +271,7 @@ export function createApiServer() {
         json(res,201,{requestId,approvalId,status:'PENDING'}); return;
       }
 
-      const approvalMatch=req.method==='POST'?req.url?.match(/^\/v1\/approvals\/([^/]+)\/decision$/):null;
+      const approvalMatch=req.method==='POST'?pathname.match(/^\/v1\/approvals\/([^/]+)\/decision$/):null;
       if(approvalMatch){
         const body=await readJson(req);
         const decision=requiredString(body,'decision');
@@ -259,9 +291,15 @@ export function createApiServer() {
       json(res,status,{error:status===500?'INTERNAL_SERVER_ERROR':'REQUEST_REJECTED',message:status===500?'Request could not be completed.':message,requestId});
     }
   });
+  server.on('close', () => { void services.pool.end().catch(() => undefined); });
+  return server;
 }
 
 if(process.env.AMAAL_API_AUTOSTART==='true'){
   const port=Number(process.env.PORT??3000);
-  createApiServer().listen(port,'0.0.0.0',()=>console.log(`Amaal API listening on ${port}`));
+  const server = createApiServer();
+  const shutdown = () => server.close(() => process.exit(0));
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
+  server.listen(port,'0.0.0.0',()=>console.log(`Amaal API listening on ${port}`));
 }

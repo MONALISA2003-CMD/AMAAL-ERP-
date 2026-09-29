@@ -1,4 +1,4 @@
-import { createPool, PgTransactionManager } from '@amaal/database';
+import { createPool, healthcheck, PgTransactionManager } from '@amaal/database';
 import { PostgresSaleService } from '@amaal/sales';
 import { PostgresInventoryService } from '@amaal/inventory';
 import { PostgresFinanceService } from '@amaal/finance';
@@ -16,11 +16,13 @@ export type ApiServices = {
   finance: PostgresFinanceService;
   approvals: PostgresApprovalService;
   recovery: PostgresRecoveryService;
+  pool: ReturnType<typeof createPool>;
 };
 
 export function createApiServices(): ApiServices {
   const pool = createPool();
   return {
+    pool,
     transactions:new PgTransactionManager(pool),
     sales:new PostgresSaleService(),
     inventory:new PostgresInventoryService(),
@@ -28,6 +30,10 @@ export function createApiServices(): ApiServices {
     approvals:new PostgresApprovalService(),
     recovery:new PostgresRecoveryService(),
   };
+}
+
+export function checkDatabaseReadiness(services:ApiServices): Promise<boolean> {
+  return healthcheck(services.pool);
 }
 
 export function completeCashSale(services:ApiServices,requestId:string,actorUserId:string,command:CreateSaleCommand,idempotencyKey?:string) {

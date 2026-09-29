@@ -71,7 +71,44 @@ export class PgTransactionManager implements TransactionManager {
   }
 }
 
-export async function healthcheck(pool: Pool): Promise<boolean> {
-  const result = await pool.query<{ ok: number }>('select 1 as ok');
-  return result.rows[0]?.ok === 1;
+export type DatabaseHealthcheckFailure = {
+  ok: false;
+  errorCode: string;
+  errorName: string;
+  errorClass: string;
+};
+
+export type DatabaseHealthcheckResult =
+  | { ok: true }
+  | DatabaseHealthcheckFailure;
+
+function databaseErrorDetails(error: unknown): DatabaseHealthcheckFailure {
+  const record = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+  const errorCode = typeof record.code === 'string' && record.code.trim() ? record.code : 'UNKNOWN';
+  const errorName = error instanceof Error && error.name ? error.name : 'Error';
+
+  let errorClass = 'unknown';
+  if (['28P01', '28000'].includes(errorCode)) errorClass = 'authentication';
+  else if (['ENOTFOUND', 'EAI_AGAIN'].includes(errorCode)) errorClass = 'dns';
+  else if (['ECONNREFUSED'].includes(errorCode)) errorClass = 'connection_refused';
+  else if (['ETIMEDOUT', 'ESOCKETTIMEDOUT'].includes(errorCode)) errorClass = 'timeout';
+  else if (['ENETUNREACH', 'EHOSTUNREACH'].includes(errorCode)) errorClass = 'network_unreachable';
+  else if (['08001', '08003', '08004', '08006', '08007', '08020', '08030'].includes(errorCode)) errorClass = 'postgres_connection';
+
+  return { ok: false, errorCode, errorName, errorClass };
+}
+
+export async function healthcheck(pool: Pool): Promise<DatabaseHealthcheckResult> {
+  try {
+    const result = await pool.query<{ ok: number }>('select 1 as ok');
+    if (result.rows[0]?.ok === 1) return { ok: true };
+    return {
+      ok: false,
+      errorCode: 'INVALID_HEALTHCHECK_RESULT',
+      errorName: 'HealthcheckResultError',
+      errorClass: 'database_response',
+    };
+  } catch (error) {
+    return databaseErrorDetails(error);
+  }
 }

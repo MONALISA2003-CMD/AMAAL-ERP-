@@ -1,2 +1,2 @@
-export * from './authorization.js';
-export * from './context.js';
+export * from './authorization.ts';
+export * from './context.ts';

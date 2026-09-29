@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { createPool, PgTransactionManager } from '@amaal/database';
-import { PostgresOutboxWorker, PostgresRealtimePublisher, reconcileInventoryReadModel } from './index.js';
+import { PostgresOutboxWorker, PostgresRealtimePublisher, reconcileInventoryReadModel } from './index.ts';
 
 const workerId = process.env.RENDER_INSTANCE_ID ?? process.env.HOSTNAME ?? randomUUID();
 const pool = createPool();

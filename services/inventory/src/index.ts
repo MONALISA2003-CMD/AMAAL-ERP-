@@ -1,2 +1,2 @@
-export { PostgresInventoryService } from './service.js';
-export type { AllocationRequest, AllocationResult, AllocationTarget } from './service.js';
+export { PostgresInventoryService } from './service.ts';
+export type { AllocationRequest, AllocationResult, AllocationTarget } from './service.ts';

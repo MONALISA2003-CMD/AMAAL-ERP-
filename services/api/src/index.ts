@@ -7,7 +7,7 @@ import { PostgresRecoveryService } from '@amaal/recovery';
 import type { CreateSaleCommand } from '@amaal/sales';
 import type { AllocationRequest } from '@amaal/inventory';
 import type { CreateRecoveryCaseInput, AssignRecoveryCaseInput, RecoveryActivityInput, AcceptRecoveredStockInput } from '@amaal/recovery';
-import { withIdempotency } from './idempotency.js';
+import { withIdempotency } from './idempotency.ts';
 
 export type ApiServices = {
   transactions: PgTransactionManager;
@@ -95,5 +95,5 @@ export function decideApproval(services:ApiServices,requestId:string,actorUserId
   return withIdempotency(services,requestId,actorUserId,'approvals.decision',idempotencyKey,{approvalId,decision,reason},(tx)=>services.approvals.decide(tx,actorUserId,approvalId,decision,reason));
 }
 
-export { withIdempotency } from './idempotency.js';
-export { createApiServer } from './http.js';
+export { withIdempotency } from './idempotency.ts';
+export { createApiServer } from './http.ts';

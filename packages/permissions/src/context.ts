@@ -1,4 +1,4 @@
-import type { AuthorizationContext, PermissionKey, RoleKey, ResourceScope, AuthorizationDecision } from './authorization.js';
+import type { AuthorizationContext, PermissionKey, RoleKey, ResourceScope, AuthorizationDecision } from './authorization.ts';
 import type { DatabaseTransaction } from '@amaal/database';
 
 export async function loadAuthorizationContext(
@@ -51,4 +51,4 @@ export function authorizeRequest(
   return authorize(context, permission, resource);
 }
 
-import { authorize } from './authorization.js';
+import { authorize } from './authorization.ts';

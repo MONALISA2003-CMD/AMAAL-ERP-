@@ -31,4 +31,4 @@ export function validateCreateSale(command: CreateSaleCommand): void {
   }
 }
 
-export { PostgresSaleService } from './service.js';
+export { PostgresSaleService } from './service.ts';

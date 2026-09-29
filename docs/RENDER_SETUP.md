@@ -15,8 +15,8 @@ Render Web Service settings:
 - Region: Frankfurt
 - Runtime: Node
 - Root directory: repository root
-- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile --allow-build=esbuild`
-- Start command: `./node_modules/.bin/tsx services/api/src/http.ts`
+- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile`
+- Start command: `node --experimental-transform-types services/api/src/http.ts`
 - `AMAAL_API_AUTOSTART=true`
 - `PORT` is supplied by Render
 
@@ -28,21 +28,14 @@ Render Background Worker settings:
 - Region: Frankfurt
 - Runtime: Node
 - Root directory: repository root
-- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile --allow-build=esbuild`
-- Start command: `./node_modules/.bin/tsx services/outbox-worker/src/runner.ts`
+- Build command: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile`
+- Start command: `node --experimental-transform-types services/outbox-worker/src/runner.ts`
 
 The worker claims the transactional outbox with row locking, publishes scoped realtime events through the `realtime_events` table, updates read models, and runs the 15-second inventory reconciliation safety net.
 
 ## pnpm build-script policy
 
-This repository uses pnpm 12.7 and explicitly allows only the dependency build script required by the current toolchain:
-
-```yaml
-allowBuilds:
-  esbuild: true
-```
-
-Do not replace this with `dangerouslyAllowAllBuilds`; Render installs must remain explicitly allowlisted.
+The Render runtime does not use `tsx` or `esbuild`, so no dependency lifecycle build-script allowlist is required for the API/worker deployment. Do not replace this with `dangerouslyAllowAllBuilds`.
 
 ## Database connection
 

@@ -1,5 +1,5 @@
 import type { TransactionManager, DatabaseTransaction } from '@amaal/database';
-import type { OutboxMessage, OutboxPublisher } from './index.js';
+import type { OutboxMessage, OutboxPublisher } from './index.ts';
 
 async function consumeOnce(tx: DatabaseTransaction, consumerName: string, eventId: string): Promise<boolean> {
   const existing = await tx.query<{ id: string }>(

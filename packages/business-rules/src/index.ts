@@ -1,2 +1,2 @@
-export * from './imei.js';
-export * from './state-machines.js';
+export * from './imei.ts';
+export * from './state-machines.ts';

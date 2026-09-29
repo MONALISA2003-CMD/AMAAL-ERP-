@@ -1,6 +1,6 @@
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
-import type { DatabaseTransaction, TransactionContext, TransactionManager } from './index.js';
+import type { DatabaseTransaction, TransactionContext, TransactionManager } from './index.ts';
 
 export type AmaalDatabase = Record<string, unknown>;
 

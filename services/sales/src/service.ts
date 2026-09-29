@@ -3,7 +3,7 @@ import type { DatabaseTransaction } from '@amaal/database';
 import { DomainError, AuthorizationError, ConflictError, ValidationError } from '@amaal/shared';
 import { assertPositiveMoney, assertNonEmpty } from '@amaal/business-rules';
 import { authorize, loadAuthorizationContext } from '@amaal/permissions';
-import type { CreateSaleCommand } from './index.js';
+import type { CreateSaleCommand } from './index.ts';
 import { createDirectSellerCommission } from '@amaal/finance';
 
 interface ImeiRow {

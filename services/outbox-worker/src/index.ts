@@ -67,4 +67,4 @@ export class PostgresOutboxWorker {
   }
 }
 
-export { PostgresRealtimePublisher, reconcileInventoryReadModel } from './projector.js';
+export { PostgresRealtimePublisher, reconcileInventoryReadModel } from './projector.ts';

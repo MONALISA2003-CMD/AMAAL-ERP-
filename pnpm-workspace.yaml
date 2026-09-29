@@ -3,9 +3,3 @@ packages:
   - packages/*
   - services/*
   - workers/*
-
-# pnpm 11+ / 12+ build-script allowlist. Keep this explicit rather than
-# enabling all dependency lifecycle scripts.
-strictDepBuilds: true
-allowBuilds:
-  esbuild: true

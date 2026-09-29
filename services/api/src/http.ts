@@ -23,7 +23,7 @@ import {
   addRecoveryActivity,
   acceptRecoveredStock,
   closeRecoveryCase,
-} from './index.js';
+} from './index.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
 

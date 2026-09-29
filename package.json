@@ -8,23 +8,19 @@
     "build": "turbo run build",
     "check": "turbo run check",
     "lint": "turbo run lint",
-    "test": "tsx --test \"tests/**/*.test.ts\"",
+    "test": "node scripts/run-tests.mjs",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "render:api": "tsx services/api/src/http.ts",
-    "render:worker": "tsx services/outbox-worker/src/runner.ts"
+    "render:api": "node --experimental-transform-types services/api/src/http.ts",
+    "render:worker": "node --experimental-transform-types services/outbox-worker/src/runner.ts"
   },
   "devDependencies": {
     "@types/node": "24.0.0",
-    "@typescript/native": "npm:typescript@7.0.2",
     "prettier": "3.9.9",
     "turbo": "2.11.4",
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "type": "module",
-  "packageManager": "pnpm@12.7.0",
-  "dependencies": {
-    "tsx": "4.23.15"
-  }
+  "dependencies": {}
 }

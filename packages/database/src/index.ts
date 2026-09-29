@@ -16,4 +16,4 @@ export interface TransactionManager {
   ): Promise<T>;
 }
 
-export * from './postgres.js';
+export * from './postgres.ts';

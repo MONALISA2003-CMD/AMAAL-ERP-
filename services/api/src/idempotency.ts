@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { DatabaseTransaction } from '@amaal/database';
 import { ConflictError } from '@amaal/shared';
-import type { ApiServices } from './index.js';
+import type { ApiServices } from './index.ts';
 
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);

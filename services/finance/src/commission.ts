@@ -1,7 +1,7 @@
 import type { DatabaseTransaction } from '@amaal/database';
 import type { RoleKey } from '@amaal/permissions';
 import { ValidationError, DomainError } from '@amaal/shared';
-import { calculateCommissionAmount, type CommissionRuleDefinition } from './commission-rules.js';
+import { calculateCommissionAmount, type CommissionRuleDefinition } from './commission-rules.ts';
 
 export type CommissionOutcome = {
   commissionId: string;

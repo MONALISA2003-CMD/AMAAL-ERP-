@@ -1,4 +1,4 @@
-import { validateRecoveryTransition } from '../../../../services/recovery/src/index.js';
+import { validateRecoveryTransition } from '../../../../services/recovery/src/index.ts';
 
 validateRecoveryTransition({ caseId:'case-1', imeiId:'imei-1', actorUserId:'user-1', fromState:'OPEN', toState:'ASSIGNED' });
 validateRecoveryTransition({ caseId:'case-1', imeiId:'imei-1', actorUserId:'user-1', fromState:'ASSIGNED', toState:'IN_PROGRESS' });

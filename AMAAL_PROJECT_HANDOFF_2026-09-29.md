@@ -419,7 +419,7 @@ Jarvis must never have unrestricted SQL authority.
 
 # 13. INFRASTRUCTURE DECISION
 
-Current intended topology:
+Current production topology (updated 30 Sep 2026):
 
 ```text
 Vercel
@@ -430,11 +430,14 @@ Render
 ├── amaal-worker     → outbox/read-model worker (NOT YET VERIFIED AS CREATED)
 └── amaal-valkey     → cache/queue/coordination/temp state
 
+Neon
+└── PostgreSQL       → authoritative transactional DB
+
 Supabase
-├── PostgreSQL       → authoritative transactional DB
-├── Auth             → identity / MFA
-├── Storage          → authoritative object storage
-└── Realtime         → realtime delivery
+├── Auth             → identity / sessions / MFA (current)
+└── Storage          → only approved supporting/private-file workflows
+
+Supabase PostgreSQL and Supabase Realtime are no longer part of the authoritative transaction/event path.
 
 OpenAI
 └── Jarvis intelligence layer (future integration stage)
@@ -452,7 +455,9 @@ Future AWS migration path, when scale requires it, is documented in the approved
 
 ---
 
-# 14. LIVE SUPABASE STATE — VERIFIED 29 SEP 2026
+# 14. HISTORICAL SUPABASE STATE — VERIFIED 29 SEP 2026
+
+> Historical reference only. Supabase PostgreSQL is no longer authoritative. See Section 16 for the current provider topology.
 
 **Project:** `AMAAL ERP`  
 **Project ref:** `kwaggfdjdgcjzizhmvbd`  
@@ -528,6 +533,23 @@ The current migration directory contains:
 The migration design includes RLS, idempotency, recovery lineage, realtime events, read models, commission adjustment lineage, consumer dedupe and relevant FK/operational indexes.
 
 ---
+
+# 16. CURRENT PROVIDER MIGRATION STATUS — 30 SEP 2026
+
+The original hand-off described Supabase PostgreSQL as authoritative. That is now historical information and is superseded by the implemented provider migration.
+
+Current production topology:
+
+```text
+Render amaal-api      -> Neon PostgreSQL (`AMAAL_DATABASE_URL`)
+Render amaal-worker   -> Neon PostgreSQL (`AMAAL_DATABASE_URL`)
+Render Valkey         -> transient coordination/cache
+Supabase Auth         -> identity/session/MFA only
+```
+
+The Neon production branch is the authoritative transactional database. The live Neon schema contains 47 public tables and 47 RLS policies. The current API/worker environment migration has been triggered on Render.
+
+The old Supabase PostgreSQL forensic sections below are retained as historical evidence of the migration decision and must not be followed as current infrastructure instructions.
 
 # 16. LIVE RENDER STATE — OPERATOR VERIFIED
 
@@ -615,7 +637,7 @@ This is the **only current production health/readiness fault**.
 
 ---
 
-# 18. DEFINITIVE CURRENT DATABASE-CONNECTION FORENSICS
+# 18. HISTORICAL SUPABASE DATABASE-CONNECTION FORENSICS — RETAINED FOR MIGRATION EVIDENCE
 
 The `/ready` endpoint intentionally executes a PostgreSQL connectivity check through the server-side PostgreSQL pool.
 
@@ -664,7 +686,7 @@ Do not store the password in the repository or this hand-off.
 
 ### Connection target
 
-The intended Render-to-Supabase route is:
+The former Render-to-Supabase route (historical) was:
 
 ```text
 Supabase Shared Pooler
@@ -684,27 +706,35 @@ The next engineer should obtain/inspect the live Render environment value only t
 
 ---
 
-# 19. IMPORTANT CONFIGURATION VARIABLES
+# 19. IMPORTANT CONFIGURATION VARIABLES — CURRENT STATE
 
-Server-side Render variables used/expected:
+Server-side Render variables used/expected now:
 
 ```text
 AMAAL_API_AUTOSTART=true
 AMAAL_DB_POOL_MAX=5
-SUPABASE_URL=https://kwaggfdjdgcjzizhmvbd.supabase.co
-SUPABASE_PUBLISHABLE_KEY=<secret/non-secret according to Supabase dashboard classification>
-AMAAL_DATABASE_URL=<Session Pooler connection string; secret>
-SUPABASE_DB_URL=<same DB connection string if retained; secret>
+AMAAL_DATABASE_URL=<Neon PostgreSQL connection string; secret>
 REDIS_URL=<internal Render Valkey URL; secret>
+
+AMAAL_AUTH_PROVIDER=supabase
+SUPABASE_URL=<Supabase Auth project URL>
+SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
+
+NEON_AUTH_BASE_URL=<staged Neon Auth URL>
+NEON_AUTH_JWKS_URL=<staged Neon Auth JWKS URL>
 ```
 
 Do not commit secret values.
 
-The API's authoritative PostgreSQL connection variable is:
+The authoritative PostgreSQL connection variable is:
 
 ```text
-AMAAL_DATABASE_URL
+AMAAL_DATABASE_URL -> Neon PostgreSQL
 ```
+
+`SUPABASE_DB_URL` is obsolete and has been neutralized. It must not be used or reintroduced.
+
+Important: Supabase Auth remains active because it currently provides the production identity/session path and privileged MFA assurance. This does not make Supabase PostgreSQL authoritative.
 
 ---
 
@@ -856,7 +886,7 @@ authorization
 ↓
 business service
 ↓
-Supabase PostgreSQL
+Neon PostgreSQL
 ```
 
 ---
@@ -1012,13 +1042,11 @@ Do not:
 
 The recommended continuation order is:
 
-### Gate A — Fix Render → Supabase PostgreSQL readiness
+### Gate A — Completed: move Render PostgreSQL to Neon
 
-1. Inspect the exact live `AMAAL_DATABASE_URL` securely in Render.
-2. Correlate a fresh `/ready` attempt with Supavisor logs.
-3. Confirm the actual PostgreSQL credential rejected by the pooler.
-4. Resolve credential/pooler state without exposing the secret.
-5. Re-test `/ready` until database check is `ok`.
+The PostgreSQL provider migration is complete. `amaal-api` and `amaal-worker` now use Neon through `AMAAL_DATABASE_URL`. The old `SUPABASE_DB_URL` is neutralized. Supabase remains only for Auth/MFA.
+
+Next readiness work is controlled authenticated integration testing against the live Neon-backed API.
 
 ### Gate B — Prove authenticated API
 
@@ -1113,7 +1141,7 @@ Before declaring production readiness, require:
 
 # 30. FINAL STATE SUMMARY
 
-### Healthy now
+### Healthy / established now
 
 ```text
 Repository        ✅
@@ -1121,21 +1149,18 @@ GitHub sync       ✅
 Render build      ✅
 Render process    ✅
 Render deployment ✅ LIVE
-/health           ✅
-/api/health       ✅
-Root routing      ✅ 404 as intended
-Supabase project  ✅ ACTIVE_HEALTHY
-Database schema   ✅ 47 tables
+Neon PostgreSQL   ✅ authoritative
+Neon schema       ✅ 47 tables
 RLS               ✅ 47 policies
-Security advisor  ✅ 0 findings
 Valkey            ✅ provisioned
+Supabase Auth     ✅ current identity/MFA provider
 ```
 
-### Not yet healthy / complete
+### Not yet complete
 
 ```text
-/ready            ❌ PostgreSQL connection rejected
-Render → DB       ❌ unresolved credential/backend auth path
+/ready            ⏳ verify after current Neon deploy completes
+Authenticated E2E  ⏳ pending
 Employee data     ⏳ not populated
 Product data      ⏳ not populated
 IMEI data         ⏳ not populated

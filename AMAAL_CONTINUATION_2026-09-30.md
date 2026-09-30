@@ -73,6 +73,28 @@ database/migrations/20260930_000017_audit_request_id.sql
 
 `amaal-valkey` already exists in Frankfurt. Do not create another instance.
 
+## 5A. Render environment contract — current
+
+The production provider split is explicit:
+
+```text
+PostgreSQL / transactions:
+  AMAAL_DATABASE_URL -> Neon PostgreSQL (`neondb`)
+
+Identity / sessions / MFA:
+  AMAAL_AUTH_PROVIDER=supabase
+  SUPABASE_URL=<Supabase project URL>
+  SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
+
+Neon Auth migration staging:
+  NEON_AUTH_BASE_URL=<staged Neon Auth URL>
+  NEON_AUTH_JWKS_URL=<staged Neon Auth JWKS URL>
+```
+
+`SUPABASE_DB_URL` is obsolete and has been neutralized in Render. It must not be reintroduced.
+
+Do not delete the active Supabase Auth variables until the application is deliberately migrated to a replacement identity provider with equivalent privileged MFA assurance.
+
 ## 6. Web implementation checkpoint
 
 The Next.js client already has:
@@ -116,6 +138,8 @@ The implementation and isolated Neon transaction path have been verified, but a 
 
 ## 11. Deployment state of this increment
 
-The implementation changes in this checkpoint are prepared in the working repository snapshot and have been validated with repository/workspace checks plus TypeScript/TSX transpile checks. The full dependency install timed out in the current container, so a complete monorepo typecheck/test run is still pending.
+The implementation changes in this checkpoint were prepared and validated with repository/workspace checks plus TypeScript/TSX transpile checks. The full dependency install timed out in the current container, so a complete monorepo typecheck/test run is still pending.
 
-A Git push credential/CLI is not available in the current workspace, and the Vercel deployment connector is not currently exposing a project/team, so this source increment is **prepared but not claimed as deployed**. Render's currently live deployment remains the existing GitHub commit until the updated source is synchronized through the repository workflow.
+Render environment migration completed before Vercel setup: both `amaal-api` and `amaal-worker` now receive the Neon `AMAAL_DATABASE_URL`; `SUPABASE_DB_URL` was neutralized; Supabase Auth variables remain intentionally active. The resulting deploys were triggered automatically by Render.
+
+A Git push credential/CLI is not available in the current workspace, and the Vercel deployment connector is not currently exposing a project/team, so source publication to Vercel is **not claimed as deployed**. Do not proceed to Vercel environment setup until the Render provider split is confirmed healthy.

@@ -1,8 +1,0 @@
-{
-  "name": "@amaal/shared",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "exports": { ".": "./src/errors.ts" },
-  "scripts": { "typecheck": "tsc --noEmit" }
-}

@@ -15,9 +15,9 @@ Amaal is a closed, single-company internal ERP and intelligent operations platfo
 
 ### Important hosting decision
 
-Neon PostgreSQL is now the production database of record. Supabase PostgreSQL is no longer the Amaal source of transactional truth. The application connects to Neon through `AMAAL_DATABASE_URL`.
+Neon PostgreSQL is the production database of record. Supabase PostgreSQL is retired from the Amaal transactional path. The server connects to Neon through the server-only `AMAAL_DATABASE_URL`.
 
-Supabase remains in the architecture only where it is explicitly used for identity/MFA and currently approved supporting capabilities. The database, audit trail, outbox, read models and transactional writes live in Neon.
+Supabase remains only for the current identity/session/MFA path through `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `AMAAL_AUTH_PROVIDER=supabase`. Do not add Supabase PostgreSQL back as a second source of truth. The transactional schema, audit trail, outbox, read models, and business writes live in Neon.
 
 ## Source of truth
 
@@ -36,6 +36,7 @@ The system is database-first, authorization-first and transaction-first. Do not 
 - The web client is an authenticated Next.js App Router client using Supabase Auth tokens and the Render API.
 - The dashboard uses `/ready` for the authoritative database-readiness signal rather than treating `/health` as proof of database availability.
 - A small schema-alignment migration (`20260930_000017_audit_request_id.sql`) is applied to Neon production and is versioned in the repository.
+- Render environment migration is now aligned: `AMAAL_DATABASE_URL` points to Neon on both API and worker; the obsolete `SUPABASE_DB_URL` has been neutralized; Supabase Auth variables remain intentionally active.
 - The 30 September documentation/client cleanup is prepared in the current repository snapshot; see `AMAAL_CONTINUATION_2026-09-30.md` for validation and deployment state.
 
 ## Active engineering gate

@@ -145,3 +145,23 @@ database/migrations/20260930_000017_audit_request_id.sql
 ```
 
 The ZIP-sync workflow now validates these paths and a minimum repository file count before it deletes/replaces the existing working tree.
+
+
+## Development MFA configuration
+
+For development/testing, `AMAAL_MFA_ENFORCED=false` is supported on the Render API so all roles can use email/password without the privileged AAL2 gate. The production/default behavior remains MFA-enforced.
+
+## Vercel configuration
+
+The Amaal web client manually requires only `NEXT_PUBLIC_AMAAL_API_URL`. The current Supabase browser URL/publishable key are public client configuration and should be synchronized through the official Vercel ↔ Supabase integration instead of being manually maintained. Server database credentials stay on Render.
+
+
+## Latest checkpoint — Vercel setup and development authentication
+
+Render is now green: `/health` and `/ready` return `{"ok":true,"service":"amaal-api"}` in the current operator verification; the API root remains an intentional structured `NOT_FOUND`.
+
+The Vercel project is connected to `MONALISA2003-CMD/AMAAL-ERP-` with `apps/web` as the Root Directory. The web client currently requires `NEXT_PUBLIC_AMAAL_API_URL=https://amaal-api.onrender.com` as the manually maintained Vercel variable. The current client also initializes Supabase Auth in the browser, so the public Supabase URL/publishable key should be synchronized by the official Vercel↔Supabase integration rather than manually duplicated.
+
+Development/testing MFA: `AMAAL_MFA_ENFORCED=false` is configured on the Render API. This is a development/testing control only; the API defaults to MFA enforcement when the variable is absent or `true`.
+
+Next infrastructure link: after the first Vercel deployment supplies its actual origin, configure Render `AMAAL_WEB_ORIGIN` to that exact origin. Keep production CORS origin-specific.

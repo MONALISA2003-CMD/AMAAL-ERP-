@@ -125,9 +125,15 @@ function isPotentialApiRoute(method: string | undefined, pathname: string): bool
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
 }
 
+function isMfaEnforced(): boolean {
+  const raw = process.env.AMAAL_MFA_ENFORCED?.trim().toLowerCase();
+  return raw !== 'false';
+}
+
 export function createApiServer() {
   const services = createApiServices();
   const authClient = createAuthClient();
+  const mfaEnforced = isMfaEnforced();
   const server = createServer(async (req,res) => {
     const requestId=req.headers['x-request-id']?.toString()||randomUUID();
     res.setHeader('x-request-id',requestId);
@@ -160,12 +166,13 @@ export function createApiServer() {
       if(req.method==='GET'&&(pathname==='/v1/me'||pathname==='/v1/me/scope')){
         const scope = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
         const privileged = scope.roles.includes('CEO') || scope.roles.includes('ADMIN');
-        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired:privileged}); return; }
-        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired:privileged && user.aal !== 'aal2'}); return;
+        const mfaRequired = privileged && mfaEnforced;
+        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired}); return; }
+        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,authenticatorAssuranceLevel:user.aal,mfaRequired: mfaRequired && user.aal !== 'aal2'}); return;
       }
 
       const context = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
-      if ((context.roles.includes('CEO') || context.roles.includes('ADMIN')) && user.aal !== 'aal2') {
+      if (mfaEnforced && (context.roles.includes('CEO') || context.roles.includes('ADMIN')) && user.aal !== 'aal2') {
         json(res,403,{error:'MFA_REQUIRED',message:'CEO and Admin ERP operations require verified multi-factor authentication.',requestId,mfaRequired:true});
         return;
       }

@@ -1241,3 +1241,12 @@ Neon production contains `public.audit_events.request_id` plus the request-corre
 ## Current continuation
 
 Use `AMAAL_CONTINUATION_2026-09-30.md` for the next implementation sequence.
+
+
+## Development MFA configuration
+
+For development/testing, `AMAAL_MFA_ENFORCED=false` is supported on the Render API so all roles can use email/password without the privileged AAL2 gate. The production/default behavior remains MFA-enforced.
+
+## Vercel configuration
+
+The Amaal web client manually requires only `NEXT_PUBLIC_AMAAL_API_URL`. The current Supabase browser URL/publishable key are public client configuration and should be synchronized through the official Vercel ↔ Supabase integration instead of being manually maintained. Server database credentials stay on Render.

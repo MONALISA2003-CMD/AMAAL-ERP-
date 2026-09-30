@@ -30,18 +30,25 @@ The system is database-first, authorization-first and transaction-first. Do not 
 ## Current build status
 
 - Neon production branch is populated from the validated Amaal schema: 47 public tables, 47 RLS policies and the Amaal foundation records.
-- Render API deployment is currently in **recovery** because GitHub commit `44ca63b` omitted the API source tree; the last known-good deployment was live before that commit.
-- Render worker source/runtime remains intact, but the recovery package must be synchronized before treating the platform as healthy.
+- Render API is healthy: `/health` and `/ready` return `ok: true`; the API root `/` intentionally returns a structured `NOT_FOUND`.
+- Render worker is deployed alongside the API and uses the same authoritative Neon database path.
 - Render Valkey `amaal-valkey` is provisioned and non-authoritative.
-- The web client is an authenticated Next.js App Router client using Supabase Auth tokens and the Render API.
+- The web client is an authenticated Next.js App Router client using Supabase Auth and the Render API.
 - The dashboard uses `/ready` for the authoritative database-readiness signal rather than treating `/health` as proof of database availability.
 - A small schema-alignment migration (`20260930_000017_audit_request_id.sql`) is applied to Neon production and is versioned in the repository.
-- The 30 September documentation/client cleanup is prepared in the current repository snapshot; see `AMAAL_CONTINUATION_2026-09-30.md` for validation and deployment state.
+- Development/testing currently supports email/password for all roles through `AMAAL_MFA_ENFORCED=false` on the Render API. The default remains MFA-enforced when the variable is absent or `true`.
+- Vercel is the next deployment surface. The web client manually needs only `NEXT_PUBLIC_AMAAL_API_URL`; the official Supabase↔Vercel integration should synchronize the public Supabase browser variables automatically.
 
-## Current recovery gate
+## Current Vercel/Render connection gate
 
-The latest Render failure is caused by GitHub commit `44ca63b` containing an incomplete repository tree: the deployment expects `services/api/src/http.ts`, but that file is absent from the commit. The Neon database migration is not the failure. A complete repository recovery package is prepared from the last known-good full source snapshot, and the ZIP-sync workflow has been hardened to reject incomplete/documentation-only packages before replacement.
+The Vercel project is already connected to `MONALISA2003-CMD/AMAAL-ERP-` with root directory `apps/web`. The manual browser variable is:
 
-The immediate gate is to synchronize that complete source tree to GitHub, let Render redeploy, then verify `/health`, `/ready`, worker startup and authenticated API behavior. Vercel remains intentionally after this recovery gate.
+```text
+NEXT_PUBLIC_AMAAL_API_URL=https://amaal-api.onrender.com
+```
 
-See `AMAAL_CONTINUATION_2026-09-30.md` for the exact recovery checkpoint.
+The current `apps/web` code still uses Supabase Auth in the browser, so the public Supabase URL/publishable key must exist for the client; these should be supplied by the official Vercel↔Supabase integration rather than manually maintained as duplicate project configuration.
+
+After the first Vercel deployment produces its project URL, set the Render API's `AMAAL_WEB_ORIGIN` to that exact Vercel origin so browser-to-API CORS is explicit. Do not use a wildcard production origin.
+
+See `AMAAL_CONTINUATION_2026-09-30.md` for the current deployment checkpoint and provider mapping.

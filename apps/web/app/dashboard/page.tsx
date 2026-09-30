@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, publicHealth } from '../../lib/api';
+import { apiFetch, publicReady } from '../../lib/api';
 import { getSupabaseBrowserClient } from '../../lib/supabase';
 
 type Me = {
@@ -15,7 +15,7 @@ type Me = {
 export default function DashboardPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
-  const [api, setApi] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [api, setApi] = useState<'checking' | 'ready' | 'degraded'>('checking');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,10 +34,10 @@ export default function DashboardPage() {
           router.replace('/mfa');
           return;
         }
-        const health = await publicHealth();
+        const readiness = await publicReady();
         if (!active) return;
         setMe(identity);
-        setApi(health.ok ? 'online' : 'offline');
+        setApi(readiness.ready && readiness.checks.database === 'ok' ? 'ready' : 'degraded');
       } catch (e) {
         if (!active) return;
         setApi('offline');
@@ -84,8 +84,10 @@ export default function DashboardPage() {
               <h1>Operational truth, at a glance.</h1>
               <p className="muted">Metrics will appear only when sourced from the authoritative ERP records.</p>
             </div>
-            <div className={`status-pill ${api}`}>{api === 'online' ? 'API online' : api === 'offline' ? 'API unavailable' : 'Checking API'}</div>
+            <div className={`status-pill ${api}`}>{api === 'ready' ? 'ERP ready' : api === 'degraded' ? 'ERP degraded' : 'Checking ERP'}</div>
           </div>
+
+          {api === 'degraded' ? <div className="alert-card">The API is reachable, but the authoritative database readiness check is not healthy.</div> : null}
 
           {error ? <div className="alert-card">{error}</div> : null}
 

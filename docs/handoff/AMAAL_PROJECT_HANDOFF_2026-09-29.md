@@ -1185,3 +1185,11 @@ That is the exact stage at hand.
 ---
 
 **End of hand-off.**
+
+---
+
+# CURRENT IMPLEMENTATION ADDENDUM — 30 SEPTEMBER 2026
+
+See the root `AMAAL_CONTINUATION_2026-09-30.md` for the authoritative continuation checkpoint. The original hand-off remains preserved as a historical baseline.
+
+The production PostgreSQL source of truth is now Neon (`icy-lake-57952361`, branch `production`, database `neondb`). Supabase Auth remains the current identity/MFA provider.

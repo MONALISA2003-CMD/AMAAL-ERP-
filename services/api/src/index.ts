@@ -32,7 +32,7 @@ export function createApiServices(): ApiServices {
   };
 }
 
-export function checkDatabaseReadiness(services:ApiServices) {
+export function checkDatabaseReadiness(services:ApiServices): Promise<boolean> {
   return healthcheck(services.pool);
 }
 

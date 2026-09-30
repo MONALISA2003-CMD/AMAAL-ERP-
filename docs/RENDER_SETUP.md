@@ -1,62 +1,48 @@
 # Amaal ERP — Render Setup
 
-## Architecture
+## Current architecture
 
-- `amaal-api`: public HTTP API; Supabase is authoritative.
-- `amaal-worker`: background outbox/realtime/read-model worker.
-- `amaal-valkey`: Render Key Value used for transient coordination/cache/queue work.
-- Supabase PostgreSQL/Auth/Storage/Realtime remain authoritative.
+- `amaal-api`: public HTTP API; **Neon PostgreSQL is authoritative**.
+- `amaal-worker`: background/outbox/read-model worker; also connected to Neon.
+- `amaal-valkey`: Render Valkey for transient coordination/cache/queue work.
+- Supabase Auth: identity/session/MFA assurance only on the current production path.
 
 ## API service
 
-Render Web Service settings:
-
 - Name: `amaal-api`
 - Region: Frankfurt
-- Runtime: Node
+- Runtime: Node 24
 - Root directory: repository root
-- Build command: `npx --yes pnpm@12.7.0 install --frozen-lockfile`
-- Start command: `node --experimental-transform-types services/api/src/http.ts`
-- `AMAAL_API_AUTOSTART=true`
-- `PORT` is supplied by Render
+- Build: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile`
+- Start: `node --experimental-transform-types services/api/src/http.ts`
 
 ## Worker service
 
-Render Background Worker settings:
-
 - Name: `amaal-worker`
 - Region: Frankfurt
-- Runtime: Node
-- Root directory: repository root
-- Build command: `npx --yes pnpm@12.7.0 install --frozen-lockfile`
-- Start command: `node --experimental-transform-types services/outbox-worker/src/runner.ts`
-
-The worker claims the transactional outbox with row locking, publishes scoped realtime events through the `realtime_events` table, updates read models, and runs the 15-second inventory reconciliation safety net.
-
-## pnpm build-script policy
-
-The Render runtime does not use `tsx` or `esbuild`, so no dependency lifecycle build-script allowlist is required for the API/worker deployment. Do not replace this with `dangerouslyAllowAllBuilds`.
+- Runtime: Node 24
+- Build: `npx --yes pnpm@12.7.0 install --no-frozen-lockfile`
+- Runner: `services/outbox-worker/src/runner.ts`
+- Current deployment uses a small HTTP wrapper so Render can expose `/health` while the worker loop remains continuous.
 
 ## Database connection
 
-For a long-lived Render Node service, use the Supabase **Session pooler** connection string when IPv4 compatibility is needed. It is the port-5432 pooled connection that supports session features. Do not use the transaction pooler for this long-lived worker/API connection.
+Set only the server-side authoritative database variable:
 
-Set the same database URL in:
+```text
+AMAAL_DATABASE_URL=<Neon production connection string>
+```
 
-- `AMAAL_DATABASE_URL`
-- `SUPABASE_DB_URL` if a separate alias is needed by a caller
+The same secret is used by the API and worker. Do not point these services back to Supabase PostgreSQL. Do not expose the connection string to browser code.
 
-Never put a Supabase service-role/secret key in the browser.
+## Identity
 
+Supabase Auth remains the current production identity provider. The API validates the bearer token and derives the Amaal user identity/assurance level before loading authorization context.
 
-The GitHub ZIP-sync validation step generates and commits `pnpm-lock.yaml` before Render deploys the resulting commit. Render therefore uses the frozen lockfile and does not re-resolve the dependency graph during deployment.
+## Probes
 
-## API probes and routing
+- `GET /health`: process liveness only.
+- `GET /ready`: PostgreSQL readiness. A `200` means the authoritative database query succeeds.
+- `GET /api/health`: compatibility alias.
 
-Public liveness endpoint: `GET /health`. It is intentionally shallow and does not require authentication; Render should use this path for the service health check.
-
-Public readiness endpoint: `GET /ready`. It checks PostgreSQL connectivity and returns `200` when the API can reach the authoritative database, or `503` when the database check fails. This is for monitoring/deployment diagnostics and is not the same as the shallow Render liveness probe.
-
-Compatibility alias: `GET /api/health` maps to `/health`. The same `/api` boundary normalization applies to the implemented `/v1/*` routes, so both `/v1/...` and the documented `/api/v1/...` paths reach the same handlers.
-
-The API does not require authentication for unknown routes. Unknown public paths return `404`, while recognized ERP routes require authentication and then authorization. This prevents a typo such as `/ready` from being reported misleadingly as `AUTHENTICATION_REQUIRED`.
+The web dashboard now uses `/ready` rather than `/health` when determining whether the ERP is operational.

@@ -1185,3 +1185,44 @@ That is the exact stage at hand.
 ---
 
 **End of hand-off.**
+
+
+---
+
+# CURRENT IMPLEMENTATION ADDENDUM — 30 SEPTEMBER 2026
+
+This addendum supersedes the provider-specific statements above where they conflict with the current deployment. The original hand-off remains preserved for forensic/history purposes.
+
+## Database hosting changed
+
+The authoritative Amaal PostgreSQL database is now Neon:
+
+- Neon project: `icy-lake-57952361`
+- Production branch: `production` / `br-restless-king-b1zq6rf0`
+- Database: `neondb`
+- PostgreSQL: 18.6
+
+Render `amaal-api` and `amaal-worker` use the server-only `AMAAL_DATABASE_URL` pointed at Neon. Supabase PostgreSQL is no longer authoritative.
+
+## Identity remains Supabase Auth
+
+Supabase Auth remains the production identity/session/MFA provider because the current Neon Auth deployment does not yet satisfy the required privileged MFA path. This is an intentional split: **Neon = PostgreSQL, Supabase = identity**.
+
+## Current live infrastructure
+
+- `amaal-api` — Render Frankfurt — live
+- `amaal-worker` — Render Frankfurt — live
+- `amaal-valkey` — Render Frankfurt — existing; do not duplicate
+- Vercel — frontend target; deployment still pending account/project connection
+
+## Schema increment
+
+Neon production contains `public.audit_events.request_id` plus the request-correlation index. The versioned migration is `database/migrations/20260930_000017_audit_request_id.sql`.
+
+## Current readiness model
+
+`/health` is process liveness only. `/ready` is the database readiness endpoint. The Next.js dashboard now uses `/ready` when determining whether the ERP is operational.
+
+## Current continuation
+
+Use `AMAAL_CONTINUATION_2026-09-30.md` for the next implementation sequence.

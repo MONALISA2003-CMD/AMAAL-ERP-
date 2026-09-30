@@ -145,23 +145,13 @@ export function createApiServer() {
       if (publicHealthPaths.has(pathname)) {
         if (req.method !== 'GET') { json(res,405,{error:'METHOD_NOT_ALLOWED',message:'Health endpoints accept GET requests only.',requestId}); return; }
         if (pathname === '/health') { json(res,200,{ok:true,service:'amaal-api'}); return; }
-        const databaseReady = await checkDatabaseReadiness(services);
-        if (databaseReady.ok) {
-          json(res,200,{ok:true,ready:true,service:'amaal-api',checks:{database:'ok'}});
-          return;
+        try {
+          const databaseReady = await checkDatabaseReadiness(services);
+          if (databaseReady) { json(res,200,{ok:true,ready:true,service:'amaal-api',checks:{database:'ok'}}); return; }
+          json(res,503,{ok:false,ready:false,service:'amaal-api',checks:{database:'failed'},requestId}); return;
+        } catch {
+          json(res,503,{ok:false,ready:false,service:'amaal-api',checks:{database:'failed'},requestId}); return;
         }
-
-        // Intentionally log only non-secret connection diagnostics. Never log the
-        // connection string, password, host, username, or raw PostgreSQL error.
-        console.error(JSON.stringify({
-          event:'database_readiness_failed',
-          requestId,
-          errorCode:databaseReady.errorCode,
-          errorName:databaseReady.errorName,
-          errorClass:databaseReady.errorClass,
-        }));
-        json(res,503,{ok:false,ready:false,service:'amaal-api',checks:{database:'failed'},requestId});
-        return;
       }
       if (!isPotentialApiRoute(req.method, pathname)) { json(res,404,{error:'NOT_FOUND',requestId}); return; }
       const authorizationHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;

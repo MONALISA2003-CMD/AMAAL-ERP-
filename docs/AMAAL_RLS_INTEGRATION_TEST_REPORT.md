@@ -1,12 +1,12 @@
 # Amaal RLS Integration Test Report
 
-## Test approach
+## Test provenance
 
-The negative authorization matrix was executed against the live Supabase PostgreSQL project using temporary test identities and organization records inside a transaction that was rolled back after the assertions.
+The baseline negative/positive authorization matrix documented below was executed against the former live Supabase PostgreSQL provider using temporary identities and rollback fixtures. That report remains valid as historical evidence of the RLS/authorization design, but it should not be read as a claim that those exact live tests were rerun on Neon.
 
-No permanent employee, customer, product, IMEI or sale data was created.
+The current Neon production branch has the same 47-table / 47-policy authorization foundation, with permission mappings and authorization functions migrated and verified. A fresh full negative integration sweep against Neon remains a required gate before production readiness.
 
-## Passing cases
+## Passing historical cases
 
 | Case | Result |
 |---|---|
@@ -18,7 +18,7 @@ No permanent employee, customer, product, IMEI or sale data was created.
 | Authenticated client cannot DELETE inventory history | PASS |
 | Recovery Officer cannot UPDATE sales directly | PASS |
 
-## Positive cases
+## Positive historical cases
 
 | Case | Result |
 |---|---|
@@ -28,11 +28,9 @@ No permanent employee, customer, product, IMEI or sale data was created.
 | Regional Manager can see regional warehouse | PASS |
 | Admin can see company warehouse | PASS |
 
-## Enforcement layers
+## Current enforcement layers
 
-These tests complement the server-side authorization engine. They do not replace it.
-
-Amaal's required security model remains:
+The required security model remains:
 
 ```text
 Authentication
@@ -41,22 +39,23 @@ Server authorization
 ↓
 Business rules / record state
 ↓
-Database grants + RLS
+Neon PostgreSQL grants + RLS
 ↓
 Audit + outbox
 ```
 
-## Current live security state
+## Current Neon security baseline
 
 - 47 public tables
-- 47/47 public tables with RLS enabled
-- Supabase security advisor: 0 findings
-- Authenticated direct table writes remain revoked for the browser-facing database role
-- Backend-only tables and state have explicit policies/grants
+- 47 RLS policies
+- permission matrix copied/verified
+- 159 role-permission mappings copied/verified
+- authenticated browser writes remain server-authoritative
+- production test fixture data cleaned up
 
 ## Next authorization test layers
 
-The live negative matrix is complete for the baseline hierarchy. The next integration suite should add:
+Run these against Neon with controlled identities/scopes:
 
 - CEO company-wide positive reads
 - scoped Admin profiles

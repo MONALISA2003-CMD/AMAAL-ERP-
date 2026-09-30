@@ -31,3 +31,19 @@ export async function publicHealth(): Promise<{ ok: boolean; service: string }> 
   if (!response.ok) throw new Error(`API health check failed with ${response.status}.`);
   return response.json();
 }
+
+export type ApiReadiness = {
+  ok: boolean;
+  ready: boolean;
+  service: string;
+  checks: {
+    database: 'ok' | 'failed';
+  };
+};
+
+export async function publicReady(): Promise<ApiReadiness> {
+  const response = await fetch(`${apiBase()}/ready`, { cache: 'no-store' });
+  const payload = (await response.json()) as ApiReadiness;
+  if (!response.ok && !payload) throw new Error(`API readiness check failed with ${response.status}.`);
+  return payload;
+}

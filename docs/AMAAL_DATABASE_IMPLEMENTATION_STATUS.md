@@ -1,34 +1,38 @@
 # Amaal Database Implementation Status
 
-## Completed
+**Updated:** 30 September 2026
 
-- PostgreSQL core schema applied to Supabase.
-- 47 public tables created, including transactional, approval, payment-reversal, idempotency, realtime and read-model tables.
-- Core enums, constraints and indexes created.
-- Organization/role/permission foundation seeded.
-- RLS enabled on all 47 public tables.
-- Anonymous table privileges revoked.
-- Authenticated table writes revoked; server-side domain services own authoritative writes.
-- Security advisor is clean.
-- Payment reversal, idempotency, recovery lineage, realtime event and read-model tables have explicit client policies consistent with the server-authoritative write boundary.
-- Recovery lineage links inventory movements to recovery cases and enforces one active recovery case per IMEI.
-- Realtime events are included in the Supabase realtime publication.
-- Master Amaal organization and Master Warehouse bootstrap records created.
-- Recovery states aligned with the approved handoff vocabulary.
-- Supabase Auth MFA remains the identity factor provider; server-side AAL is checked for privileged operations.
-- Supabase Auth MFA remains the identity factor provider; server-side AAL is checked for privileged operations.
+## Current provider
 
-## Current performance status
+**Neon PostgreSQL is the authoritative production database.** Supabase PostgreSQL is historical/legacy from the earlier infrastructure phase and is no longer the Amaal source of transactional truth.
 
-The database performance advisor reports informational unused-index notices because the database has not yet carried realistic operational traffic. No unindexed-FK or duplicate-index issue remains after the latest hardening.
+## Verified baseline
 
-## Next
+- Neon project: `icy-lake-57952361`
+- Production branch: `production` (`br-restless-king-b1zq6rf0`)
+- Database: `neondb`
+- PostgreSQL: 18.6
+- Public tables: 47
+- RLS policies: 47
+- Enums: 16
+- Private auth/authorization functions: 8
+- Amaal organization + Master Warehouse foundation present
+- Profiles: 0 after controlled test cleanup
+- Role assignments: 0 after controlled test cleanup
+- Synthetic worker smoke records: cleaned up
 
-- Positive authenticated integration tests using controlled role/scope identities.
-- Full lifecycle integration tests for inventory return, adjustment, write-off and recovery.
-- Commission/bonus and loan/receivable policy execution after policy freeze.
-- Realtime reconnect/reconciliation tests under representative workloads.
+## Completed migration hardening
 
-## Infrastructure gate
+`20260930_000017_audit_request_id.sql` is applied to Neon production. It preserves request correlation on `audit_events` and supports audit/outbox tracing from the transactional service layer.
 
-Vercel and Render provisioning is the next infrastructure stage, after the API and worker pass the representative integration gate.
+## Authentication
+
+Supabase Auth remains the production identity provider. The API requires authenticated bearer tokens, loads Amaal authorization context, and requires AAL2 for CEO/Admin privileged operations.
+
+## Current next work
+
+- authenticated positive integration tests against controlled identities/scopes
+- allocation and cash-sale HTTP integration coverage
+- full worker/reconciliation verification
+- production Vercel deployment and browser verification
+- governed Jarvis implementation after deterministic ERP paths are proven

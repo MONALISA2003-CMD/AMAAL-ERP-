@@ -2,14 +2,14 @@
 
 Authenticated Next.js App Router client for the closed Amaal ERP.
 
-The browser uses Supabase Auth for identity/session handling but never becomes the authority for business state or permissions. Operational mutations go to the Amaal API with the current access token, where authentication and authorization are re-evaluated.
+The browser uses Supabase Auth for identity/session handling, then calls the Render API with the current access token. The browser never becomes the authority for business state, permissions or database writes.
 
-The current client deliberately avoids fabricated dashboard metrics. It shows the real authenticated identity and backend health while domain-specific screens are added against authoritative API/read-model contracts.
+The dashboard uses `/ready` when it needs an operational readiness signal. `/health` remains a shallow liveness probe only.
 
 ## Required environment
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_AMAAL_API_URL=
+NEXT_PUBLIC_AMAAL_API_URL=https://amaal-api.onrender.com
 ```

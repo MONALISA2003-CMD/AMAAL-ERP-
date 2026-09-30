@@ -1,14 +1,16 @@
-# Database migrations
+# Amaal PostgreSQL migrations
 
-The repository tracks the live Supabase migration sequence.
+These migrations define the authoritative Amaal PostgreSQL schema.
 
-1. `20260928_000001_core_foundation.sql`
-2. `20260928_000002_harden_trigger_function.sql`
-3. `20260928_000003_rls_foundation.sql`
-4. `20260928_000004_grants_hardening.sql`
-5. `20260928_000005_performance_hardening.sql`
-6. `20260928_000006_seed_amaal_foundation.sql`
+## Current provider
 
-The connected project currently has the corresponding live migration history plus the non-sensitive Amaal bootstrap.
+Production is hosted on **Neon PostgreSQL**, database `neondb`, production branch `production` in project `icy-lake-57952361`.
 
-Do not edit production schema manually. Future changes belong in new migrations and should be verified with Supabase security/performance advisors before release.
+Historical references to Supabase PostgreSQL in archived snapshots remain for traceability only. They are not instructions for the current deployment.
+
+## Migration discipline
+
+- Every production schema change must exist as a migration file.
+- Apply/test schema changes against an isolated Neon branch before production where possible.
+- Preserve RLS, constraints, state-transition rules and transactional integrity.
+- Keep migrations idempotent where the database supports safe `if not exists` guards.

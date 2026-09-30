@@ -15,9 +15,9 @@ Amaal is a closed, single-company internal ERP and intelligent operations platfo
 
 ### Important hosting decision
 
-Neon PostgreSQL is the production database of record. Supabase PostgreSQL is retired from the Amaal transactional path. The server connects to Neon through the server-only `AMAAL_DATABASE_URL`.
+Neon PostgreSQL is now the production database of record. Supabase PostgreSQL is no longer the Amaal source of transactional truth. The application connects to Neon through `AMAAL_DATABASE_URL`.
 
-Supabase remains only for the current identity/session/MFA path through `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and `AMAAL_AUTH_PROVIDER=supabase`. Do not add Supabase PostgreSQL back as a second source of truth. The transactional schema, audit trail, outbox, read models, and business writes live in Neon.
+Supabase remains in the architecture only where it is explicitly used for identity/MFA and currently approved supporting capabilities. The database, audit trail, outbox, read models and transactional writes live in Neon.
 
 ## Source of truth
 
@@ -30,15 +30,18 @@ The system is database-first, authorization-first and transaction-first. Do not 
 ## Current build status
 
 - Neon production branch is populated from the validated Amaal schema: 47 public tables, 47 RLS policies and the Amaal foundation records.
-- Render API is live at `https://amaal-api.onrender.com`.
-- Render worker `amaal-worker` is live and processes the transactional outbox/read-model path.
+- Render API deployment is currently in **recovery** because GitHub commit `44ca63b` omitted the API source tree; the last known-good deployment was live before that commit.
+- Render worker source/runtime remains intact, but the recovery package must be synchronized before treating the platform as healthy.
 - Render Valkey `amaal-valkey` is provisioned and non-authoritative.
 - The web client is an authenticated Next.js App Router client using Supabase Auth tokens and the Render API.
 - The dashboard uses `/ready` for the authoritative database-readiness signal rather than treating `/health` as proof of database availability.
 - A small schema-alignment migration (`20260930_000017_audit_request_id.sql`) is applied to Neon production and is versioned in the repository.
-- Render environment migration is now aligned: `AMAAL_DATABASE_URL` points to Neon on both API and worker; the obsolete `SUPABASE_DB_URL` has been neutralized; Supabase Auth variables remain intentionally active.
 - The 30 September documentation/client cleanup is prepared in the current repository snapshot; see `AMAAL_CONTINUATION_2026-09-30.md` for validation and deployment state.
 
-## Active engineering gate
+## Current recovery gate
 
-The next production gates are authenticated end-to-end transaction tests, worker/reconciliation verification, production Vercel connection, and then governed Jarvis integration. See `AMAAL_CONTINUATION_2026-09-30.md`.
+The latest Render failure is caused by GitHub commit `44ca63b` containing an incomplete repository tree: the deployment expects `services/api/src/http.ts`, but that file is absent from the commit. The Neon database migration is not the failure. A complete repository recovery package is prepared from the last known-good full source snapshot, and the ZIP-sync workflow has been hardened to reject incomplete/documentation-only packages before replacement.
+
+The immediate gate is to synchronize that complete source tree to GitHub, let Render redeploy, then verify `/health`, `/ready`, worker startup and authenticated API behavior. Vercel remains intentionally after this recovery gate.
+
+See `AMAAL_CONTINUATION_2026-09-30.md` for the exact recovery checkpoint.

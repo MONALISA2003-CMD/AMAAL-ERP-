@@ -1,5 +1,7 @@
 # AMAAL ERP — CONTINUATION
 
+> **Current correction checkpoint — 30 September 2026:** Render's latest GitHub deployment failed because commit `44ca63b` is a documentation-only repository shape and does not contain the required API/worker source files. The underlying provider migration is not the cause of this failure. A full repository recovery package has been prepared from the last known-good source snapshot, and the ZIP-sync workflow has been hardened so incomplete ZIPs are rejected before repository replacement.
+
 **Date:** 30 September 2026  
 **Purpose:** Current implementation checkpoint after the PostgreSQL provider migration
 
@@ -63,37 +65,15 @@ database/migrations/20260930_000017_audit_request_id.sql
 
 ### API
 
-`amaal-api` is live in Frankfurt at `https://amaal-api.onrender.com`. It is configured to use Neon PostgreSQL through the server-only `AMAAL_DATABASE_URL`.
+The Render service is configured for Neon PostgreSQL, but the newest GitHub commit `44ca63b` omitted `services/api/src/http.ts`, so the current deployment is failing with `MODULE_NOT_FOUND`. The previous deployment was live after the Neon environment migration.
 
 ### Worker
 
-`amaal-worker` is live in Frankfurt at `https://amaal-worker.onrender.com`. It runs the outbox worker loop and exposes a small `/health` endpoint through the Render web-service wrapper.
+The worker service was successfully live after the Neon environment migration. Its source remains in the recovery package. Re-verify live status after the repository is restored.
 
 ### Valkey
 
 `amaal-valkey` already exists in Frankfurt. Do not create another instance.
-
-## 5A. Render environment contract — current
-
-The production provider split is explicit:
-
-```text
-PostgreSQL / transactions:
-  AMAAL_DATABASE_URL -> Neon PostgreSQL (`neondb`)
-
-Identity / sessions / MFA:
-  AMAAL_AUTH_PROVIDER=supabase
-  SUPABASE_URL=<Supabase project URL>
-  SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
-
-Neon Auth migration staging:
-  NEON_AUTH_BASE_URL=<staged Neon Auth URL>
-  NEON_AUTH_JWKS_URL=<staged Neon Auth JWKS URL>
-```
-
-`SUPABASE_DB_URL` is obsolete and has been neutralized in Render. It must not be reintroduced.
-
-Do not delete the active Supabase Auth variables until the application is deliberately migrated to a replacement identity provider with equivalent privileged MFA assurance.
 
 ## 6. Web implementation checkpoint
 
@@ -136,10 +116,32 @@ The implementation and isolated Neon transaction path have been verified, but a 
 - Always update `README.md` and this continuation file when the architecture or deployment state changes materially.
 
 
-## 11. Deployment state of this increment
+## 11. Deployment/recovery state — 30 September 2026
 
-The implementation changes in this checkpoint were prepared and validated with repository/workspace checks plus TypeScript/TSX transpile checks. The full dependency install timed out in the current container, so a complete monorepo typecheck/test run is still pending.
+- Render API service `amaal-api` is currently affected by a bad GitHub repository commit (`44ca63b`) that removed the `services/api/src/http.ts` source path.
+- Render's failure is therefore a **source-tree integrity failure**, not evidence that Neon PostgreSQL credentials are failing.
+- The previous Neon/Render environment migration completed successfully before this repository corruption: `AMAAL_DATABASE_URL` was pointed at Neon on both API and worker, and both services launched successfully after that change.
+- `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `AMAAL_AUTH_PROVIDER=supabase` remain intentionally active because Supabase Auth/MFA is still the current identity provider.
+- `SUPABASE_DB_URL` was neutralized and must not be used as a transactional database source.
+- A full source recovery package is being prepared from `amaal_repo_sync_2026-09-30.zip`, with the current migration/docs plus these fixes: dashboard readiness state correction, explicit auth-provider guard, deployment-shape validation, and a hardened ZIP-sync workflow.
+- The fixed repository must be synchronized to GitHub before Render can become healthy again.
+- After synchronization, verify in this order: Render deploy `LIVE` → `GET /health` 200 → `GET /ready` 200 with `checks.database=ok` → worker live → authenticated `/v1/me` → controlled transaction smoke tests.
 
-Render environment migration completed before Vercel setup: both `amaal-api` and `amaal-worker` now receive the Neon `AMAAL_DATABASE_URL`; `SUPABASE_DB_URL` was neutralized; Supabase Auth variables remain intentionally active. The resulting deploys were triggered automatically by Render.
+## 12. Repository integrity rule
 
-A Git push credential/CLI is not available in the current workspace, and the Vercel deployment connector is not currently exposing a project/team, so source publication to Vercel is **not claimed as deployed**. Do not proceed to Vercel environment setup until the Render provider split is confirmed healthy.
+A ZIP is never allowed to replace the repository unless it contains the complete deployment-critical tree, including:
+
+```text
+package.json
+pnpm-workspace.yaml
+apps/web/
+services/api/src/http.ts
+services/api/src/index.ts
+services/outbox-worker/src/runner.ts
+services/outbox-worker/src/index.ts
+packages/auth/src/server.ts
+packages/database/src/index.ts
+database/migrations/20260930_000017_audit_request_id.sql
+```
+
+The ZIP-sync workflow now validates these paths and a minimum repository file count before it deletes/replaces the existing working tree.

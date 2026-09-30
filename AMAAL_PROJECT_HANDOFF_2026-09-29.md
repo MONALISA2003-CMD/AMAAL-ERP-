@@ -1,3 +1,18 @@
+# 30 SEPTEMBER 2026 CURRENT CORRECTION ADDENDUM
+
+This addendum supersedes infrastructure/deployment statements below where they conflict with the current state. The original 29 September hand-off remains preserved as historical traceability.
+
+- **Authoritative database:** Neon PostgreSQL project `icy-lake-57952361`, production branch `br-restless-king-b1zq6rf0`, database `neondb`.
+- **Identity/MFA:** Supabase Auth remains the current production identity provider; `AMAAL_AUTH_PROVIDER=supabase` is intentional until a replacement supports the required privileged MFA assurance path.
+- **Render:** `amaal-api` and `amaal-worker` were successfully redeployed after the Neon environment migration, but the newest GitHub commit `44ca63b` is an incomplete source tree and currently causes the API deploy to fail with `MODULE_NOT_FOUND` for `services/api/src/http.ts`.
+- **Root cause:** repository synchronization accepted an incomplete ZIP. The ZIP-sync workflow has now been hardened to require deployment-critical source files before replacement.
+- **Recovery source:** use the complete repository recovery package prepared from the last known-good full source snapshot; do not use the documentation-only package that produced commit `44ca63b`.
+- **Next verification order:** Render deploy LIVE → `/health` 200 → `/ready` 200/database ok → worker live → authenticated `/v1/me` → controlled transaction tests → Vercel.
+
+Never treat the old Supabase PostgreSQL connection details in the historical sections below as the current database configuration.
+
+---
+
 # AMAAL ERP — COMPLETE PROJECT HAND-OFF
 
 **Handoff date:** 29 September 2026  
@@ -419,7 +434,7 @@ Jarvis must never have unrestricted SQL authority.
 
 # 13. INFRASTRUCTURE DECISION
 
-Current production topology (updated 30 Sep 2026):
+Current intended topology:
 
 ```text
 Vercel
@@ -430,14 +445,11 @@ Render
 ├── amaal-worker     → outbox/read-model worker (NOT YET VERIFIED AS CREATED)
 └── amaal-valkey     → cache/queue/coordination/temp state
 
-Neon
-└── PostgreSQL       → authoritative transactional DB
-
 Supabase
-├── Auth             → identity / sessions / MFA (current)
-└── Storage          → only approved supporting/private-file workflows
-
-Supabase PostgreSQL and Supabase Realtime are no longer part of the authoritative transaction/event path.
+├── PostgreSQL       → authoritative transactional DB
+├── Auth             → identity / MFA
+├── Storage          → authoritative object storage
+└── Realtime         → realtime delivery
 
 OpenAI
 └── Jarvis intelligence layer (future integration stage)
@@ -455,9 +467,7 @@ Future AWS migration path, when scale requires it, is documented in the approved
 
 ---
 
-# 14. HISTORICAL SUPABASE STATE — VERIFIED 29 SEP 2026
-
-> Historical reference only. Supabase PostgreSQL is no longer authoritative. See Section 16 for the current provider topology.
+# 14. LIVE SUPABASE STATE — VERIFIED 29 SEP 2026
 
 **Project:** `AMAAL ERP`  
 **Project ref:** `kwaggfdjdgcjzizhmvbd`  
@@ -533,23 +543,6 @@ The current migration directory contains:
 The migration design includes RLS, idempotency, recovery lineage, realtime events, read models, commission adjustment lineage, consumer dedupe and relevant FK/operational indexes.
 
 ---
-
-# 16. CURRENT PROVIDER MIGRATION STATUS — 30 SEP 2026
-
-The original hand-off described Supabase PostgreSQL as authoritative. That is now historical information and is superseded by the implemented provider migration.
-
-Current production topology:
-
-```text
-Render amaal-api      -> Neon PostgreSQL (`AMAAL_DATABASE_URL`)
-Render amaal-worker   -> Neon PostgreSQL (`AMAAL_DATABASE_URL`)
-Render Valkey         -> transient coordination/cache
-Supabase Auth         -> identity/session/MFA only
-```
-
-The Neon production branch is the authoritative transactional database. The live Neon schema contains 47 public tables and 47 RLS policies. The current API/worker environment migration has been triggered on Render.
-
-The old Supabase PostgreSQL forensic sections below are retained as historical evidence of the migration decision and must not be followed as current infrastructure instructions.
 
 # 16. LIVE RENDER STATE — OPERATOR VERIFIED
 
@@ -637,7 +630,7 @@ This is the **only current production health/readiness fault**.
 
 ---
 
-# 18. HISTORICAL SUPABASE DATABASE-CONNECTION FORENSICS — RETAINED FOR MIGRATION EVIDENCE
+# 18. DEFINITIVE CURRENT DATABASE-CONNECTION FORENSICS
 
 The `/ready` endpoint intentionally executes a PostgreSQL connectivity check through the server-side PostgreSQL pool.
 
@@ -686,7 +679,7 @@ Do not store the password in the repository or this hand-off.
 
 ### Connection target
 
-The former Render-to-Supabase route (historical) was:
+The intended Render-to-Supabase route is:
 
 ```text
 Supabase Shared Pooler
@@ -706,35 +699,27 @@ The next engineer should obtain/inspect the live Render environment value only t
 
 ---
 
-# 19. IMPORTANT CONFIGURATION VARIABLES — CURRENT STATE
+# 19. IMPORTANT CONFIGURATION VARIABLES
 
-Server-side Render variables used/expected now:
+Server-side Render variables used/expected:
 
 ```text
 AMAAL_API_AUTOSTART=true
 AMAAL_DB_POOL_MAX=5
-AMAAL_DATABASE_URL=<Neon PostgreSQL connection string; secret>
+SUPABASE_URL=https://kwaggfdjdgcjzizhmvbd.supabase.co
+SUPABASE_PUBLISHABLE_KEY=<secret/non-secret according to Supabase dashboard classification>
+AMAAL_DATABASE_URL=<Session Pooler connection string; secret>
+SUPABASE_DB_URL=<same DB connection string if retained; secret>
 REDIS_URL=<internal Render Valkey URL; secret>
-
-AMAAL_AUTH_PROVIDER=supabase
-SUPABASE_URL=<Supabase Auth project URL>
-SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
-
-NEON_AUTH_BASE_URL=<staged Neon Auth URL>
-NEON_AUTH_JWKS_URL=<staged Neon Auth JWKS URL>
 ```
 
 Do not commit secret values.
 
-The authoritative PostgreSQL connection variable is:
+The API's authoritative PostgreSQL connection variable is:
 
 ```text
-AMAAL_DATABASE_URL -> Neon PostgreSQL
+AMAAL_DATABASE_URL
 ```
-
-`SUPABASE_DB_URL` is obsolete and has been neutralized. It must not be used or reintroduced.
-
-Important: Supabase Auth remains active because it currently provides the production identity/session path and privileged MFA assurance. This does not make Supabase PostgreSQL authoritative.
 
 ---
 
@@ -886,7 +871,7 @@ authorization
 ↓
 business service
 ↓
-Neon PostgreSQL
+Supabase PostgreSQL
 ```
 
 ---
@@ -1042,11 +1027,13 @@ Do not:
 
 The recommended continuation order is:
 
-### Gate A — Completed: move Render PostgreSQL to Neon
+### Gate A — Fix Render → Supabase PostgreSQL readiness
 
-The PostgreSQL provider migration is complete. `amaal-api` and `amaal-worker` now use Neon through `AMAAL_DATABASE_URL`. The old `SUPABASE_DB_URL` is neutralized. Supabase remains only for Auth/MFA.
-
-Next readiness work is controlled authenticated integration testing against the live Neon-backed API.
+1. Inspect the exact live `AMAAL_DATABASE_URL` securely in Render.
+2. Correlate a fresh `/ready` attempt with Supavisor logs.
+3. Confirm the actual PostgreSQL credential rejected by the pooler.
+4. Resolve credential/pooler state without exposing the secret.
+5. Re-test `/ready` until database check is `ok`.
 
 ### Gate B — Prove authenticated API
 
@@ -1141,7 +1128,7 @@ Before declaring production readiness, require:
 
 # 30. FINAL STATE SUMMARY
 
-### Healthy / established now
+### Healthy now
 
 ```text
 Repository        ✅
@@ -1149,18 +1136,21 @@ GitHub sync       ✅
 Render build      ✅
 Render process    ✅
 Render deployment ✅ LIVE
-Neon PostgreSQL   ✅ authoritative
-Neon schema       ✅ 47 tables
+/health           ✅
+/api/health       ✅
+Root routing      ✅ 404 as intended
+Supabase project  ✅ ACTIVE_HEALTHY
+Database schema   ✅ 47 tables
 RLS               ✅ 47 policies
+Security advisor  ✅ 0 findings
 Valkey            ✅ provisioned
-Supabase Auth     ✅ current identity/MFA provider
 ```
 
-### Not yet complete
+### Not yet healthy / complete
 
 ```text
-/ready            ⏳ verify after current Neon deploy completes
-Authenticated E2E  ⏳ pending
+/ready            ❌ PostgreSQL connection rejected
+Render → DB       ❌ unresolved credential/backend auth path
 Employee data     ⏳ not populated
 Product data      ⏳ not populated
 IMEI data         ⏳ not populated

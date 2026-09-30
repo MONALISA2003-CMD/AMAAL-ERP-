@@ -119,7 +119,7 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/me' || pathname === '/v1/me/scope')) return true;
+  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/me' || pathname === '/v1/me/scope')) return true;
   if (method === 'POST' && (pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals')) return true;
   if (method !== 'POST') return false;
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
@@ -147,6 +147,16 @@ export function createApiServer() {
     try {
       if(req.method==='OPTIONS'){ res.statusCode=204; res.end(); return; }
       const pathname = requestPath(req);
+      if (req.method === 'GET' && pathname === '/v1/auth/config') {
+        const supabaseUrl = process.env.SUPABASE_URL?.trim();
+        const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+        if (!supabaseUrl || !publishableKey) {
+          json(res, 503, { error: 'AUTH_CONFIG_UNAVAILABLE', message: 'Public authentication configuration is not available.', requestId });
+          return;
+        }
+        json(res, 200, { requestId, supabaseUrl, supabasePublishableKey: publishableKey });
+        return;
+      }
       const publicHealthPaths = new Set(['/health','/ready']);
       if (publicHealthPaths.has(pathname)) {
         if (req.method !== 'GET') { json(res,405,{error:'METHOD_NOT_ALLOWED',message:'Health endpoints accept GET requests only.',requestId}); return; }

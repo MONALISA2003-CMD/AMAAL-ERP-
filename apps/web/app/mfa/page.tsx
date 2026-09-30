@@ -30,7 +30,7 @@ export default function MfaPage() {
         const me = await apiFetch<Me>('/v1/me');
         if (!isPrivilegedRole(me.authorization.roles)) { router.replace('/dashboard'); return; }
         if (me.authenticatorAssuranceLevel === 'aal2') { router.replace('/dashboard'); return; }
-        const supabase = getSupabaseBrowserClient();
+        const supabase = await getSupabaseBrowserClient();
         const factors = await supabase.auth.mfa.listFactors();
         if (factors.error) throw factors.error;
         const verifiedTotp = factors.data.totp.find((factor) => factor.status === 'verified');
@@ -49,7 +49,7 @@ export default function MfaPage() {
   async function enroll() {
     setBusy(true); setError('');
     try {
-      const supabase = getSupabaseBrowserClient();
+      const supabase = await getSupabaseBrowserClient();
       const result = await supabase.auth.mfa.enroll({ factorType: 'totp' });
       if (result.error) throw result.error;
       setFactorId(result.data.id);
@@ -63,7 +63,7 @@ export default function MfaPage() {
     event.preventDefault();
     setBusy(true); setError('');
     try {
-      const supabase = getSupabaseBrowserClient();
+      const supabase = await getSupabaseBrowserClient();
       let activeChallengeId = challengeId;
       if (!activeChallengeId) {
         const challenge = await supabase.auth.mfa.challenge({ factorId });

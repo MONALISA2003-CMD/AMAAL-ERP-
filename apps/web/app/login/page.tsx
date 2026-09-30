@@ -12,17 +12,22 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/dashboard');
-    });
+    void (async () => {
+      try {
+        const supabase = await getSupabaseBrowserClient();
+        const { data } = await supabase.auth.getSession();
+        if (data.session) router.replace('/dashboard');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Unable to load authentication.');
+      }
+    })();
   }, [router]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError('');
-    const supabase = getSupabaseBrowserClient();
+    const supabase = await getSupabaseBrowserClient();
     const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (result.error) {
       setError('Authentication failed. Verify your credentials and account status.');

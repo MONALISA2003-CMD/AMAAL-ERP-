@@ -9,11 +9,15 @@ export default function HomePage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    void supabase.auth.getSession().then(({ data }) => {
-      router.replace(data.session ? '/dashboard' : '/login');
-      setChecking(false);
-    });
+    void (async () => {
+      try {
+        const supabase = await getSupabaseBrowserClient();
+        const { data } = await supabase.auth.getSession();
+        router.replace(data.session ? '/dashboard' : '/login');
+      } finally {
+        setChecking(false);
+      }
+    })();
   }, [router]);
 
   return (

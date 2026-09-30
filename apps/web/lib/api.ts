@@ -7,7 +7,7 @@ function apiBase(): string {
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = await getSupabaseBrowserClient();
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error('Authentication session is required.');

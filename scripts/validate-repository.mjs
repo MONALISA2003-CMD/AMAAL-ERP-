@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const root = process.cwd();
@@ -31,6 +31,16 @@ const required = [
   'services/outbox-worker/src/index.ts',
   'database/migrations/20260930_000017_audit_request_id.sql'
 ];
+
+const packageManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+if (packageManifest.packageManager !== 'pnpm@12.7.0') {
+  console.error(`Invalid packageManager: expected pnpm@12.7.0, found ${packageManifest.packageManager ?? 'missing'}`);
+  process.exit(1);
+}
+if (packageManifest.devEngines?.packageManager?.name !== 'pnpm' || packageManifest.devEngines?.packageManager?.version !== '12.7.0') {
+  console.error('devEngines.packageManager must pin pnpm 12.7.0.');
+  process.exit(1);
+}
 
 const missing = required.filter((p) => !existsSync(join(root, p)));
 if (missing.length) {

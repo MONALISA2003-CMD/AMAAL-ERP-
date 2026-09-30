@@ -20,8 +20,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let active = true;
-    const supabase = getSupabaseBrowserClient();
     void (async () => {
+      const supabase = await getSupabaseBrowserClient();
       const session = await supabase.auth.getSession();
       if (!session.data.session) {
         router.replace('/login');
@@ -48,7 +48,8 @@ export default function DashboardPage() {
   }, [router]);
 
   async function signOut() {
-    await getSupabaseBrowserClient().auth.signOut();
+    const supabase = await getSupabaseBrowserClient();
+    await supabase.auth.signOut();
     router.replace('/login');
   }
 

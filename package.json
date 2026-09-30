@@ -22,5 +22,13 @@
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "type": "module",
-  "dependencies": {}
+  "dependencies": {},
+  "packageManager": "pnpm@12.7.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.7.0",
+      "onFail": "error"
+    }
+  }
 }

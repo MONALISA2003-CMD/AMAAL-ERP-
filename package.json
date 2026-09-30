@@ -5,11 +5,11 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "build": "turbo run build",
-    "check": "turbo run check",
-    "lint": "turbo run lint",
+    "build": "pnpm exec turbo run build",
+    "check": "pnpm exec turbo run check",
+    "lint": "pnpm exec turbo run lint",
     "test": "node scripts/run-tests.mjs",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "pnpm exec turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "render:api": "node --experimental-transform-types services/api/src/http.ts",

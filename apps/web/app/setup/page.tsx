@@ -16,7 +16,7 @@ type Draft = {
   regionalWarehouses: WarehouseDraft[];
 };
 
-const STORAGE_KEY = 'amaal.setup.draft.v1';
+const STORAGE_KEY = 'amaal.setup.draft.v2';
 
 const initialDraft: Draft = {
   ceoEmail: '',
@@ -37,8 +37,16 @@ function loadDraft(): Draft {
       ceoEmail: typeof parsed.ceoEmail === 'string' ? parsed.ceoEmail : '',
       ceoDisplayName: typeof parsed.ceoDisplayName === 'string' ? parsed.ceoDisplayName : '',
       ceoEmployeeNumber: typeof parsed.ceoEmployeeNumber === 'string' ? parsed.ceoEmployeeNumber : '',
-      regions: Array.isArray(parsed.regions) && parsed.regions.length ? parsed.regions : initialDraft.regions,
-      regionalWarehouses: Array.isArray(parsed.regionalWarehouses) ? parsed.regionalWarehouses : initialDraft.regionalWarehouses,
+      regions: Array.isArray(parsed.regions) && parsed.regions.length
+        ? parsed.regions.map((region) => ({ code: String(region?.code ?? ''), name: String(region?.name ?? '') }))
+        : initialDraft.regions,
+      regionalWarehouses: Array.isArray(parsed.regionalWarehouses)
+        ? parsed.regionalWarehouses.map((warehouse) => ({
+            code: String(warehouse?.code ?? ''),
+            name: String(warehouse?.name ?? ''),
+            regionCode: String(warehouse?.regionCode ?? ''),
+          }))
+        : initialDraft.regionalWarehouses,
     };
   } catch {
     return initialDraft;
@@ -85,7 +93,7 @@ export default function SetupPage() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safeDraft));
   }, [draft, complete]);
 
-  const regionOptions = useMemo(() => draft.regions.map((region) => region.code).filter(Boolean), [draft.regions]);
+  const regionOptions = useMemo(() => draft.regions.map((region) => normalizeCode(region.code)).filter(Boolean), [draft.regions]);
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -96,7 +104,14 @@ export default function SetupPage() {
     if (step === 2) {
       if (!draft.regions.length) return 'Add at least one operating region.';
       if (draft.regions.some((region) => !normalizeCode(region.code) || !region.name.trim())) return 'Complete every region before continuing.';
-      if (draft.regionalWarehouses.some((warehouse) => !normalizeCode(warehouse.code) || !warehouse.name.trim() || !regionOptions.includes(normalizeCode(warehouse.regionCode)))) {
+      const activeWarehouses = draft.regionalWarehouses.filter((warehouse) =>
+        normalizeCode(warehouse.code) || warehouse.name.trim() || normalizeCode(warehouse.regionCode),
+      );
+      if (activeWarehouses.some((warehouse) =>
+        !normalizeCode(warehouse.code) ||
+        !warehouse.name.trim() ||
+        !regionOptions.includes(normalizeCode(warehouse.regionCode)),
+      )) {
         return 'Complete every regional warehouse or remove it.';
       }
       const regionCodes = draft.regions.map((region) => normalizeCode(region.code));

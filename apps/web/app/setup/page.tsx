@@ -16,7 +16,7 @@ type Draft = {
   regionalWarehouses: WarehouseDraft[];
 };
 
-const STORAGE_KEY = 'amaal.setup.draft.v2';
+const STORAGE_KEY = 'amaal.setup.draft.v3';
 
 const initialDraft: Draft = {
   ceoEmail: '',
@@ -29,7 +29,9 @@ const initialDraft: Draft = {
 function loadDraft(): Draft {
   if (typeof window === 'undefined') return initialDraft;
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? 'null') as Partial<Draft> | null;
+    const rawCurrent = window.localStorage.getItem(STORAGE_KEY);
+    const rawLegacy = window.localStorage.getItem('amaal.setup.draft.v2');
+    const parsed = JSON.parse(rawCurrent ?? rawLegacy ?? 'null') as Partial<Draft> | null;
     if (!parsed) return initialDraft;
     return {
       ...initialDraft,
@@ -55,6 +57,14 @@ function loadDraft(): Draft {
 
 function normalizeCode(value: string): string {
   return value.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+}
+
+function canonicalRegionCode(value: string, regions: RegionDraft[]): string {
+  const normalized = normalizeCode(value);
+  const match = regions.find((region) =>
+    normalizeCode(region.code) === normalized || normalizeCode(region.name) === normalized,
+  );
+  return match ? normalizeCode(match.code) : normalized;
 }
 
 export default function SetupPage() {
@@ -93,7 +103,9 @@ export default function SetupPage() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safeDraft));
   }, [draft, complete]);
 
-  const regionOptions = useMemo(() => draft.regions.map((region) => normalizeCode(region.code)).filter(Boolean), [draft.regions]);
+  const regionOptions = useMemo(() => draft.regions
+    .map((region) => ({ code: normalizeCode(region.code), name: region.name.trim() }))
+    .filter((region) => region.code), [draft.regions]);
 
   function updateDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -107,11 +119,12 @@ export default function SetupPage() {
       const activeWarehouses = draft.regionalWarehouses.filter((warehouse) =>
         normalizeCode(warehouse.code) || warehouse.name.trim() || normalizeCode(warehouse.regionCode),
       );
-      if (activeWarehouses.some((warehouse) =>
-        !normalizeCode(warehouse.code) ||
-        !warehouse.name.trim() ||
-        !regionOptions.includes(normalizeCode(warehouse.regionCode)),
-      )) {
+      if (activeWarehouses.some((warehouse) => {
+        const regionCode = canonicalRegionCode(warehouse.regionCode, draft.regions);
+        return !normalizeCode(warehouse.code) ||
+          !warehouse.name.trim() ||
+          !regionOptions.some((region) => region.code === regionCode);
+      })) {
         return 'Complete every regional warehouse or remove it.';
       }
       const regionCodes = draft.regions.map((region) => normalizeCode(region.code));
@@ -143,19 +156,20 @@ export default function SetupPage() {
 
   function removeRegion(index: number) {
     setDraft((current) => {
-      const removed = current.regions[index]?.code;
+      const removed = current.regions[index];
+      const removedCode = removed ? normalizeCode(removed.code) : '';
       return {
         ...current,
         regions: current.regions.filter((_, currentIndex) => currentIndex !== index),
-        regionalWarehouses: removed
-          ? current.regionalWarehouses.filter((warehouse) => warehouse.regionCode !== removed)
+        regionalWarehouses: removedCode
+          ? current.regionalWarehouses.filter((warehouse) => canonicalRegionCode(warehouse.regionCode, current.regions) !== removedCode)
           : current.regionalWarehouses,
       };
     });
   }
 
   function addWarehouse() {
-    const regionCode = regionOptions[0] ?? '';
+    const regionCode = regionOptions[0]?.code ?? '';
     const nextNumber = draft.regionalWarehouses.length + 1;
     updateDraft('regionalWarehouses', [...draft.regionalWarehouses, { code: `WH-${nextNumber}`, name: '', regionCode }]);
   }
@@ -177,11 +191,13 @@ export default function SetupPage() {
         ceoDisplayName: draft.ceoDisplayName.trim(),
         ...(draft.ceoEmployeeNumber.trim() ? { ceoEmployeeNumber: draft.ceoEmployeeNumber.trim() } : {}),
         regions: draft.regions.map((region) => ({ code: normalizeCode(region.code), name: region.name.trim() })),
-        regionalWarehouses: draft.regionalWarehouses.map((warehouse) => ({
-          code: normalizeCode(warehouse.code),
-          name: warehouse.name.trim(),
-          regionCode: normalizeCode(warehouse.regionCode),
-        })),
+        regionalWarehouses: draft.regionalWarehouses
+          .filter((warehouse) => normalizeCode(warehouse.code) || warehouse.name.trim() || warehouse.regionCode.trim())
+          .map((warehouse) => ({
+            code: normalizeCode(warehouse.code),
+            name: warehouse.name.trim(),
+            regionCode: canonicalRegionCode(warehouse.regionCode, draft.regions),
+          })),
       });
       if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
       setComplete(true);
@@ -213,7 +229,10 @@ export default function SetupPage() {
           </div>
           <div className="setup-next">
             <strong>Next</strong>
-            <p>Next, secure access will be prepared for your CEO account.</p>
+            <p>Create the CEO sign-in, confirm the activation code, and finish security setup.</p>
+          </div>
+          <div className="setup-actions">
+            <button type="button" className="setup-primary" onClick={() => router.replace('/signup')}>Create CEO access</button>
           </div>
         </section>
       </main>
@@ -273,7 +292,7 @@ export default function SetupPage() {
                   <input aria-label={`Warehouse ${index + 1} code`} value={warehouse.code} onChange={(e) => updateDraft('regionalWarehouses', draft.regionalWarehouses.map((item, current) => current === index ? { ...item, code: e.target.value } : item))} placeholder="Warehouse code" />
                   <input aria-label={`Warehouse ${index + 1} name`} value={warehouse.name} onChange={(e) => updateDraft('regionalWarehouses', draft.regionalWarehouses.map((item, current) => current === index ? { ...item, name: e.target.value } : item))} placeholder="Warehouse name" />
                   <select aria-label={`Warehouse ${index + 1} region`} value={warehouse.regionCode} onChange={(e) => updateDraft('regionalWarehouses', draft.regionalWarehouses.map((item, current) => current === index ? { ...item, regionCode: e.target.value } : item))}>
-                    {regionOptions.map((code) => <option key={code} value={code}>{code}</option>)}
+                    {regionOptions.map((region) => <option key={region.code} value={region.code}>{region.name || region.code}</option>)}
                   </select>
                   <button type="button" className="setup-remove" onClick={() => removeWarehouse(index)}>Remove</button>
                 </div>

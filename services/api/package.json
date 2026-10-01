@@ -1,0 +1,25 @@
+{
+  "name": "@amaal/api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@amaal/auth": "workspace:*",
+    "@amaal/database": "workspace:*",
+    "@amaal/permissions": "workspace:*",
+    "@amaal/sales": "workspace:*",
+    "@amaal/shared": "workspace:*",
+    "@amaal/approvals": "workspace:*",
+    "@amaal/finance": "workspace:*",
+    "@amaal/inventory": "workspace:*",
+    "@amaal/recovery": "workspace:*",
+    "@amaal/business-rules": "workspace:*",
+    "pg": "^8.16.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

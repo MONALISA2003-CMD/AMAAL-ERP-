@@ -1,0 +1,20 @@
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+dist/
+build/
+coverage/
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+*.log
+supabase/.temp/
+
+# Package-manager/runtime output
+node_modules/
+.next/
+dist/
+.turbo/

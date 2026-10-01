@@ -226,3 +226,17 @@ output:  .next
 The root repository remains pnpm/Turborepo for Render, workers, packages, and local monorepo development. This is a deployment-surface isolation change, not a database/provider architecture change.
 
 The Vercel app is pinned to Node 24.x because Vercel currently defaults new projects to Node 24.x and the repository's current Next.js/web dependencies are already tested against the Node 24 line in the deployment design.
+
+## Vercel correction — 1 October 2026 TypeScript build gate
+
+The npm-based Vercel install now succeeds and Next.js/Turbopack compilation completes. The next failure is TypeScript-only:
+
+- `apps/web/app/login/page.tsx`: input `event.target.value` was rejected because the web app inherited the root server-oriented TypeScript `lib` and did not explicitly include browser DOM libraries.
+- `apps/web/app/mfa/page.tsx`: same DOM event typing issue.
+- `apps/web/lib/api.ts`: TypeScript 6 types `Response.json()` as `unknown`, so the `/health` payload requires an explicit API-contract cast before returning it as the declared shape.
+
+Resolution:
+
+- `apps/web/tsconfig.json` now explicitly includes `ES2024`, `DOM`, and `DOM.Iterable`.
+- `publicHealth()` now explicitly narrows the `/health` JSON payload to `{ ok: boolean; service: string }`, matching `services/api/src/http.ts` and `docs/AMAAL_API_CONTRACT.md`.
+- No Render, Neon, Supabase Auth, or server-side package-manager architecture changes are introduced by this fix.

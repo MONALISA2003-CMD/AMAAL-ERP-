@@ -29,7 +29,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 export async function publicHealth(): Promise<{ ok: boolean; service: string }> {
   const response = await fetch(`${apiBase()}/health`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`API health check failed with ${response.status}.`);
-  return response.json();
+  const payload = (await response.json()) as { ok: boolean; service: string };
+  return payload;
 }
 
 export type ApiReadiness = {

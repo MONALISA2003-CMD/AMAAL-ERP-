@@ -190,7 +190,7 @@ export default function SetupPage() {
           <div className="setup-check">✓</div>
           <p className="setup-kicker">Amaal is ready</p>
           <h1>Your organization is set up.</h1>
-          <p className="setup-lead">The Amaal foundation is in place and ready for secure CEO account activation.</p>
+          <p className="setup-lead">The Amaal foundation is in place and ready for secure access.</p>
           <div className="setup-summary">
             <div><span>Company</span><strong>{status?.organization.name ?? 'Amaal'}</strong></div>
             <div><span>Regions</span><strong>{status?.regions.length ?? draft.regions.length}</strong></div>
@@ -198,7 +198,7 @@ export default function SetupPage() {
           </div>
           <div className="setup-next">
             <strong>Next</strong>
-            <p>Secure CEO account activation and privileged security are the next step.</p>
+            <p>Next, secure access will be prepared for your CEO account.</p>
           </div>
         </section>
       </main>
@@ -271,14 +271,14 @@ export default function SetupPage() {
           <section className="setup-section">
             <p className="setup-kicker">First leader</p>
             <h2>Define the CEO account</h2>
-            <p className="setup-lead">The CEO will become the first privileged identity when account activation is completed.</p>
+            <p className="setup-lead">The CEO will be the first person with full control of the Amaal workspace.</p>
             <div className="setup-form-grid">
               <label><span>CEO display name</span><input autoComplete="name" value={draft.ceoDisplayName} onChange={(e) => updateDraft('ceoDisplayName', e.target.value)} placeholder="Full name" /></label>
               <label><span>Work email</span><input autoComplete="email" inputMode="email" value={draft.ceoEmail} onChange={(e) => updateDraft('ceoEmail', e.target.value)} placeholder="name@company.com" /></label>
               <label><span>Employee number <em>optional</em></span><input value={draft.ceoEmployeeNumber} onChange={(e) => updateDraft('ceoEmployeeNumber', e.target.value)} placeholder="Optional" /></label>
               <label><span>Amaal activation code</span><input type="password" autoComplete="off" value={activationCode} onChange={(e) => setActivationCode(e.target.value)} placeholder="Enter activation code" /></label>
             </div>
-            <div className="setup-note">Your password is not collected or stored in this step. Secure account creation belongs to the next identity phase.</div>
+            <div className="setup-note">Your secure sign-in will be completed after the organization details are saved.</div>
           </section>
         ) : null}
 

@@ -15,7 +15,7 @@ export default function HomePage() {
         const status = await getSetupStatus();
         router.replace(status.stage === 'ACTIVATED' ? '/login' : '/setup');
       } catch {
-        setError('Amaal could not be opened right now. Please try again.');
+        setError('Amaal is taking a moment to load. Please try again.');
       }
     })();
   }, [router]);

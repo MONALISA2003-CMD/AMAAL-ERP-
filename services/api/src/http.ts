@@ -5,6 +5,7 @@ import { DomainError } from '@amaal/shared';
 import type { ImeiState } from '@amaal/business-rules';
 import { loadAuthorizationContext } from '@amaal/permissions';
 import type { ApprovalType } from '@amaal/approvals';
+import { SetupError } from './setup.ts';
 import {
   approveInventoryAllocation,
   cancelInventoryAllocation,
@@ -15,7 +16,6 @@ import {
   getAmaalSetupStatus,
   initializeAmaalOrganization,
   validateSetupInitializeInput,
-  SetupError,
   decideApproval,
   dispatchInventoryAllocation,
   receiveInventoryAllocation,

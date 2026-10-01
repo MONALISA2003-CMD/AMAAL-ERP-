@@ -21,7 +21,8 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await authClient.getJWTToken?.();
+  const tokenResponse = await authClient.token();
+  const token = tokenResponse.data?.token ?? null;
   if (!token) throw new Error('A secure session is required.');
 
   const mfaAssertion = getMfaAssertion();

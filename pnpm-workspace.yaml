@@ -3,3 +3,7 @@ packages:
   - packages/*
   - services/*
   - workers/*
+
+# pnpm v11 security default: explicitly allow the one install script required by the workspace.
+allowBuilds:
+  core-js: true

@@ -137,9 +137,19 @@ export function createApiServer() {
   const server = createServer(async (req,res) => {
     const requestId=req.headers['x-request-id']?.toString()||randomUUID();
     res.setHeader('x-request-id',requestId);
-    const allowedOrigin = process.env.AMAAL_WEB_ORIGIN?.trim();
-    if (allowedOrigin) {
-      res.setHeader('access-control-allow-origin', allowedOrigin);
+    const configuredOrigins = (process.env.AMAAL_WEB_ORIGIN ?? '')
+      .split(',')
+      .map((origin) => origin.trim().replace(/\/$/, ''))
+      .filter(Boolean);
+    const allowedOrigins = new Set([
+      ...configuredOrigins,
+      // Canonical production Vercel alias. This prevents a stale preview URL
+      // in Render from breaking the browser CORS contract for production.
+      'https://amaal-erp.vercel.app',
+    ]);
+    const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin.replace(/\/$/, '') : '';
+    if (requestOrigin && allowedOrigins.has(requestOrigin)) {
+      res.setHeader('access-control-allow-origin', requestOrigin);
       res.setHeader('access-control-allow-headers', 'authorization,content-type,x-request-id,x-idempotency-key');
       res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
       res.setHeader('vary', 'Origin');

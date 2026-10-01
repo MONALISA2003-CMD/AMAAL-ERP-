@@ -33,3 +33,7 @@ AMAAL_WEB_ORIGIN=https://<your-vercel-origin>
 ```
 
 Use the Vercel URL from the browser address bar, keep `https://`, remove any path, and do not add a trailing slash.
+
+## First-run entrypoint
+
+`/` and `/setup` intentionally route to `/login` immediately. The browser does not block first-run navigation on the API. Supabase authentication configuration is loaded by the login screen itself.

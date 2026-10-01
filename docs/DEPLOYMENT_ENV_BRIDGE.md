@@ -34,6 +34,8 @@ AMAAL_WEB_ORIGIN=https://amaal-erp.vercel.app
 
 Replace the example with the real Vercel origin if the project uses a different Vercel URL.
 
+The API also accepts the canonical production Vercel alias `https://amaal-erp.vercel.app` so a stale preview origin in `AMAAL_WEB_ORIGIN` cannot break the production browser CORS path. Keep the variable set to the canonical production origin anyway.
+
 ## Render build command
 
 For the existing `amaal-api` and `amaal-worker` services use:

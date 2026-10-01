@@ -18,9 +18,19 @@ No Neon connection string, Valkey URL, Supabase service-role credential, or othe
 
 The browser obtains the public Supabase Auth URL and publishable key from the Render endpoint `/v1/auth/config`. These are public client configuration values, not database credentials.
 
-## Monorepo package manager
+## Build/package-manager boundary
 
-The repository uses pnpm 12.7.0. The root `package.json` explicitly declares `packageManager` and `devEngines.packageManager`. This prevents Vercel from falling back to Yarn when no lockfile is present.
+The repository root remains a pnpm 12.7.0 + Turborepo workspace for Render, workers, packages and local monorepo development. The Vercel frontend is deliberately isolated from that workspace install because `apps/web` has no runtime imports from the server-side workspace packages.
+
+Vercel builds `apps/web` directly with npm:
+
+```text
+install: npm install --no-audit --no-fund
+build:   npm run build
+output:  .next
+```
+
+This prevents a pnpm registry/client failure from blocking the standalone Next.js frontend.
 
 ## Development authentication
 

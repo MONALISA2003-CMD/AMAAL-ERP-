@@ -202,3 +202,27 @@ This permits email/password login for all roles during development/testing. Prod
 ### Remaining connection gate
 
 After the fixed source tree is deployed to Vercel, configure Render `AMAAL_WEB_ORIGIN` with the Vercel production origin so browser requests to `/v1/auth/config`, `/health`, `/ready` and authenticated API routes satisfy the API CORS boundary.
+
+## Vercel correction — 1 October 2026
+
+The first Vercel correction fixed workspace discovery, but the next deployment exposed a separate package-manager transport failure:
+
+```text
+ERR_PNPM_META_FETCH_FAIL
+Value of "this" must be of type URLSearchParams
+```
+
+The failure occurs while pnpm is fetching ordinary npm registry metadata and happens before the Next.js application build begins. The frontend application under `apps/web` has no imports from the server-side Amaal workspace packages, so it does not require a full monorepo install to build.
+
+The Vercel deployment path is therefore deliberately isolated from the monorepo package manager:
+
+```text
+Vercel Root Directory: apps/web (current)
+install: npm install --no-audit --no-fund
+build:   npm run build
+output:  .next
+```
+
+The root repository remains pnpm/Turborepo for Render, workers, packages, and local monorepo development. This is a deployment-surface isolation change, not a database/provider architecture change.
+
+The Vercel app is pinned to Node 24.x because Vercel currently defaults new projects to Node 24.x and the repository's current Next.js/web dependencies are already tested against the Node 24 line in the deployment design.

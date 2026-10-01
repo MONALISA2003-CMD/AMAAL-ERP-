@@ -46,3 +46,7 @@ The latest Render failure is caused by GitHub commit `44ca63b` containing an inc
 The immediate gate is to synchronize that complete source tree to GitHub, let Render redeploy, then verify `/health`, `/ready`, worker startup and authenticated API behavior. Vercel remains intentionally after this recovery gate.
 
 See `AMAAL_CONTINUATION_2026-09-30.md` for the exact recovery checkpoint.
+
+## Vercel deployment correction — 1 October 2026
+
+The Next.js frontend is deployed independently from the pnpm/Turborepo workspace install. Vercel installs and builds from `apps/web` with npm so a pnpm registry/client failure cannot block the web build. Render and the root monorepo continue to use pnpm/Turborepo.

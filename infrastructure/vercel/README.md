@@ -29,6 +29,15 @@ authorization + business service
 Neon PostgreSQL
 ```
 
-## Deployment gate
+## Deployment configuration
 
-The current session has not yet authenticated to a Vercel team/project, so no Vercel deployment is claimed. The repository is prepared for Vercel once the target project/account is available.
+The current Vercel project is `amaal-erp`, with `apps/web` as the web application boundary. The frontend is intentionally built independently from the root pnpm/Turborepo install:
+
+```text
+install: npm install --no-audit --no-fund
+build:   npm run build
+output:  .next
+Node:    24.x
+```
+
+This does not change the monorepo package manager used by Render or local development.

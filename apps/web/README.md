@@ -23,3 +23,13 @@ The browser calls the public Render endpoint `/v1/auth/config` to obtain the Sup
 ## Development MFA
 
 Development/test environments may set `AMAAL_MFA_ENFORCED=false` on Render so all roles can use email/password without the MFA screen. Production must re-enable server-side MFA enforcement before go-live.
+
+## Render → Vercel CORS
+
+The Render API must know the exact browser origin served by Vercel:
+
+```text
+AMAAL_WEB_ORIGIN=https://<your-vercel-origin>
+```
+
+Use the Vercel URL from the browser address bar, keep `https://`, remove any path, and do not add a trailing slash.

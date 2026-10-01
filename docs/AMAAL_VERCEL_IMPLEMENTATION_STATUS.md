@@ -39,3 +39,23 @@ This prevents a pnpm registry/client failure from blocking the standalone Next.j
 ## Render/Vercel boundary
 
 After the Vercel production URL exists, set Render `AMAAL_WEB_ORIGIN` to the exact Vercel origin. This enables the Render API's CORS response for the browser application.
+
+
+### Render → Vercel browser boundary
+
+Set this on the Render `amaal-api` service:
+
+```text
+AMAAL_WEB_ORIGIN=https://<your-vercel-origin>
+```
+
+Use the exact Vercel origin, including `https://` and without a trailing slash or path. The Vercel application uses the Render API through:
+
+```text
+NEXT_PUBLIC_AMAAL_API_URL=https://amaal-api.onrender.com
+```
+
+Do not put `AMAAL_WEB_ORIGIN` in Vercel and do not put backend secrets in `NEXT_PUBLIC_*` variables.
+
+
+See `docs/DEPLOYMENT_ENV_BRIDGE.md` for the exact Vercel ↔ Render variable names and Render build command.

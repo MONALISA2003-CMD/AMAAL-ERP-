@@ -57,7 +57,7 @@ Do not use `SUPABASE_DB_URL` as the Amaal database source of truth. Do not place
 API and worker use Node.js 24 and the pinned pnpm launcher:
 
 ```bash
-npx --yes pnpm@12.7.0 install --no-frozen-lockfile
+npx --yes pnpm@11.28.0 install --no-frozen-lockfile
 ```
 
 API start:

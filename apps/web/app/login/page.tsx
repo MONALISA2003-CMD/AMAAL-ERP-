@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase';
+import { BrandLogo } from '../../components/brand-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function LoginPage() {
     <main className="auth-shell">
       <section className="auth-panel">
         <div className="eyebrow">INTERNAL OPERATIONS PLATFORM</div>
-        <div className="brand-mark">AMAAL</div>
+        <BrandLogo variant="full" className="auth-logo" priority />
         <h1>Secure ERP access</h1>
         <p className="muted">Amaal is a closed company system. All operational activity is authenticated and authorized.</p>
         <form onSubmit={submit} className="auth-form">

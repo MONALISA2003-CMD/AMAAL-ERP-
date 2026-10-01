@@ -164,20 +164,13 @@ Missing devEngines.packageManager or legacy packageManager field in package.json
 
 ### Implemented fix
 
-The root repository now declares:
+The root repository declares:
 
 ```json
-"packageManager": "pnpm@12.7.0",
-"devEngines": {
-  "packageManager": {
-    "name": "pnpm",
-    "version": "12.7.0",
-    "onFail": "error"
-  }
-}
+"packageManager": "pnpm@12.7.0"
 ```
 
-This matches the package manager already used successfully by Render.
+The `devEngines.packageManager` gate was intentionally removed after Render/npm 11 rejected `npx pnpm` before the pnpm process could start. The monorepo package-manager pin remains 12.7.0 for local development and CI; Render uses an explicit 11.28.0 installer command to avoid the registry/client failure observed in the deployment environment.
 
 ### Vercel environment design
 
@@ -240,3 +233,24 @@ Resolution:
 - `apps/web/tsconfig.json` now explicitly includes `ES2024`, `DOM`, and `DOM.Iterable`.
 - `publicHealth()` now explicitly narrows the `/health` JSON payload to `{ ok: boolean; service: string }`, matching `services/api/src/http.ts` and `docs/AMAAL_API_CONTRACT.md`.
 - No Render, Neon, Supabase Auth, or server-side package-manager architecture changes are introduced by this fix.
+
+
+---
+## 10/01/2026 Render/Vercel deployment correction
+
+- Render was blocked by npm 11 enforcing the root `devEngines.packageManager` declaration while executing `npx pnpm`. The root `devEngines.packageManager` gate was removed; `packageManager` is now pinned to pnpm 11.28.0.
+- Render build documentation is aligned to pnpm 11.28.0.
+- Vercel remains intentionally isolated to `apps/web` and uses npm for the frontend build.
+- Render API CORS requires `AMAAL_WEB_ORIGIN` set to the exact Vercel origin.
+- Amaal brand assets are now the supplied original logo; the emblem is also the favicon/app icon.
+
+
+### Render build-command override
+
+For the existing Render API and worker services, use:
+
+```text
+npx --yes pnpm@11.28.0 install --no-frozen-lockfile
+```
+
+The repository itself remains pinned to pnpm 12.7.0; this is an infrastructure-specific installer workaround.

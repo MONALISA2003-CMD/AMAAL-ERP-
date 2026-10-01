@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, publicReady } from '../../lib/api';
 import { getSupabaseBrowserClient } from '../../lib/supabase';
+import { BrandLogo } from '../../components/brand-logo';
 
 type Me = {
   user: { id: string; email: string | null };
@@ -56,8 +57,8 @@ export default function DashboardPage() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <div className="brand-mark small">AMAAL</div>
+        <div className="topbar-brand">
+          <BrandLogo variant="full" className="topbar-full-logo" priority />
           <div className="topbar-subtitle">Intelligent Operations Platform</div>
         </div>
         <button className="ghost-button" onClick={signOut}>Sign out</button>

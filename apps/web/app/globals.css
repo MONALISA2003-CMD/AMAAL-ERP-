@@ -21,6 +21,12 @@ button { cursor: pointer; }
 .center-page { min-height: 100vh; display: grid; place-items: center; gap: 8px; align-content: center; }
 .brand-mark { font-size: 42px; letter-spacing: .22em; font-weight: 800; color: var(--navy); }
 .brand-mark.small { font-size: 24px; color: white; letter-spacing: .18em; }
+.brand-logo { display: block; object-fit: contain; }
+.splash-logo { width: min(300px, 72vw); height: auto; margin: 0 auto; }
+.auth-logo { width: min(250px, 70vw); height: auto; margin: 8px 0 2px; }
+.topbar-logo { width: 46px; height: 46px; }
+.topbar-full-logo { width: 108px; height: auto; flex: 0 0 auto; }
+.splash-error { max-width: 320px; text-align: center; margin: 0 auto; }
 
 .auth-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top right, rgba(200,169,90,.12), transparent 36%), var(--paper); }
 .auth-panel { width: min(460px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 38px; box-shadow: 0 24px 70px rgba(11,31,58,.10); }
@@ -38,6 +44,7 @@ button { cursor: pointer; }
 
 .app-shell { min-height: 100vh; }
 .topbar { height: 76px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; background: var(--navy-deep); color: white; }
+.topbar-brand { display: flex; align-items: center; gap: 12px; }
 .topbar-subtitle { color: rgba(255,255,255,.62); font-size: 11px; margin-top: 3px; }
 .ghost-button { border: 1px solid rgba(255,255,255,.18); background: transparent; color: white; border-radius: 10px; padding: 9px 13px; }
 .workspace { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: calc(100vh - 76px); }

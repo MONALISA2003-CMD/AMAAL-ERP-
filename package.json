@@ -23,12 +23,5 @@
   },
   "type": "module",
   "dependencies": {},
-  "packageManager": "pnpm@12.7.0",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.7.0",
-      "onFail": "error"
-    }
-  }
+  "packageManager": "pnpm@12.7.0"
 }

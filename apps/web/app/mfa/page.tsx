@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../lib/api';
 import { isPrivilegedRole } from '../../lib/privileged';
 import { getSupabaseBrowserClient } from '../../lib/supabase';
+import { BrandLogo } from '../../components/brand-logo';
 
 type Me = {
   authorization: { roles: string[] };
@@ -83,7 +84,7 @@ export default function MfaPage() {
     <main className="auth-shell">
       <section className="auth-panel">
         <div className="eyebrow">PRIVILEGED ACCESS CONTROL</div>
-        <div className="brand-mark">AMAAL</div>
+        <BrandLogo variant="full" className="auth-logo" priority />
         <h1>Multi-factor verification</h1>
         <p className="muted">CEO and Admin accounts require a verified second factor before ERP operations are available.</p>
         {mode === 'enroll' ? (

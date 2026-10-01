@@ -1241,3 +1241,24 @@ Neon production contains `public.audit_events.request_id` plus the request-corre
 ## Current continuation
 
 Use `AMAAL_CONTINUATION_2026-09-30.md` for the next implementation sequence.
+
+
+---
+## 10/01/2026 Render/Vercel deployment correction
+
+- Render was blocked by npm 11 enforcing the root `devEngines.packageManager` declaration while executing `npx pnpm`. The root `devEngines.packageManager` gate was removed; `packageManager` is now pinned to pnpm 11.28.0.
+- Render build documentation is aligned to pnpm 11.28.0.
+- Vercel remains intentionally isolated to `apps/web` and uses npm for the frontend build.
+- Render API CORS requires `AMAAL_WEB_ORIGIN` set to the exact Vercel origin.
+- Amaal brand assets are now the supplied original logo; the emblem is also the favicon/app icon.
+
+
+### Render build-command override
+
+For the existing Render API and worker services, use:
+
+```text
+npx --yes pnpm@11.28.0 install --no-frozen-lockfile
+```
+
+The repository itself remains pinned to pnpm 12.7.0; this is an infrastructure-specific installer workaround.

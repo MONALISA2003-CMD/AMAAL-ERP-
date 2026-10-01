@@ -11,7 +11,19 @@ function apiBase(): string {
 export async function getSupabaseBrowserClient(): Promise<SupabaseClient> {
   if (clientPromise) return clientPromise;
   clientPromise = (async () => {
-    const response = await fetch(`${apiBase()}/v1/auth/config`, { cache: 'no-store' });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 65000);
+    let response: Response;
+    try {
+      response = await fetch(`${apiBase()}/v1/auth/config`, { cache: 'no-store', signal: controller.signal });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('The Amaal API did not respond within 65 seconds. Confirm the Render API is live.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
     const payload = (await response.json()) as { supabaseUrl?: string; supabasePublishableKey?: string; message?: string };
     if (!response.ok || !payload.supabaseUrl || !payload.supabasePublishableKey) {
       throw new Error(payload.message || `Authentication configuration failed with ${response.status}.`);

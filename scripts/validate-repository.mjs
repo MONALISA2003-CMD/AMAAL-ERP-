@@ -37,8 +37,8 @@ if (packageManifest.packageManager !== 'pnpm@12.7.0') {
   console.error(`Invalid packageManager: expected pnpm@12.7.0, found ${packageManifest.packageManager ?? 'missing'}`);
   process.exit(1);
 }
-if (packageManifest.devEngines?.packageManager?.name !== 'pnpm' || packageManifest.devEngines?.packageManager?.version !== '12.7.0') {
-  console.error('devEngines.packageManager must pin pnpm 12.7.0.');
+if (packageManifest.devEngines?.packageManager) {
+  console.error('devEngines.packageManager must not be declared because Render invokes pnpm through npm/npx.');
   process.exit(1);
 }
 

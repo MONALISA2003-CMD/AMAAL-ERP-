@@ -103,3 +103,5 @@ export function decideApproval(services:ApiServices,requestId:string,actorUserId
 
 export { withIdempotency } from './idempotency.ts';
 export { createApiServer } from './http.ts';
+
+export { getAmaalSetupStatus, initializeAmaalOrganization, validateSetupInitializeInput } from './setup.ts';

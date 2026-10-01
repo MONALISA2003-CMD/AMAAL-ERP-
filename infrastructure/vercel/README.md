@@ -1,5 +1,8 @@
 # Vercel infrastructure status
 
+**Phase 0 supersession note (1 Oct 2026):** The current browser still uses the transitional Supabase Auth client, but this is not the target architecture. Phase 2 removes that dependency. Vercel remains presentation-only.
+
+
 ## Role
 
 Vercel is the presentation layer for the closed Amaal ERP:

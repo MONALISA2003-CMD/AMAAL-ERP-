@@ -50,3 +50,10 @@ See `AMAAL_CONTINUATION_2026-09-30.md` for the exact recovery checkpoint.
 ## Vercel deployment correction — 1 October 2026
 
 The Next.js frontend is deployed independently from the pnpm/Turborepo workspace install. Vercel installs and builds from `apps/web` with npm so a pnpm registry/client failure cannot block the web build. Render and the root monorepo continue to use pnpm/Turborepo.
+
+## Phase 0 — Foundation & Architecture Freeze
+
+Phase 0 is the current Amaal delivery gate. The approved specifications remain authoritative; Neon PostgreSQL is the transactional source of truth; Vercel is the frontend; Render is the application/API and worker boundary; Supabase is transitional/historical only.
+
+See `docs/AMAAL_WORK_PHASES.md` and `docs/phase0/AMAAL_PHASE0_FOUNDATION.md`.
+

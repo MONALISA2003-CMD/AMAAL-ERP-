@@ -1,6 +1,6 @@
 # Amaal Neon Live Status
 
-**Updated:** 30 September 2026
+**Updated:** 1 October 2026
 
 ## Project
 
@@ -46,3 +46,9 @@ Render API and worker use the server-only `AMAAL_DATABASE_URL` to connect to thi
 ## Cutover snapshot
 
 A cutover snapshot named `amaal-production-cutover-2026-09-30` was created as a recovery point during the migration and expires 14 October 2026.
+
+## Phase 0 verification
+
+The production Neon branch remains the authoritative Amaal transactional source. The live database contains the Amaal organization and Master Warehouse foundation with zero production profiles, role assignments, products, sales, audit events or outbox events at the start of the Phase 0 freeze.
+
+Neon Auth is provisioned on the production branch with Better Auth. It remains a staged identity target until the dedicated identity/migration phase completes the privileged MFA and browser cutover requirements.

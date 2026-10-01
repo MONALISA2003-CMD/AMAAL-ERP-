@@ -80,3 +80,10 @@ Jarvis must never receive unrestricted SQL authority.
 ## Cost controls
 
 Phase 1 intentionally does not introduce Kubernetes, Kafka, a separate graph/vector database, ClickHouse or a full AWS event estate.
+
+## Phase 0 target architecture
+
+The current production system is transitional. The target architecture is: Vercel for frontend experience, Render for API/workers/auth boundary, Neon PostgreSQL for authoritative business truth and identity data, and Valkey for transient state. Supabase is not a target transactional or identity dependency.
+
+The remaining Supabase Auth dependency is intentionally left in place until Phase 2 completes the identity cutover. This is a migration state, not a competing source of truth.
+

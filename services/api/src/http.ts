@@ -12,6 +12,10 @@ import {
   createApiServices,
   createApprovalRequest,
   checkDatabaseReadiness,
+  getAmaalSetupStatus,
+  initializeAmaalOrganization,
+  validateSetupInitializeInput,
+  SetupError,
   decideApproval,
   dispatchInventoryAllocation,
   receiveInventoryAllocation,
@@ -119,8 +123,8 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/me' || pathname === '/v1/me/scope')) return true;
-  if (method === 'POST' && (pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals')) return true;
+  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope')) return true;
+  if (method === 'POST' && (pathname === '/v1/setup/initialize' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals')) return true;
   if (method !== 'POST') return false;
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
 }
@@ -157,6 +161,11 @@ export function createApiServer() {
     try {
       if(req.method==='OPTIONS'){ res.statusCode=204; res.end(); return; }
       const pathname = requestPath(req);
+      if (req.method === 'GET' && pathname === '/v1/setup/status') {
+        const status = await getAmaalSetupStatus(services);
+        json(res, 200, { requestId, ...status });
+        return;
+      }
       if (req.method === 'GET' && pathname === '/v1/auth/config') {
         const supabaseUrl = process.env.SUPABASE_URL?.trim();
         const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
@@ -180,6 +189,15 @@ export function createApiServer() {
         }
       }
       if (!isPotentialApiRoute(req.method, pathname)) { json(res,404,{error:'NOT_FOUND',requestId}); return; }
+
+      if (req.method === 'POST' && pathname === '/v1/setup/initialize') {
+        const body = await readJson(req);
+        const input = validateSetupInitializeInput(body);
+        const result = await initializeAmaalOrganization(services, requestId, input);
+        json(res, 201, { requestId, ...result });
+        return;
+      }
+
       const authorizationHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;
       const user = await authenticateBearerToken(authClient,authorizationHeader);
 
@@ -311,6 +329,7 @@ export function createApiServer() {
 
       json(res,404,{error:'NOT_FOUND',requestId});
     } catch(error) {
+      if(error instanceof SetupError){ json(res,error.status,{error:error.code,message:error.message,requestId}); return; }
       if(error instanceof AuthenticationError){ json(res,401,{error:'AUTHENTICATION_REQUIRED',message:error.message,requestId}); return; }
       if(error instanceof DomainError){ const status=domainStatus(error); json(res,status,{error:error.code,message:error.message,requestId}); return; }
       const message=error instanceof Error?error.message:'Internal server error.';

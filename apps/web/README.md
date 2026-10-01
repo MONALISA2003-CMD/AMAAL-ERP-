@@ -1,5 +1,8 @@
 # Amaal ERP Web Client
 
+**Phase 0 supersession note (1 Oct 2026):** The current web client still contains the transitional Supabase Auth browser adapter. This is scheduled for removal in Phase 2. The user-facing UI must remain implementation-note free.
+
+
 Authenticated Next.js App Router client for the closed Amaal ERP.
 
 The browser uses the Render API as its only public application endpoint. The Render API supplies the public Supabase Auth configuration needed by the browser, so the Vercel project only needs one environment variable. The browser never becomes the authority for business state, permissions or database writes.
@@ -18,7 +21,7 @@ Do not place `AMAAL_DATABASE_URL`, `REDIS_URL`, Supabase service-role credential
 
 ## Authentication configuration
 
-The browser calls the public Render endpoint `/v1/auth/config` to obtain the Supabase project URL and publishable key. These values are public client configuration and contain no database credentials.
+The browser uses the Render API as the public application boundary. Authentication remains transitional during Phase 1 and is replaced by the Neon-centered identity architecture in Phase 2.
 
 ## Development MFA
 
@@ -36,4 +39,4 @@ Use the Vercel URL from the browser address bar, keep `https://`, remove any pat
 
 ## First-run entrypoint
 
-`/` and `/setup` intentionally route to `/login` immediately. The browser does not block first-run navigation on the API. Supabase authentication configuration is loaded by the login screen itself.
+`/` and `/login` route to the real `/setup` experience until the Amaal organization foundation has been activated. The setup flow records organization structure and a pending CEO identity definition without storing credentials.

@@ -56,3 +56,7 @@ SUPABASE_SERVICE_ROLE_KEY
 REDIS_URL
 OPENAI_API_KEY
 ```
+
+## Phase 1 setup
+
+Render `amaal-api` requires a server-only `AMAAL_SETUP_KEY` while the Amaal organization setup is still at `NOT_STARTED`. This value must never be added to Vercel. After `/setup` reaches `ORGANIZATION_READY`, Phase 2 removes the bootstrap dependency during the final identity cutover.

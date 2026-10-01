@@ -1,5 +1,8 @@
 # Amaal Read Models and Realtime Architecture
 
+**Phase 0 supersession note (1 Oct 2026):** The outbox/reconciliation model remains authoritative. The named Supabase Realtime delivery hop is transitional only; Phase 4 replaces it with the Amaal outbox/worker realtime delivery path.
+
+
 ## Status
 
 Implemented in Phase 1 foundation. PostgreSQL remains authoritative.

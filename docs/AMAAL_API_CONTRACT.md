@@ -285,3 +285,18 @@ The initial API will not expose:
 - client-controlled current inventory state
 - client-controlled commission calculations
 - client-controlled aging values
+
+## 3.2 First-run organization setup
+
+During Phase 1, the following first-run routes are intentionally outside normal ERP authentication because no production identity exists yet:
+
+```text
+GET  /api/v1/setup/status
+POST /api/v1/setup/initialize
+```
+
+`GET /api/v1/setup/status` exposes only the minimum state required to render the first-run experience: setup stage, Amaal company identity, Master Warehouse readiness, configured Regions and the pending CEO definition.
+
+`POST /api/v1/setup/initialize` is protected by the server-only `AMAAL_SETUP_KEY`. It creates or confirms the Phase 1 organization foundation, records policy readiness without inventing business values, writes an audit event and publishes an outbox event. The backend uses a PostgreSQL transaction advisory lock and rejects subsequent initialization attempts.
+
+The route deliberately does **not** create a password or a legacy identity-provider user. CEO account activation belongs to Phase 2's final Neon-centered identity architecture.

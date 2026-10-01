@@ -1,5 +1,8 @@
 # Amaal Repository Blueprint
 
+**Phase 0 supersession note (1 Oct 2026):** The repository structure remains authoritative, but current provider boundaries are defined by `docs/phase0/AMAAL_PHASE0_FOUNDATION.md`. Historical Supabase-specific architecture statements in this blueprint are not target-state instructions.
+
+
 **Status:** Fresh repository baseline  
 **Repository:** `amaal-ERP`  
 **Purpose:** Define the repository boundaries before implementation begins.

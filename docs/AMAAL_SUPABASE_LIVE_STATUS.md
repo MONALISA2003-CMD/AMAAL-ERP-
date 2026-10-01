@@ -17,3 +17,7 @@ The former Supabase `AMAAL ERP` database had 47 public tables, 47 RLS-enabled pu
 ## Current replacement
 
 See `docs/AMAAL_NEON_LIVE_STATUS.md` for the authoritative database hosting record.
+
+## Phase 0 legacy inventory check — 1 October 2026
+
+Direct verification found: Auth users = 0; Storage objects = 0. There is therefore no current bulk identity/file dataset that must be copied during the Neon-centered cutover. Historical schema/security evidence remains archived for traceability.

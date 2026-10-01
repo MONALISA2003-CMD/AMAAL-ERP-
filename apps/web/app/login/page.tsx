@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase';
 import { BrandLogo } from '../../components/brand-logo';
+import { getSetupStatus } from '../../lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,11 +16,16 @@ export default function LoginPage() {
   useEffect(() => {
     void (async () => {
       try {
+        const setup = await getSetupStatus();
+        if (setup.stage !== 'ACTIVATED') {
+          router.replace('/setup');
+          return;
+        }
         const supabase = await getSupabaseBrowserClient();
         const { data } = await supabase.auth.getSession();
         if (data.session) router.replace('/dashboard');
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unable to load authentication.');
+        setError(e instanceof Error ? e.message : 'Unable to continue.');
       }
     })();
   }, [router]);
@@ -41,10 +47,10 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <div className="eyebrow">INTERNAL OPERATIONS PLATFORM</div>
+        <div className="eyebrow">Amaal</div>
         <BrandLogo variant="full" className="auth-logo" priority />
         <h1>Secure ERP access</h1>
-        <p className="muted">Amaal is a closed company system. All operational activity is authenticated and authorized.</p>
+        <p className="muted">Welcome back. Sign in to continue to your Amaal workspace.</p>
         <form onSubmit={submit} className="auth-form">
           <label>
             Work email
@@ -57,7 +63,7 @@ export default function LoginPage() {
           {error ? <p className="error-text" role="alert">{error}</p> : null}
           <button type="submit" disabled={busy}>{busy ? 'Authenticating…' : 'Sign in securely'}</button>
         </form>
-        <p className="microcopy">Core business permissions are re-checked by the Amaal API. The browser is never the authority.</p>
+        <p className="microcopy">Your access is protected by Amaal security controls.</p>
       </section>
     </main>
   );

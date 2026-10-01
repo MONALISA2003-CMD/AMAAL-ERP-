@@ -59,7 +59,7 @@ export default function DashboardPage() {
       <header className="topbar">
         <div className="topbar-brand">
           <BrandLogo variant="full" className="topbar-full-logo" priority />
-          <div className="topbar-subtitle">Intelligent Operations Platform</div>
+          <div className="topbar-subtitle">Operations</div>
         </div>
         <button className="ghost-button" onClick={signOut}>Sign out</button>
       </header>
@@ -84,18 +84,18 @@ export default function DashboardPage() {
             <div>
               <div className="eyebrow">COMMAND CENTER</div>
               <h1>Operational truth, at a glance.</h1>
-              <p className="muted">Metrics will appear only when sourced from the authoritative ERP records.</p>
+              <p className="muted">Your current Amaal activity and performance will appear here.</p>
             </div>
-            <div className={`status-pill ${api}`}>{api === 'ready' ? 'ERP ready' : api === 'degraded' ? 'ERP degraded' : 'Checking ERP'}</div>
+            <div className={`status-pill ${api}`}>{api === 'ready' ? 'Ready' : api === 'degraded' ? 'Needs attention' : 'Loading'}</div>
           </div>
 
-          {api === 'degraded' ? <div className="alert-card">The API is reachable, but the authoritative database readiness check is not healthy.</div> : null}
+          {api === 'degraded' ? <div className="alert-card">Some information is temporarily unavailable. Please try again shortly.</div> : null}
 
           {error ? <div className="alert-card">{error}</div> : null}
 
           <div className="grid two">
             <section className="card">
-              <div className="card-label">CURRENT IDENTITY</div>
+              <div className="card-label">YOUR ACCESS</div>
               <h2>{me?.user.email ?? 'Loading…'}</h2>
               <div className="chip-row">
                 {(me?.authorization.roles ?? []).map((role) => <span className="chip" key={role}>{role}</span>)}
@@ -107,26 +107,26 @@ export default function DashboardPage() {
               </div>
             </section>
             <section className="card emphasis">
-              <div className="card-label">SYSTEM PRINCIPLE</div>
-              <blockquote>“The ERP creates the truth. Events distribute the truth. Analytics explains the truth. ML predicts from the truth.”</blockquote>
-              <p className="muted">Jarvis reasons over authorized truth; it never becomes the truth source.</p>
+              <div className="card-label">AMAAL</div>
+              <blockquote>Everything you need to run the business, in one place.</blockquote>
+              <p className="muted">Keep an eye on stock, sales, recovery, approvals and team activity from your workspace.</p>
             </section>
           </div>
 
           <div className="grid three">
-            <section className="card module"><div className="module-icon">IMEI</div><h3>Inventory & custody</h3><p>IMEI state, holder, movement history, aging and controlled transfers.</p><span>Module foundation ready</span></section>
-            <section className="card module"><div className="module-icon">SALE</div><h3>Sales & finance</h3><p>Atomic sales, receipts, payment records, reversal and policy-driven commissions.</p><span>Transaction engine ready</span></section>
-            <section className="card module"><div className="module-icon">AI</div><h3>Jarvis intelligence</h3><p>Authorization-aware tools over current ERP truth, with approval boundaries.</p><span>Gateway foundation ready</span></section>
+            <section className="card module"><div className="module-icon">IMEI</div><h3>Inventory & custody</h3><p>IMEI state, holder, movement history, aging and controlled transfers.</p><span>Available</span></section>
+            <section className="card module"><div className="module-icon">SALE</div><h3>Sales & finance</h3><p>Atomic sales, receipts, payment records, reversal and policy-driven commissions.</p><span>Available</span></section>
+            <section className="card module"><div className="module-icon">AI</div><h3>Jarvis intelligence</h3><p>Authorization-aware tools over current ERP truth, with approval boundaries.</p><span>Available</span></section>
           </div>
 
           <section className="card roadmap-card">
-            <div className="card-label">LIVE BUILD STATUS</div>
+            <div className="card-label">YOUR WORKSPACE</div>
             <div className="roadmap">
-              <div className="roadmap-item done"><span>01</span><div><strong>Truth layer</strong><p>PostgreSQL, RLS, audit, IMEI ledger</p></div></div>
-              <div className="roadmap-item done"><span>02</span><div><strong>Transaction layer</strong><p>Sales, allocation, approvals, recovery, reversals</p></div></div>
-              <div className="roadmap-item done"><span>03</span><div><strong>Truth distribution</strong><p>Outbox, read models, scoped realtime</p></div></div>
-              <div className="roadmap-item current"><span>04</span><div><strong>ERP client</strong><p>Authenticated Next.js/PWA workflows</p></div></div>
-              <div className="roadmap-item"><span>05</span><div><strong>Infrastructure</strong><p>Render API/worker and Vercel production client</p></div></div>
+              <div className="roadmap-item done"><span>01</span><div><strong>Inventory</strong><p>Track devices, custody and movement.</p></div></div>
+              <div className="roadmap-item done"><span>02</span><div><strong>Sales</strong><p>Record sales, payments and receipts.</p></div></div>
+              <div className="roadmap-item current"><span>03</span><div><strong>Recovery</strong><p>Keep overdue devices moving toward resolution.</p></div></div>
+              <div className="roadmap-item"><span>04</span><div><strong>Approvals</strong><p>Review work that needs your attention.</p></div></div>
+              <div className="roadmap-item"><span>05</span><div><strong>Reports</strong><p>See performance and operational trends.</p></div></div>
             </div>
           </section>
         </section>

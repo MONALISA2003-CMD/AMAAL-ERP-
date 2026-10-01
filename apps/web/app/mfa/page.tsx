@@ -83,10 +83,10 @@ export default function MfaPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <div className="eyebrow">PRIVILEGED ACCESS CONTROL</div>
+        <div className="eyebrow">SECURE ACCESS</div>
         <BrandLogo variant="full" className="auth-logo" priority />
         <h1>Multi-factor verification</h1>
-        <p className="muted">CEO and Admin accounts require a verified second factor before ERP operations are available.</p>
+        <p className="muted">Add a second sign-in step to keep your Amaal account protected.</p>
         {mode === 'enroll' ? (
           <div className="mfa-stack">
             <p>Set up an authenticator app using Amaal’s TOTP enrollment.</p>
@@ -106,7 +106,7 @@ export default function MfaPage() {
         ) : null}
         {mode === 'done' ? <p className="muted">Verification complete.</p> : null}
         {error && mode === 'enroll' ? <p className="error-text" role="alert">{error}</p> : null}
-        <p className="microcopy">The API enforces this requirement independently of browser routing.</p>
+        <p className="microcopy">Your security settings protect privileged Amaal access.</p>
       </section>
     </main>
   );

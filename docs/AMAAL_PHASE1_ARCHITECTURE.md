@@ -1,5 +1,8 @@
 # Amaal Phase 1 Architecture
 
+**Phase 0 supersession note (1 Oct 2026):** This document is retained as the Phase 1 implementation baseline. Where its provider table says Supabase Auth/Storage/Realtime are current, the Phase 0 target/freeze in `docs/phase0/AMAAL_PHASE0_FOUNDATION.md` takes precedence. The remaining Supabase runtime dependency is transitional and is removed in the identity/event/storage cutover phases.
+
+
 **Status:** Current implementation baseline — updated 30 September 2026
 
 The three approved Amaal specifications remain the product/domain source of truth. This document records the currently implemented provider choices and boundaries.
@@ -62,3 +65,7 @@ The browser never connects directly to Neon.
 ## 6. Explicit non-goals
 
 Do not add unrestricted SQL to Jarvis, a second database, a duplicate Valkey instance, Kafka, Kubernetes or a separate vector/graph database during this phase.
+
+## Phase 1 implementation note — 1 October 2026
+
+The live Phase 1 setup boundary is now organization-first. `/setup` configures the Amaal company root, regions, optional regional warehouses and a pending CEO identity definition. It does not create a password or a legacy `auth.users`/`profiles` pair. This deliberately keeps Phase 1 independent from the transitional Supabase identity provider and leaves the final CEO activation to Phase 2's Neon-centered identity cutover.

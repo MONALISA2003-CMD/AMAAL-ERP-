@@ -64,5 +64,5 @@ Run these against Neon with controlled identities/scopes:
 - Team Leader team positives
 - Agent/Shop Owner own-stock positives
 - Recovery Officer assigned-case positives
-- Jarvis read-tool authorization for every documented boundary
+- Amaal AI read-tool authorization for every documented boundary
 - realtime event scope filtering

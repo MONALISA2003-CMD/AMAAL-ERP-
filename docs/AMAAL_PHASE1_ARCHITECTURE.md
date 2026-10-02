@@ -13,7 +13,7 @@ Amaal remains a closed, single-company ERP; authenticated; least-privilege; IMEI
 
 The governing principle is:
 
-> **The ERP creates the truth. Events distribute the truth. Analytics explains the truth. ML predicts from the truth. Jarvis reasons over authorized truth and orchestrates approved action.**
+> **The ERP creates the truth. Events distribute the truth. Analytics explains the truth. ML predicts from the truth. Amaal AI reasons over authorized truth and orchestrates approved action.**
 
 ## 2. Current platform
 
@@ -26,7 +26,7 @@ The governing principle is:
 | Database | **Neon PostgreSQL 18.6** | authoritative transactional state |
 | Identity | Supabase Auth | sessions and MFA assurance |
 | Storage | Supabase Storage where approved | private files/evidence |
-| AI | OpenAI | governed Jarvis intelligence |
+| AI | OpenAI | governed Amaal AI intelligence |
 
 ## 3. Production database
 
@@ -64,7 +64,7 @@ The browser never connects directly to Neon.
 
 ## 6. Explicit non-goals
 
-Do not add unrestricted SQL to Jarvis, a second database, a duplicate Valkey instance, Kafka, Kubernetes or a separate vector/graph database during this phase.
+Do not add unrestricted SQL to Amaal AI, a second database, a duplicate Valkey instance, Kafka, Kubernetes or a separate vector/graph database during this phase.
 
 ## Phase 1 implementation note — 1 October 2026
 

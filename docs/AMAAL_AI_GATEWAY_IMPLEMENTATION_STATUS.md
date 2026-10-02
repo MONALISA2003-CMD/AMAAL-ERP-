@@ -1,8 +1,8 @@
-# Amaal Jarvis Gateway Implementation Status
+# Amaal AI Gateway Implementation Status
 
 ## Implemented
 
-The Jarvis package now contains a real server-side tool gateway over the approved tool contract.
+The Amaal AI package now contains a real server-side tool gateway over the approved tool contract.
 
 Each invocation:
 
@@ -37,7 +37,7 @@ Action/prepare tools additionally require the appropriate AI execution/approval 
 
 ## Explicit prohibition
 
-Jarvis does not expose:
+Amaal AI does not expose:
 
 - raw SQL
 - unrestricted database handles
@@ -47,4 +47,4 @@ Jarvis does not expose:
 
 ## Remaining AI gate
 
-The next phase is the LLM orchestration layer itself: model routing, governed prompts, tool schemas, conversation audit, RAG authorization filtering, and evaluation. Core ERP operations remain independent of Jarvis availability.
+The next phase is the LLM orchestration layer itself: model routing, governed prompts, tool schemas, conversation audit, RAG authorization filtering, and evaluation. Core ERP operations remain independent of Amaal AI availability.

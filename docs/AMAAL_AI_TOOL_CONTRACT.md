@@ -1,10 +1,10 @@
-# Amaal Jarvis Tool Contract
+# Amaal AI Tool Contract
 
 Status: Engineering contract — gateway implemented; LLM orchestration pending
 
 ## 1. Purpose
 
-Jarvis is an intelligence and orchestration layer over authorized Amaal truth. It is not a direct database administrator.
+Amaal AI is an intelligence and orchestration layer over authorized Amaal truth. It is not a direct database administrator.
 
 Required boundary:
 
@@ -15,7 +15,7 @@ AUTHENTICATION
 ↓
 AUTHORIZATION
 ↓
-JARVIS
+AMAAL AI
 ↓
 LLM ORCHESTRATION
 ↓
@@ -181,7 +181,7 @@ Unauthorized IMEI existence is hidden, sold-device history falls back through au
 
 ## 7. Approval boundary
 
-Jarvis may:
+Amaal AI may:
 
 ```text
 observe
@@ -195,7 +195,7 @@ It may execute only where explicit Amaal automation policy permits the action.
 For critical financial/security/destructive actions:
 
 ```text
-Jarvis recommendation
+Amaal AI recommendation
 ↓
 approval request
 ↓
@@ -216,7 +216,7 @@ Tool responses must be structured and should distinguish:
 - LLM explanations
 - recommended actions
 
-Jarvis must not present a prediction or recommendation as if it were an authoritative transactional fact.
+Amaal AI must not present a prediction or recommendation as if it were an authoritative transactional fact.
 
 ## 9. Audit
 
@@ -244,10 +244,10 @@ RAG retrieval is permission-aware. A document is eligible only when both semanti
 
 ## 11. Memory boundary
 
-Jarvis memory may store conversation/task context, but remembered information never grants permission. Current authorization is always re-evaluated.
+Amaal AI memory may store conversation/task context, but remembered information never grants permission. Current authorization is always re-evaluated.
 
 ## 12. No raw SQL tool
 
-There is deliberately no `run_sql()` or unrestricted database tool in the Jarvis contract.
+There is deliberately no `run_sql()` or unrestricted database tool in the Amaal AI contract.
 
 If a new tool needs data, the tool must be implemented as a narrowly scoped business capability with explicit authorization.

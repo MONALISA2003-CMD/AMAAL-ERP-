@@ -1,6 +1,6 @@
 # Amaal Infrastructure Mapping
 
-**Status:** Current Phase 1 implementation mapping — updated 30 September 2026
+**Status:** Current Phase 0 implementation mapping — updated 2 October 2026
 
 The approved Amaal specifications define required product/domain capabilities. This document records the current hosting implementation after the PostgreSQL provider migration.
 
@@ -12,11 +12,11 @@ The approved Amaal specifications define required product/domain capabilities. T
 | API | Render + Node.js/TypeScript | Authentication boundary, authorization, business services, HTTP |
 | Worker | Render + Node.js/TypeScript | Outbox, projections, reconciliation and asynchronous work |
 | PostgreSQL | **Neon PostgreSQL** | Authoritative transactional state |
-| Identity/MFA | Supabase Auth | Identity, sessions and privileged MFA assurance |
+| Identity/MFA | Neon Auth / Better Auth | Identity, sessions and token issuance |
 | Valkey | Render Valkey | Cache, queue coordination, rate limits, short-lived state |
 | Object storage | Supabase Storage where still explicitly required | Private files/evidence only; never transactional truth |
 | Realtime | Amaal outbox/worker + realtime projection path | Derived operational delivery; never authoritative |
-| AI | OpenAI through governed Amaal/Jarvis boundaries | Reasoning and orchestration |
+| AI | OpenAI through governed Amaal/Amaal AI boundaries | Reasoning and orchestration |
 | Source control | GitHub | Versioned source, migrations and CI/CD |
 
 ## Database source of truth
@@ -29,7 +29,7 @@ Supabase PostgreSQL is no longer the production transactional source. The previo
 
 ## Authentication vs authorization
 
-Supabase Auth answers:
+Neon Auth / Better Auth answers:
 
 > Who is this user?
 
@@ -64,7 +64,7 @@ AuthN
  ↓
 AuthZ
  ↓
-Jarvis
+Amaal AI
  ↓
 AI router
  ↓
@@ -75,7 +75,7 @@ business service
 Neon PostgreSQL / outbox
 ```
 
-Jarvis must never receive unrestricted SQL authority.
+Amaal AI must never receive unrestricted SQL authority.
 
 ## Cost controls
 
@@ -83,7 +83,7 @@ Phase 1 intentionally does not introduce Kubernetes, Kafka, a separate graph/vec
 
 ## Phase 0 target architecture
 
-The current production system is transitional. The target architecture is: Vercel for frontend experience, Render for API/workers/auth boundary, Neon PostgreSQL for authoritative business truth and identity data, and Valkey for transient state. Supabase is not a target transactional or identity dependency.
+The current production system is being migrated. The target architecture is: Vercel for frontend experience, Render for API/workers/auth boundary, Neon PostgreSQL for authoritative business truth and identity data, and Valkey for transient state. Supabase is not a target transactional or identity dependency.
 
-The remaining Supabase Auth dependency is intentionally left in place until Phase 2 completes the identity cutover. This is a migration state, not a competing source of truth.
+The Neon Auth route is already deployed and responding successfully. The remaining Phase 2 gate is end-to-end login → JWT → Render `/v1/me`, followed by removal of any obsolete browser/runtime Supabase Auth dependency.
 

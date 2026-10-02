@@ -25,6 +25,17 @@ function jwksUrl(): URL {
   return new URL(explicit || `${authBaseUrl()}/.well-known/jwks.json`);
 }
 
+function authIssuer(): string {
+  const explicit = process.env.AMAAL_NEON_AUTH_ISSUER?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+  return new URL(authBaseUrl()).origin;
+}
+
+function authAudience(): string {
+  const explicit = process.env.AMAAL_NEON_AUTH_AUDIENCE?.trim();
+  return (explicit || authIssuer()).replace(/\/$/, '');
+}
+
 let remoteKeys: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 function getRemoteKeys() {
@@ -47,11 +58,11 @@ export async function authenticateBearerToken(
   const token = authorizationHeader.slice('Bearer '.length).trim();
   if (!token) throw new AuthenticationError();
 
-  const expectedIssuer = process.env.AMAAL_NEON_AUTH_ISSUER?.trim();
   let claims: JWTPayload;
   try {
     const verified = await jwtVerify(token, getRemoteKeys(), {
-      ...(expectedIssuer ? { issuer: expectedIssuer } : {}),
+      issuer: authIssuer(),
+      audience: authAudience(),
     });
     claims = verified.payload;
   } catch {
@@ -60,6 +71,10 @@ export async function authenticateBearerToken(
 
   const id = typeof claims.sub === 'string' ? claims.sub : '';
   if (!id) throw new AuthenticationError('Authenticated user identifier is missing.');
+
+  if (claims.banned === true) {
+    throw new AuthenticationError('The authenticated account is disabled.');
+  }
 
   const expiresAt = typeof claims.exp === 'number' ? claims.exp : 0;
   if (!expiresAt || expiresAt <= Math.floor(Date.now() / 1000)) {

@@ -12,7 +12,7 @@ const required = [
   'docs/AMAAL_AUTHORIZATION_MATRIX.md',
   'docs/AMAAL_EVENT_CATALOG.md',
   'docs/AMAAL_API_CONTRACT.md',
-  'docs/AMAAL_JARVIS_TOOL_CONTRACT.md',
+  'docs/AMAAL_AI_TOOL_CONTRACT.md',
   'database/migrations/20260928_000001_core_foundation.sql',
   'database/policies/20260928_rls_foundation.sql',
   'database/verification/20260928_core_foundation_verify.sql',

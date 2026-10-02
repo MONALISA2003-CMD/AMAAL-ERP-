@@ -11,7 +11,7 @@
 -- 6. Regional Manager cannot read another Region's warehouse stock.
 -- 7. Recovery Officer cannot update sales or payments directly.
 -- 8. Authenticated users cannot directly insert audit/outbox events.
--- 9. Jarvis tool queries cannot expand beyond the caller's current scope.
+-- 9. Amaal AI tool queries cannot expand beyond the caller's current scope.
 -- 10. CEO/Admin can read company-wide governed data.
 
 -- Concrete assertions will be wired once the test harness has seeded representative

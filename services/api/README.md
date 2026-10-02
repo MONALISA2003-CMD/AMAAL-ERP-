@@ -28,4 +28,4 @@ authenticate
 → commit
 ```
 
-AI/Jarvis is not on the authoritative transaction path.
+Amaal AI is not on the authoritative transaction path.

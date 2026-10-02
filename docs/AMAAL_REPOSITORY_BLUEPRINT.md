@@ -19,7 +19,7 @@ The approved Amaal specifications define the product/domain requirements. Infras
 amaal-ERP/
 ├── apps/
 │   ├── web/                 # Next.js ERP/PWA frontend
-│   └── jarvis/              # Jarvis application surface/orchestration when separated
+│   └── amaal-ai/              # Amaal AI application surface/orchestration when separated
 │
 ├── packages/
 │   ├── ui/                  # shared design system/components
@@ -178,7 +178,7 @@ The repository must contain automated negative cases including:
 - Regional Manager cannot see another Region's warehouse.
 - Admin cannot delete Master Warehouse history.
 - Recovery Officer cannot modify a sale.
-- Jarvis cannot retrieve unauthorized records.
+- Amaal AI cannot retrieve unauthorized records.
 
 These examples come directly from the approved authorization blueprint.
 
@@ -219,9 +219,9 @@ The repository must model:
 
 Inventory is a ledger, not a manually editable quantity.
 
-## 9. Jarvis boundary
+## 9. Amaal AI boundary
 
-Jarvis tools are explicit contracts.
+Amaal AI tools are explicit contracts.
 
 Read examples:
 
@@ -306,7 +306,7 @@ Secrets are supplied through environment/secret management and never committed.
 16. Operational screens
 17. Reports/read models
 18. Offline/PWA workflows
-19. Jarvis tool gateway
+19. Amaal AI tool gateway
 20. RAG and governed knowledge
 21. ML capabilities where justified
 22. Security hardening and observability

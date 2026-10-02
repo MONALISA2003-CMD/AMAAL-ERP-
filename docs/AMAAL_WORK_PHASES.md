@@ -1,7 +1,7 @@
 # Amaal Work Phases
 
 **Status:** Active delivery roadmap  
-**Phase currently active:** Phase 0 — Foundation & Architecture Freeze  
+**Phase currently active:** Phase 2B — Organization & Identity Model  
 **Date:** 1 October 2026
 
 ## Purpose
@@ -14,19 +14,18 @@ The approved Amaal specifications remain the primary product/domain authority. T
 
 | Phase | Name | Primary outcome |
 |---|---|---|
-| 0 | Foundation & Architecture Freeze | One agreed source-of-truth architecture, provider boundaries, security rules, deployment contract and production baseline |
-| 1 | Amaal Setup | Real first-run organization/bootstrap/setup experience |
-| 2 | Identity & Security | Amaal authentication, sessions, CEO/Admin MFA and privileged access controls without Supabase Auth |
-| 3 | Neon Migration Completion | Neon is the complete transactional source of truth and application packages have no Supabase database dependency |
-| 4 | Events & Realtime | Outbox, worker, projections and realtime delivery operate without Supabase Realtime |
-| 5 | Organization & Authorization | Full role, scope, ownership, permission and approval enforcement |
-| 6 | Products, Variants & IMEI | Complete product, variant, IMEI and inventory custody lifecycle |
-| 7 | Sales, Payments & Finance | Atomic sale/payment/receipt/reversal/commission/bonus workflows |
-| 8 | Recovery & Aging | Aging, recovery, reassignment and recovery closure workflows |
-| 9 | Management ERP | Production-ready role-specific ERP workspace and management views |
-| 10 | Jarvis | Governed AI tools, approvals and orchestration over authorized Amaal truth |
-| 11 | Predictive Intelligence | Forecasting, anomaly/risk signals and ML workloads over verified Amaal data |
-| 12 | Hardening & Launch | Security, E2E, recovery, performance and operational release gate |
+| 0 | Foundation & Architecture Freeze | Provider boundaries, transaction/event rules, terminology, deployment contract and live baseline are frozen and validated |
+| 2A | Neon Auth End-to-End | Login → session → JWT → Render `/v1/me`; development MFA remains disabled |
+| 2B | Organization & Identity Model | CEO, Admin, RM, Manager, Team Leader, Agent, Shop Owner, Recovery Officer and organizational hierarchy |
+| 2C | Authorization & Governance | Role/scope enforcement, approvals, suspension/reinstatement, audit and negative authorization tests |
+| 3 | Products, IMEI & Inventory Custody | Product/variant/IMEI, master/regional warehouses, allocation, transfer, receipt and custody ledger |
+| 4 | Sales, Customers, Payments & Commission | Atomic sales, customer records, receipts, payments, reversals and commission ledger |
+| 5 | Aging, Recovery & Suspension | CEO aging policy, recovery workflow, recovery officer, escalation and suspension engine |
+| 6 | Role Workspaces & Realtime Dashboards | Agent/TL/Manager/RM/Admin/CEO workspaces, comparisons, dashboards and realtime operations |
+| 7 | Reporting & Operational Intelligence | Multi-period reporting, performance comparisons, aging, recovery, stock and commission intelligence |
+| 8 | Amaal AI | Governed AI reasoning, reporting, action preparation and approval-aware orchestration |
+| 9 | Predictive Intelligence | Python/ML forecasting, anomaly/risk signals and recovery/sales prediction |
+| 10 | Hardening & Launch | Security, E2E, load, resilience, backups, observability, disaster recovery and production MFA |
 
 ## Phase rule
 

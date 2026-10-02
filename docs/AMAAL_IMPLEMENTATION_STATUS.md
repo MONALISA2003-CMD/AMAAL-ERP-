@@ -9,7 +9,7 @@
 - PostgreSQL schema draft created.
 - RLS foundation created.
 - API contract created.
-- Jarvis tool contract created.
+- Amaal AI tool contract created.
 - Deterministic business-rule package created.
 - Permission decision primitives created.
 - Transaction/service interfaces created for inventory, sales, finance and recovery.
@@ -26,7 +26,17 @@
 
 ## Current gate
 
-The transactional core, read-model/realtime foundation, recovery lineage and negative authorization matrix are live-verified. The remaining product gate is positive authenticated integration coverage plus the policy-dependent bonus/loan/approval-threshold workflows.
+Phase 2A Neon Auth end-to-end is now live-verified. The transactional core, read-model/realtime foundation, recovery lineage and negative authorization matrix remain intact. The next implementation gate is Phase 2B organization and identity model; no Phase 2B business role work is being treated as complete until the authorization boundary is built and tested.
+
+## Phase 2A Neon Auth gate — 2 October 2026
+
+- Vercel `/api/auth/get-session` returns HTTP 200.
+- A real disposable Neon Auth email/password account successfully established an httpOnly session through the Amaal `/signup` flow.
+- `/api/auth/token` returned a signed JWT whose `sub`, `iss`, `aud` and `exp` claims were present and valid.
+- Render `/v1/me` accepted the Bearer JWT and returned the same identity subject in both `user.id` and `authorization.userId`.
+- Development MFA remained disabled (`mfaRequired=false`).
+- The disposable verification user was deleted immediately after the E2E check.
+- Render now validates the production Neon Auth issuer through `AMAAL_NEON_AUTH_ISSUER`; the Phase 2A source package additionally defaults JWT issuer/audience validation from the Neon Auth origin and rejects Neon Auth banned accounts.
 
 ## Vercel build correction — 1 October 2026
 

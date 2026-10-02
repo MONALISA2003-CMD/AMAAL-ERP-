@@ -46,4 +46,4 @@ The current environment has not completed a full authenticated positive HTTP `PO
 
 ## Next gate
 
-Complete controlled authenticated integration tests, then finish the production Vercel connection and browser verification before starting governed Jarvis implementation.
+Complete controlled authenticated integration tests, then finish the production Vercel connection and browser verification before starting governed Amaal AI implementation.

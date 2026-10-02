@@ -27,4 +27,4 @@ A failed transaction rolls back all business effects.
 - Completed history is corrected by reversal/adjustment/void/cancellation mechanisms, never silent destructive overwrite.
 - Outbox events are written in the same transaction as the business change.
 - Realtime publication occurs after commit through the outbox/worker path.
-- AI/Jarvis is never on the authoritative sale transaction path.
+- AI/Amaal AI is never on the authoritative sale transaction path.

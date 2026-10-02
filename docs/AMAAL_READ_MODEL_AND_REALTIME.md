@@ -15,7 +15,7 @@ Outbox events = durable publication intent
 Realtime events = authorized delivery/read channel
 Read models = derived query projections
 Valkey/cache = performance only
-Jarvis/ML = consumers of authorized truth
+Amaal AI/ML = consumers of authorized truth
 ```
 
 A read model, realtime event or cache entry can never become the source of transactional truth.
@@ -86,4 +86,4 @@ If realtime delivery fails:
 - projections can be rebuilt;
 - clients can reconcile from authoritative reads.
 
-Jarvis is not on the synchronous transaction path.
+Amaal AI is not on the synchronous transaction path.

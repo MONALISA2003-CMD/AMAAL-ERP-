@@ -173,7 +173,7 @@ Phase-1 consumers may include:
 - reporting jobs
 - recovery workflow jobs
 - document generation
-- Jarvis background tasks
+- Amaal AI background tasks
 - scheduled intelligence
 
 ML and AI consumers must read governed data and must not rewrite authoritative business state without going through the same business services and approval controls as human actions.

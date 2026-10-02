@@ -13,7 +13,7 @@ The ZIP-sync process preserves existing documentation when an incoming ZIP omits
 - `ai/prompts/README.md`
 - `ai/rag/README.md`
 - `ai/tools/README.md`
-- `apps/jarvis/README.md`
+- `apps/amaal-ai/README.md`
 - `apps/web/README.md`
 - `database/README.md`
 - `database/functions/README.md`
@@ -31,7 +31,7 @@ The ZIP-sync process preserves existing documentation when an incoming ZIP omits
 - `docs/AMAAL_EVENT_CATALOG.md`
 - `docs/AMAAL_IMPLEMENTATION_STATUS.md`
 - `docs/AMAAL_INFRASTRUCTURE_MAPPING.md`
-- `docs/AMAAL_JARVIS_TOOL_CONTRACT.md`
+- `docs/AMAAL_AI_TOOL_CONTRACT.md`
 - `docs/AMAAL_PHASE1_ARCHITECTURE.md`
 - `docs/AMAAL_REPOSITORY_BLUEPRINT.md`
 - `docs/AMAAL_REPOSITORY_DOCUMENT_MANIFEST.md`

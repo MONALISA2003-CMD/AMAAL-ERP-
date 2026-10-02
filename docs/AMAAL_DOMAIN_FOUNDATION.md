@@ -60,7 +60,7 @@ Aging follows the IMEI and does not reset because of ordinary hierarchy transfer
 
 ### AI
 
-Jarvis never has unrestricted SQL access. AI actions go through explicit tools, current authorization, business rules, approvals where required, audit and verification.
+Amaal AI never has unrestricted SQL access. AI actions go through explicit tools, current authorization, business rules, approvals where required, audit and verification.
 
 ## 3. State-machine candidates
 
@@ -93,7 +93,7 @@ Authentication
 
 ## 5. Read model principle
 
-Operational dashboards, analytics and Jarvis explanations consume governed read models or application services derived from authoritative transactional state. They do not become alternative sources of truth.
+Operational dashboards, analytics and Amaal AI explanations consume governed read models or application services derived from authoritative transactional state. They do not become alternative sources of truth.
 
 ## 6. Specification gaps intentionally not guessed here
 

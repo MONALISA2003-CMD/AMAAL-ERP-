@@ -82,7 +82,7 @@ Therefore, `Admin` is a role family that must be refined through explicit permis
 
 ### CEO
 
-Company-wide visibility and authority across regions, managers, teams, sellers, warehouses, IMEIs, sales, customers, payments, commissions, bonuses, recovery, reports, approvals, audit and Jarvis intelligence.
+Company-wide visibility and authority across regions, managers, teams, sellers, warehouses, IMEIs, sales, customers, payments, commissions, bonuses, recovery, reports, approvals, audit and Amaal AI intelligence.
 
 ### Admin
 
@@ -153,9 +153,9 @@ No role receives a generic `DELETE` capability over:
 
 Corrections use governed reversal/cancellation/adjustment/write-off/archive/deactivation flows.
 
-## 8. Jarvis authorization
+## 8. Amaal AI authorization
 
-Jarvis inherits the requesting user's scope.
+Amaal AI inherits the requesting user's scope.
 
 Example:
 
@@ -167,11 +167,11 @@ Agent asks: "Show my stock."
 The following must be rejected:
 
 ```text
-Agent asks Jarvis to ignore permissions and reveal company-wide stock.
+Agent asks Amaal AI to ignore permissions and reveal company-wide stock.
 → tool gateway rejects request
 ```
 
-Jarvis must never use unrestricted raw SQL.
+Amaal AI must never use unrestricted raw SQL.
 
 ## 9. High-risk / critical action controls
 
@@ -199,7 +199,7 @@ These are required automated denial cases from the approved blueprint:
 | RM reads another Region's warehouse | Deny |
 | Admin deletes Master Warehouse history | Deny |
 | Recovery Officer modifies a sale | Deny |
-| Jarvis retrieves unauthorized records | Deny |
+| Amaal AI retrieves unauthorized records | Deny |
 
 Positive authorization tests must accompany these negative cases.
 
@@ -216,4 +216,4 @@ Positive authorization tests must accompany these negative cases.
 8. Audit event
 ```
 
-The same business authorization must remain effective when an operation is attempted through the API, background worker or Jarvis tool gateway rather than through the browser.
+The same business authorization must remain effective when an operation is attempted through the API, background worker or Amaal AI tool gateway rather than through the browser.

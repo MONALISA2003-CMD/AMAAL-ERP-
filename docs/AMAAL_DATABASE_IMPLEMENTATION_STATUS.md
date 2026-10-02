@@ -35,4 +35,4 @@ Supabase Auth remains the production identity provider. The API requires authent
 - allocation and cash-sale HTTP integration coverage
 - full worker/reconciliation verification
 - production Vercel deployment and browser verification
-- governed Jarvis implementation after deterministic ERP paths are proven
+- governed Amaal AI implementation after deterministic ERP paths are proven

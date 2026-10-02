@@ -19,7 +19,7 @@ The platform covers:
 - aging and recovery
 - approvals and audit
 - realtime/domain events
-- governed Jarvis access
+- governed Amaal AI access
 
 The database remains the authoritative transactional source. Dashboards, cache, AI and read models are derived consumers.
 
@@ -332,9 +332,9 @@ Each event should carry at minimum:
 
 Read models and realtime clients consume these events; events do not become a second source of transactional truth.
 
-## 10. Jarvis boundary
+## 10. Amaal AI boundary
 
-Jarvis operates over authorized tools rather than unrestricted SQL.
+Amaal AI operates over authorized tools rather than unrestricted SQL.
 
 ```text
 USER
@@ -343,7 +343,7 @@ AUTHENTICATION
 ↓
 AUTHORIZATION
 ↓
-JARVIS
+AMAAL AI
 ↓
 LLM ORCHESTRATION
 ↓

@@ -75,7 +75,7 @@ export default function DashboardPage() {
             <a className="nav-item" href="#reports">Reports</a>
           </nav>
           <div className="section-label lower">INTELLIGENCE</div>
-          <a className="nav-item" href="#jarvis">Jarvis</a>
+          <a className="nav-item" href="#amaal-ai">Amaal AI</a>
         </aside>
 
         <section className="content">
@@ -115,7 +115,7 @@ export default function DashboardPage() {
           <div className="grid three">
             <section className="card module"><div className="module-icon">IMEI</div><h3>Inventory & custody</h3><p>IMEI state, holder, movement history, aging and controlled transfers.</p><span>Available</span></section>
             <section className="card module"><div className="module-icon">SALE</div><h3>Sales & finance</h3><p>Atomic sales, receipts, payment records, reversal and policy-driven commissions.</p><span>Available</span></section>
-            <section className="card module"><div className="module-icon">AI</div><h3>Jarvis intelligence</h3><p>Authorization-aware tools over current ERP truth, with approval boundaries.</p><span>Available</span></section>
+            <section className="card module"><div className="module-icon">AI</div><h3>Amaal AI intelligence</h3><p>Authorization-aware tools over current ERP truth, with approval boundaries.</p><span>Available</span></section>
           </div>
 
           <section className="card roadmap-card">

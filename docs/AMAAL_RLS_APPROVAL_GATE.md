@@ -28,4 +28,4 @@ The harness uses temporary identities/data and rolls the test transaction back.
 
 ## Security rule
 
-RLS is not the only authorization layer. Amaal continues to enforce authorization in business services, background workers, reports, exports, realtime reads and Jarvis tools.
+RLS is not the only authorization layer. Amaal continues to enforce authorization in business services, background workers, reports, exports, realtime reads and Amaal AI tools.

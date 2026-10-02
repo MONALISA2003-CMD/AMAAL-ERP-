@@ -2,7 +2,7 @@ import type { DatabaseTransaction } from '@amaal/database';
 import { AuthorizationError, ValidationError } from '@amaal/shared';
 import { authorize, loadAuthorizationContext, type AuthorizationContext } from '@amaal/permissions';
 
-export type JarvisReadTool =
+export type AmaalAIReadTool =
   | 'get_my_stock'
   | 'get_team_stock'
   | 'get_region_stock'
@@ -16,22 +16,22 @@ export type JarvisReadTool =
   | 'compare_performance'
   | 'generate_report';
 
-export type JarvisActionTool =
+export type AmaalAIActionTool =
   | 'create_task'
   | 'create_recovery_case'
   | 'prepare_transfer_request'
   | 'prepare_adjustment_request'
   | 'prepare_approval_request';
 
-export type JarvisToolName = JarvisReadTool | JarvisActionTool;
+export type AmaalAIToolName = AmaalAIReadTool | AmaalAIActionTool;
 
-export type JarvisToolCall = {
-  tool: JarvisToolName;
+export type AmaalAIToolCall = {
+  tool: AmaalAIToolName;
   args: Record<string, unknown>;
 };
 
-export type JarvisToolResult = {
-  tool: JarvisToolName;
+export type AmaalAIToolResult = {
+  tool: AmaalAIToolName;
   data: unknown;
   trace: { actorUserId: string; authorization: string };
 };
@@ -186,7 +186,7 @@ function commissionScope(context: AuthorizationContext, actorUserId: string, req
   return { clause: 'where c.beneficiary_user_id = $1', params: [actorUserId], authorization: 'Own commission scope' };
 }
 
-export class JarvisToolGateway {
+export class AmaalAIToolGateway {
   constructor(private readonly tx: DatabaseTransaction, private readonly actorUserId: string) {}
 
   private async context(): Promise<AuthorizationContext> {
@@ -195,7 +195,7 @@ export class JarvisToolGateway {
     return context;
   }
 
-  async call(call: JarvisToolCall): Promise<JarvisToolResult> {
+  async call(call: AmaalAIToolCall): Promise<AmaalAIToolResult> {
     const context = await this.context();
 
     switch (call.tool) {
@@ -393,7 +393,7 @@ export class JarvisToolGateway {
       case 'prepare_approval_request': {
         requireAiExecute(context);
         if (call.tool === 'prepare_adjustment_request' || call.tool === 'prepare_transfer_request' || call.tool === 'prepare_approval_request') requireAiApprove(context);
-        return { tool: call.tool, data: { status: 'PREPARED', requiresHumanApproval: true, arguments: call.args }, trace: { actorUserId: this.actorUserId, authorization: 'Governed Jarvis action: preparation only' } };
+        return { tool: call.tool, data: { status: 'PREPARED', requiresHumanApproval: true, arguments: call.args }, trace: { actorUserId: this.actorUserId, authorization: 'Governed Amaal AI action: preparation only' } };
       }
     }
   }

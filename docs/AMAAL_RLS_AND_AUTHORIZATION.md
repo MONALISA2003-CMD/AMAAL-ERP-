@@ -40,6 +40,6 @@ Read policies establish scope for core records. Write policies for protected sta
 - Regional Manager cannot read another Region's warehouse.
 - Admin cannot delete Master Warehouse history.
 - Recovery Officer cannot modify a sale.
-- Jarvis cannot retrieve unauthorized records.
+- Amaal AI cannot retrieve unauthorized records.
 
 These tests should be automated alongside positive authorization tests.

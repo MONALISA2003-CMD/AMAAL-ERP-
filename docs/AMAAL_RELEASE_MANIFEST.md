@@ -38,7 +38,7 @@ Implemented:
 - Transactional outbox worker with reclaimable leases and consumer dedupe
 - Mutation idempotency
 - Scoped realtime events and derived read models
-- Authorization-aware Jarvis tool gateway
+- Authorization-aware Amaal AI tool gateway
 - Authenticated Next.js ERP client shell plus CEO/Admin MFA flow
 
 ## Infrastructure status

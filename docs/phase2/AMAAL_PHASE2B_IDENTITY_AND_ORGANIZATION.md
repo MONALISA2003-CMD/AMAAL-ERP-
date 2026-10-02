@@ -13,7 +13,9 @@ CEO → Admin / Regional Manager → Manager → Team → Team Leader → Agent 
 
 ## Rules implemented
 
-- CEO/Admin may create regions and provision organizational identities.
+- CEO/Admin may create regions, sub-regions and provision organizational identities.
+- CEO can recruit Admins through a controlled invitation bound to an explicit Admin profile family.
+- CEO can recruit Regional Managers; Regional Managers recruit Managers/Recovery Officers; Managers recruit Team Leaders; Team Leaders recruit Agents/Shop Owners.
 - Regional Manager may provision Managers only inside assigned regions.
 - Manager may create teams for themselves inside assigned regions and provision Team Leaders only inside their teams.
 - Team Leader may provision Agents or Shop Owners only inside their team.
@@ -22,6 +24,8 @@ CEO → Admin / Regional Manager → Manager → Team → Team Leader → Agent 
 - A person can have only one active team membership at a time.
 - A team can have only one active Team Leader.
 - Every provisioned identity writes audit and outbox records.
+- Recruitment invitations store only SHA-256 token digests, are single-use, expire, and are bound to the invited email and organizational scope.
+- Only one pending invitation per email is permitted.
 
 ## API
 
@@ -30,6 +34,9 @@ CEO → Admin / Regional Manager → Manager → Team → Team Leader → Agent 
 - `POST /v1/org/teams` — CEO/Admin/Manager within scope.
 - `POST /v1/org/shops` — CEO/Admin/Manager/Team Leader within scope.
 - `POST /v1/org/people` — role-aware provisioning of existing Neon Auth identities.
+- `POST /v1/org/invitations` — scoped recruitment invitation for operational roles, including Regional Manager.
+- `POST /v1/org/admin-invitations` — CEO-only Admin recruitment with explicit Admin profile.
+- `GET /v1/org/invitations/preview` and `POST /v1/org/invitations/accept` — email-bound invitation onboarding.
 
 ## Frontend
 
@@ -41,7 +48,14 @@ All organizational actions pass through Render authorization and the Neon/Postgr
 
 ## Database hardening
 
-Migration `20261002_000020_phase2b_organization_identity_integrity.sql` adds the structural uniqueness and scope constraints required to prevent ambiguous reporting lines at scale.
+Migrations `20261002_000021_phase0_2b_identity_scope_hardening.sql` and `20261002_000023_phase0_2b_recruitment_and_hierarchy_hardening.sql` add the Neon Auth identity bridge, region-scoped Recovery Officers, sub-regions, Admin profile families, controlled invitations, composite hierarchy FKs, Manager→RM integrity validation, and profile-aware Admin authorization. RLS uses an Amaal `auth.uid()` compatibility shim backed by the authenticated actor context; there is no `auth.users` dependency in the active model.
+
+## Release verification
+
+- Phase 0, Phase 1 and Phase 2B structural validators pass.
+- Disposable Neon release-test branch validated RM/Manager/TL/Agent/Shop/Recovery scope behavior and Admin profile permission boundaries.
+- Live Neon production schema contains the Phase 2B hardening tables/constraints; MFA remains unenforced.
+- Exact-source deployment remains deferred until GitHub MFA authorization is repaired.
 
 ## Not included yet
 

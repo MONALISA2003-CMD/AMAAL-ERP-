@@ -1,3 +1,5 @@
+> **Current-state supersession (2026-10-02):** Phase 2A Neon Auth E2E is verified; Phase 2B organizational hardening is implemented. CEO/Admin MFA remains intentionally disabled during development. The active AI term is **Amaal AI**.
+
 # Amaal Phase 2 — Identity & Security Implementation
 
 Status: implementation package prepared on 1 October 2026.

@@ -56,7 +56,7 @@ export class PostgresRealtimePublisher implements OutboxPublisher {
     await this.transactions.withTransaction(
       { requestId: `event-publish-${message.id}`, actorUserId: message.actorUserId ?? '00000000-0000-0000-0000-000000000000' },
       async (tx) => {
-        const first = await consumeOnce(tx, 'supabase-realtime-table', message.id);
+        const first = await consumeOnce(tx, 'realtime-delivery', message.id);
         if (!first) return [];
 
         await projectSalesDaily(tx, message);

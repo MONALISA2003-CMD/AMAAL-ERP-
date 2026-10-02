@@ -9,17 +9,21 @@ test('setup validation accepts a complete organization foundation', () => {
     ceoDisplayName: 'Amaal CEO',
     ceoEmployeeNumber: 'CEO-001',
     regions: [
+      { code: 'NORTH', name: 'North' },
+      { code: 'WEST', name: 'West' },
       { code: 'CENTRAL', name: 'Central' },
-      { code: 'EASTERN', name: 'Eastern' },
+      { code: 'EAST', name: 'East' },
     ],
     regionalWarehouses: [
-      { code: 'CENTRAL-01', name: 'Central Warehouse', regionCode: 'CENTRAL' },
-      { code: 'EASTERN-01', name: 'Eastern Warehouse', regionCode: 'EASTERN' },
+      { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+      { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+      { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+      { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EAST' },
     ],
   });
   assert.equal(result.ceoEmail, 'ceo@example.com');
-  assert.equal(result.regions.length, 2);
-  assert.equal(result.regionalWarehouses.length, 2);
+  assert.equal(result.regions.length, 4);
+  assert.equal(result.regionalWarehouses.length, 4);
 });
 
 test('setup validation rejects duplicate region codes', () => {
@@ -29,10 +33,18 @@ test('setup validation rejects duplicate region codes', () => {
       ceoEmail: 'ceo@example.com',
       ceoDisplayName: 'Amaal CEO',
       regions: [
+        { code: 'NORTH', name: 'North' },
+        { code: 'WEST', name: 'West' },
         { code: 'CENTRAL', name: 'Central' },
         { code: 'central', name: 'Central 2' },
+        { code: 'EAST', name: 'East' },
       ],
-      regionalWarehouses: [],
+      regionalWarehouses: [
+        { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+        { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+        { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EAST' },
+      ],
     }),
     /duplicated/,
   );
@@ -44,9 +56,86 @@ test('setup validation rejects a warehouse that references an unknown region', (
       activationCode: 'sample-activation-code',
       ceoEmail: 'ceo@example.com',
       ceoDisplayName: 'Amaal CEO',
-      regions: [{ code: 'CENTRAL', name: 'Central' }],
-      regionalWarehouses: [{ code: 'EAST-01', name: 'Eastern Warehouse', regionCode: 'EASTERN' }],
+      regions: [
+        { code: 'NORTH', name: 'North' },
+        { code: 'WEST', name: 'West' },
+        { code: 'CENTRAL', name: 'Central' },
+        { code: 'EAST', name: 'East' },
+      ],
+      regionalWarehouses: [
+        { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+        { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+        { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EASTERN' },
+      ],
     }),
     /unknown region/,
+  );
+});
+
+
+test('setup validation rejects missing required main region', () => {
+  assert.throws(
+    () => validateSetupInitializeInput({
+      activationCode: 'sample-activation-code',
+      ceoEmail: 'ceo@example.com',
+      ceoDisplayName: 'Amaal CEO',
+      regions: [
+        { code: 'NORTH', name: 'North' },
+        { code: 'WEST', name: 'West' },
+        { code: 'EAST', name: 'East' },
+      ],
+      regionalWarehouses: [
+        { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+        { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EAST' },
+      ],
+    }),
+    /main regions/,
+  );
+});
+
+test('setup validation rejects missing required regional warehouse', () => {
+  assert.throws(
+    () => validateSetupInitializeInput({
+      activationCode: 'sample-activation-code',
+      ceoEmail: 'ceo@example.com',
+      ceoDisplayName: 'Amaal CEO',
+      regions: [
+        { code: 'NORTH', name: 'North' },
+        { code: 'WEST', name: 'West' },
+        { code: 'CENTRAL', name: 'Central' },
+        { code: 'EAST', name: 'East' },
+      ],
+      regionalWarehouses: [
+        { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+        { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+      ],
+    }),
+    /regional warehouses/,
+  );
+});
+
+test('setup validation rejects a standard regional warehouse attached to the wrong main region', () => {
+  assert.throws(
+    () => validateSetupInitializeInput({
+      activationCode: 'sample-activation-code',
+      ceoEmail: 'ceo@example.com',
+      ceoDisplayName: 'Amaal CEO',
+      regions: [
+        { code: 'NORTH', name: 'North' },
+        { code: 'WEST', name: 'West' },
+        { code: 'CENTRAL', name: 'Central' },
+        { code: 'EAST', name: 'East' },
+      ],
+      regionalWarehouses: [
+        { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+        { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+        { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EAST' },
+      ],
+    }),
+    /must belong to region NORTH/,
   );
 });

@@ -106,4 +106,4 @@ export { createApiServer } from './http.ts';
 
 export { getAmaalSetupStatus, initializeAmaalOrganization, validateSetupInitializeInput } from './setup.ts';
 
-export { getOrganizationDirectory, createRegion, createTeam, createShop, provisionPerson } from './organization.ts';
+export { getOrganizationDirectory, createRegion, createSubregion, createTeam, createShop, provisionPerson, provisionAdmin, createOrganizationInvitation, createAdminInvitation, getOrganizationInvitationPreview, acceptOrganizationInvitation } from './organization.ts';

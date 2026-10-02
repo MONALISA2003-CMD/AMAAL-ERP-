@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createApiServer } from '../../services/api/src/http.ts';
 
-process.env.SUPABASE_URL = process.env.SUPABASE_URL ?? 'https://example.supabase.co';
-process.env.SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? 'test-publishable-key';
+process.env.AMAAL_NEON_AUTH_URL = process.env.AMAAL_NEON_AUTH_URL ?? 'https://auth.example.test/neondb/auth';
+process.env.AMAAL_NEON_AUTH_JWKS_URL = process.env.AMAAL_NEON_AUTH_JWKS_URL ?? 'https://auth.example.test/neondb/auth/.well-known/jwks.json';
+process.env.AMAAL_NEON_AUTH_ISSUER = process.env.AMAAL_NEON_AUTH_ISSUER ?? 'https://auth.example.test';
+process.env.AMAAL_NEON_AUTH_AUDIENCE = process.env.AMAAL_NEON_AUTH_AUDIENCE ?? 'https://auth.example.test';
 process.env.AMAAL_DATABASE_URL = process.env.AMAAL_DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:1/amaal';
 
 async function startServer() {

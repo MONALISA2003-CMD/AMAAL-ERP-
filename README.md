@@ -47,3 +47,7 @@ Phase 0 is the current Amaal delivery gate. The approved specifications remain a
 
 See `docs/AMAAL_WORK_PHASES.md`, `docs/phase0/AMAAL_PHASE0_FOUNDATION.md` and `docs/phase0/AMAAL_TECHNOLOGY_STACK_AND_PHASE_PLAN.md`.
 
+
+
+## Current delivery gate — Phase 1
+Phase 1 is explicitly tracked as Amaal Setup: company foundation, four main regions, standard regional warehouses, pending CEO definition, policy-readiness markers, atomic audit/outbox completion and setup readiness verification.

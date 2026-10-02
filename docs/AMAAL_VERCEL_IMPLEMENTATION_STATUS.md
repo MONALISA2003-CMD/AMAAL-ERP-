@@ -4,7 +4,7 @@
 
 ## Current target
 
-Vercel hosts the Next.js web client only. Render remains the application/API boundary. Neon PostgreSQL remains the authoritative transactional database. Supabase Auth remains the current identity provider.
+Vercel hosts the Next.js web client only. Render remains the application/API boundary. Neon PostgreSQL remains the authoritative transactional database. Neon Auth / Better Auth is the current production identity provider.
 
 ## Vercel environment contract
 
@@ -16,7 +16,7 @@ NEXT_PUBLIC_AMAAL_API_URL=https://amaal-api.onrender.com
 
 No Neon connection string, Valkey URL, Supabase service-role credential, or other backend secret belongs in Vercel.
 
-The browser obtains the public Supabase Auth URL and publishable key from the Render endpoint `/v1/auth/config`. These are public client configuration values, not database credentials.
+The browser obtains the public Neon Auth URL from the Render endpoint `/v1/auth/config`. These are public client configuration values, not database credentials.
 
 ## Build/package-manager boundary
 

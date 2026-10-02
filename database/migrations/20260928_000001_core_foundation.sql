@@ -1,6 +1,6 @@
 -- Amaal ERP — Core PostgreSQL foundation
 -- Specification-derived draft migration. Do not apply to production until reviewed.
--- Target is portable PostgreSQL/Supabase; current Supabase project is PostgreSQL 17.x.
+-- Target is Neon PostgreSQL + Neon Auth. Supabase is historical/legacy only.
 
 create extension if not exists pgcrypto;
 
@@ -36,7 +36,7 @@ create table public.organizations (
 );
 
 create table public.profiles (
-  user_id uuid primary key references auth.users(id) on delete restrict,
+  user_id uuid primary key references neon_auth."user"(id) on delete restrict,
   organization_id uuid not null references public.organizations(id) on delete restrict,
   employee_number text unique,
   display_name text not null,
@@ -49,7 +49,7 @@ create table public.profiles (
 create table public.company_settings (
   organization_id uuid primary key references public.organizations(id) on delete restrict,
   settings jsonb not null default '{}'::jsonb,
-  updated_by uuid references auth.users(id) on delete restrict,
+  updated_by uuid references neon_auth."user"(id) on delete restrict,
   updated_at timestamptz not null default now()
 );
 
@@ -157,7 +157,8 @@ create table public.role_assignments (
   status public.record_status not null default 'ACTIVE',
   check (effective_to is null or effective_to >= effective_from),
   check (
-    (role in ('CEO','ADMIN','RECOVERY_OFFICER') and region_id is null and manager_user_id is null and team_id is null and shop_id is null)
+    (role in ('CEO','ADMIN') and region_id is null and manager_user_id is null and team_id is null and shop_id is null)
+    or (role = 'RECOVERY_OFFICER' and region_id is not null and manager_user_id is null and team_id is null and shop_id is null)
     or (role = 'REGIONAL_MANAGER' and region_id is not null and manager_user_id is null and team_id is null and shop_id is null)
     or (role = 'MANAGER' and manager_user_id is not null and team_id is null and shop_id is null)
     or (role = 'TEAM_LEADER' and team_id is not null and shop_id is null)

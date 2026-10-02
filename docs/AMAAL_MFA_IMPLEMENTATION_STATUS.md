@@ -1,3 +1,5 @@
+# Current-state note (2026-10-02): Amaal-specific TOTP MFA is the target privileged-control layer. The schema is applied in Neon; `AMAAL_MFA_ENFORCED=false` remains intentionally set during development.
+
 # Amaal MFA Implementation Status
 
 ## Requirement source

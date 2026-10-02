@@ -31,9 +31,15 @@ import {
   closeRecoveryCase,
   getOrganizationDirectory,
   createRegion,
+  createSubregion,
   createTeam,
   createShop,
   provisionPerson,
+  provisionAdmin,
+  createOrganizationInvitation,
+  createAdminInvitation,
+  getOrganizationInvitationPreview,
+  acceptOrganizationInvitation,
 } from './index.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -129,8 +135,8 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory')) return true;
-  if (method === 'POST' && (pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people')) return true;
+  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory' || pathname === '/v1/org/invitations/preview')) return true;
+  if (method === 'POST' && (pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/subregions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people' || pathname === '/v1/org/admins' || pathname === '/v1/org/admin-invitations' || pathname === '/v1/org/invitations' || pathname === '/v1/org/invitations/accept')) return true;
   if (method !== 'POST') return false;
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
 }
@@ -138,6 +144,22 @@ function isPotentialApiRoute(method: string | undefined, pathname: string): bool
 function isMfaEnforced(): boolean {
   const raw = process.env.AMAAL_MFA_ENFORCED?.trim().toLowerCase();
   return raw !== 'false';
+}
+
+async function getAmaalAccessState(services: ReturnType<typeof createApiServices>, userId: string, bannedClaim: boolean | null): Promise<'ACTIVE'|'PENDING_ASSIGNMENT'|'SUSPENDED'> {
+  if (bannedClaim === true) return 'SUSPENDED';
+  const rows = await services.pool.query<{profile_status:string|null; active_roles:string[]}>({
+    text: `select p.status as profile_status, coalesce(array_agg(distinct ra.role) filter (where ra.user_id is not null), '{}'::text[]) as active_roles
+            from neon_auth."user" u
+            left join public.profiles p on p.user_id=u.id
+            left join public.role_assignments ra on ra.user_id=u.id and ra.status='ACTIVE' and (ra.effective_to is null or ra.effective_to > now())
+            where u.id=$1
+            group by p.status`,
+    values: [userId],
+  } as any);
+  const row = rows[0];
+  if (!row || row.profile_status !== 'ACTIVE' || !row.active_roles?.length) return row?.profile_status === 'SUSPENDED' ? 'SUSPENDED' : 'PENDING_ASSIGNMENT';
+  return 'ACTIVE';
 }
 
 export function createApiServer() {
@@ -232,15 +254,22 @@ export function createApiServer() {
 
       if(req.method==='GET'&&(pathname==='/v1/me'||pathname==='/v1/me/scope')){
         const scope = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
+        const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null);
         const privileged = scope.roles.includes('CEO') || scope.roles.includes('ADMIN');
         const mfaRequired = privileged && mfaEnforced;
         const mfaVerified = !mfaRequired || verifyMfaAssertion(mfaAssertion, user.id, user.sessionId);
-        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,mfaRequired,mfaVerified}); return; }
-        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,mfaRequired,mfaVerified}); return;
+        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,accessState,mfaRequired,mfaVerified}); return; }
+        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,accessState,mfaRequired,mfaVerified}); return;
       }
 
       const context = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
+      const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null);
       const privileged = context.roles.includes('CEO') || context.roles.includes('ADMIN');
+      const onboardingAllowed = pathname === '/v1/org/invitations/accept' || pathname === '/v1/mfa/status' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify';
+      if (accessState !== 'ACTIVE' && !onboardingAllowed) {
+        json(res,403,{error:accessState==='SUSPENDED'?'ACCOUNT_SUSPENDED':'ACCESS_PENDING',message:accessState==='SUSPENDED'?'Your Amaal account is suspended.':'Your Neon Auth account is authenticated but has not been assigned active Amaal organizational access.',requestId});
+        return;
+      }
       if (mfaEnforced && privileged && pathname !== '/v1/mfa/status' && pathname !== '/v1/mfa/enroll/start' && pathname !== '/v1/mfa/enroll/confirm' && pathname !== '/v1/mfa/verify' && !verifyMfaAssertion(mfaAssertion, user.id, user.sessionId)) {
         json(res,403,{error:'MFA_REQUIRED',message:'CEO and Admin ERP operations require verified multi-factor authentication.',requestId,mfaRequired:true});
         return;
@@ -279,9 +308,16 @@ export function createApiServer() {
         return;
       }
 
+      if (req.method === 'POST' && pathname === '/v1/org/subregions') {
+        const body = await readJson(req);
+        const subregion = await createSubregion(services,user.id,{regionId:requiredString(body,'regionId'),code:requiredString(body,'code'),name:requiredString(body,'name'),description:typeof body.description==='string'?body.description:undefined});
+        json(res,201,{requestId,...subregion});
+        return;
+      }
+
       if (req.method === 'POST' && pathname === '/v1/org/teams') {
         const body = await readJson(req);
-        const team = await createTeam(services,user.id,{regionId:requiredString(body,'regionId'),managerUserId:requiredString(body,'managerUserId'),teamCode:requiredString(body,'teamCode'),teamName:requiredString(body,'teamName')});
+        const team = await createTeam(services,user.id,{regionId:requiredString(body,'regionId'),managerUserId:requiredString(body,'managerUserId'),subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,teamCode:requiredString(body,'teamCode'),teamName:requiredString(body,'teamName')});
         json(res,201,{requestId,...team});
         return;
       }
@@ -296,7 +332,7 @@ export function createApiServer() {
       if (req.method === 'POST' && pathname === '/v1/org/people') {
         const body = await readJson(req);
         const role = requiredString(body,'role');
-        const roles = ['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'] as const;
+        const roles = ['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'] as const;
         if (!roles.includes(role as typeof roles[number])) throw new Error('Unsupported organizational role.');
         const person = await provisionPerson(services,user.id,{
           userId:requiredString(body,'userId'),
@@ -305,11 +341,58 @@ export function createApiServer() {
           phone:typeof body.phone==='string'?body.phone:undefined,
           role:role as typeof roles[number],
           regionId:typeof body.regionId==='string'?body.regionId:undefined,
+          regionalManagerUserId:typeof body.regionalManagerUserId==='string'?body.regionalManagerUserId:undefined,
+          subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,
           managerUserId:typeof body.managerUserId==='string'?body.managerUserId:undefined,
           teamId:typeof body.teamId==='string'?body.teamId:undefined,
           shopId:typeof body.shopId==='string'?body.shopId:undefined,
         });
         json(res,201,{requestId,...person});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/admins') {
+        const body = await readJson(req);
+        const admin = await provisionAdmin(services,user.id,{userId:requiredString(body,'userId'),displayName:requiredString(body,'displayName'),employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,phone:typeof body.phone==='string'?body.phone:undefined,profileKey:requiredString(body,'profileKey')});
+        json(res,201,{requestId,...admin});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/admin-invitations') {
+        const body = await readJson(req);
+        const invitation = await createAdminInvitation(services,user.id,{
+          email:requiredString(body,'email'),displayName:requiredString(body,'displayName'),
+          employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,
+          phone:typeof body.phone==='string'?body.phone:undefined,
+          profileKey:requiredString(body,'profileKey'),
+          expiresInHours:typeof body.expiresInHours==='number'?body.expiresInHours:undefined,
+        });
+        json(res,201,{requestId,...invitation});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/invitations') {
+        const body = await readJson(req);
+        const invitation = await createOrganizationInvitation(services,user.id,{
+          email:requiredString(body,'email'),displayName:requiredString(body,'displayName'),employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,phone:typeof body.phone==='string'?body.phone:undefined,
+          role:requiredString(body,'role') as any,regionId:typeof body.regionId==='string'?body.regionId:undefined,regionalManagerUserId:typeof body.regionalManagerUserId==='string'?body.regionalManagerUserId:undefined,subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,managerUserId:typeof body.managerUserId==='string'?body.managerUserId:undefined,teamId:typeof body.teamId==='string'?body.teamId:undefined,shopId:typeof body.shopId==='string'?body.shopId:undefined,expiresInHours:typeof body.expiresInHours==='number'?body.expiresInHours:undefined
+        });
+        json(res,201,{requestId,...invitation});
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/org/invitations/preview') {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        const token = url.searchParams.get('token') ?? '';
+        const preview = await getOrganizationInvitationPreview(services,token);
+        json(res,200,{requestId,...preview});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/invitations/accept') {
+        const body = await readJson(req);
+        const result = await acceptOrganizationInvitation(services,user.id,user.email,requiredString(body,'token'));
+        json(res,200,{requestId,...result});
         return;
       }
 

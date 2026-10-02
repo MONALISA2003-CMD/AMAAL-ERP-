@@ -1,3 +1,5 @@
+# Current-state note (2026-10-02): Neon PostgreSQL is the authoritative business database and Neon Auth owns active identity/session state. Historical Supabase references are archival.
+
 # Amaal Database Implementation Status
 
 **Updated:** 30 September 2026

@@ -36,6 +36,16 @@ export type SetupInitializeInput = {
   regionalWarehouses: SetupWarehouseInput[];
 };
 
+export type SetupReadiness = {
+  organization: boolean;
+  masterWarehouse: boolean;
+  mainRegions: boolean;
+  regionalWarehouses: boolean;
+  pendingCeo: boolean;
+  policyReadinessRecorded: boolean;
+  locked: boolean;
+};
+
 export type SetupStatus = {
   stage: SetupStage;
   setupRequired: boolean;
@@ -53,6 +63,7 @@ export type SetupStatus = {
     code: string;
     name: string;
   }>;
+  readiness: SetupReadiness;
   pendingCeo: {
     email: string;
     displayName: string;
@@ -64,6 +75,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{1,31}$/;
 const MAX_REGIONS = 50;
 const MAX_REGIONAL_WAREHOUSES = 50;
+
+export const REQUIRED_MAIN_REGIONS = [
+  { code: 'NORTH', name: 'North', warehouseCode: 'NUWH', warehouseName: 'Northern Uganda Warehouse' },
+  { code: 'WEST', name: 'West', warehouseCode: 'WUWH', warehouseName: 'Western Uganda Warehouse' },
+  { code: 'CENTRAL', name: 'Central', warehouseCode: 'CUWH', warehouseName: 'Central Uganda Warehouse' },
+  { code: 'EAST', name: 'East', warehouseCode: 'EUWH', warehouseName: 'Eastern Uganda Warehouse' },
+] as const;
 
 function clean(value: unknown, label: string, maxLength: number): string {
   if (typeof value !== 'string') throw new Error(`${label} is required.`);
@@ -106,6 +124,9 @@ export function validateSetupInitializeInput(body: Record<string, unknown>): Set
     regionNames.add(region.name.toLowerCase());
   }
 
+  const missingMainRegions = REQUIRED_MAIN_REGIONS.filter((required) => !regionCodes.has(required.code));
+  if (missingMainRegions.length) throw new Error(`The Phase 1 foundation requires these main regions: ${missingMainRegions.map((item) => item.code).join(', ')}.`);
+
   if (!Array.isArray(body.regionalWarehouses)) throw new Error('regionalWarehouses must be an array.');
   if (body.regionalWarehouses.length > MAX_REGIONAL_WAREHOUSES) throw new Error(`Amaal supports at most ${MAX_REGIONAL_WAREHOUSES} regional warehouses in setup.`);
   const regionalWarehouses = body.regionalWarehouses.map((raw, index) => {
@@ -124,6 +145,14 @@ export function validateSetupInitializeInput(body: Record<string, unknown>): Set
   for (const warehouse of regionalWarehouses) {
     if (warehouseCodes.has(warehouse.code)) throw new Error(`Regional warehouse code ${warehouse.code} is duplicated.`);
     warehouseCodes.add(warehouse.code);
+  }
+
+  const missingMainWarehouses = REQUIRED_MAIN_REGIONS.filter((required) => !warehouseCodes.has(required.warehouseCode));
+  if (missingMainWarehouses.length) throw new Error(`The Phase 1 foundation requires these regional warehouses: ${missingMainWarehouses.map((item) => item.warehouseCode).join(', ')}.`);
+
+  for (const required of REQUIRED_MAIN_REGIONS) {
+    const warehouse = regionalWarehouses.find((item) => item.code === required.warehouseCode);
+    if (warehouse && warehouse.regionCode !== required.code) throw new Error(`${required.warehouseCode} must belong to region ${required.code}.`);
   }
 
   const base = { activationCode, ceoEmail, ceoDisplayName, regions, regionalWarehouses };
@@ -178,6 +207,14 @@ export async function getAmaalSetupStatus(services: ApiServices): Promise<SetupS
     order by region_name asc
   `, [row.organization_id]);
 
+  const regionalWarehouseResult = await services.pool.query<{ code: string; regionCode: string }>(`
+    select w.warehouse_code as code, r.region_code as "regionCode"
+    from public.warehouses w
+    join public.regions r on r.id = w.region_id
+    where w.organization_id = $1 and w.warehouse_type = 'REGIONAL' and w.status = 'ACTIVE'
+    order by w.warehouse_code asc
+  `, [row.organization_id]);
+
   const rawSetup = row.setup && typeof row.setup === 'object' && !Array.isArray(row.setup)
     ? row.setup as Record<string, unknown>
     : {};
@@ -192,6 +229,18 @@ export async function getAmaalSetupStatus(services: ApiServices): Promise<SetupS
     ? rawSetup.pendingCeo as Record<string, unknown>
     : null;
 
+  const requiredRegionCodes = new Set(REQUIRED_MAIN_REGIONS.map((item) => item.code));
+  const requiredWarehouseMap = new Map(REQUIRED_MAIN_REGIONS.map((item) => [item.warehouseCode, item.code]));
+  const readiness: SetupReadiness = {
+    organization: true,
+    masterWarehouse: Boolean(row.master_warehouse_id),
+    mainRegions: REQUIRED_MAIN_REGIONS.every((item) => regionResult.rows.some((region) => region.code === item.code && requiredRegionCodes.has(region.code))),
+    regionalWarehouses: REQUIRED_MAIN_REGIONS.every((item) => regionalWarehouseResult.rows.some((warehouse) => warehouse.code === item.warehouseCode && warehouse.regionCode === requiredWarehouseMap.get(warehouse.code))),
+    pendingCeo: Boolean(pendingCeo && typeof pendingCeo.email === 'string' && typeof pendingCeo.displayName === 'string'),
+    policyReadinessRecorded: Boolean(rawSetup.policyReadiness && typeof rawSetup.policyReadiness === 'object'),
+    locked: stage !== 'NOT_STARTED',
+  };
+
   return {
     stage,
     setupRequired: stage !== 'ACTIVATED',
@@ -199,6 +248,7 @@ export async function getAmaalSetupStatus(services: ApiServices): Promise<SetupS
     masterWarehouse: row.master_warehouse_id
       ? { id: row.master_warehouse_id, code: row.master_warehouse_code ?? '', name: row.master_warehouse_name ?? '' }
       : null,
+    readiness,
     regions: regionResult.rows,
     pendingCeo: pendingCeo && typeof pendingCeo.email === 'string' && typeof pendingCeo.displayName === 'string'
       ? {
@@ -254,6 +304,13 @@ export async function initializeAmaalOrganization(
     if (currentStage === 'ORGANIZATION_READY' || currentStage === 'ACTIVATED' || Number(profileCount.rows[0]?.count ?? 0) > 0) {
       throw new SetupError('SETUP_ALREADY_COMPLETED', 'Amaal setup has already been completed.', 409);
     }
+
+    const masterWarehouse = await client.query(`
+      select id from public.warehouses
+      where organization_id = $1 and warehouse_type = 'MASTER' and status = 'ACTIVE'
+      order by created_at asc limit 1 for update
+    `, [row.organization_id]);
+    if (!masterWarehouse.rows[0]) throw new SetupError('MASTER_WAREHOUSE_MISSING', 'The Amaal Master Warehouse must exist before first-run setup.', 409);
 
     const existingRegionRows = await client.query<{ id: string; code: string; name: string }>(`
       select id, region_code as code, region_name as name
@@ -319,7 +376,7 @@ export async function initializeAmaalOrganization(
 
     const setupState = {
       ...currentSetup,
-      version: 1,
+      version: 2,
       stage: 'ORGANIZATION_READY',
       completedAt: new Date().toISOString(),
       requestId,
@@ -329,6 +386,8 @@ export async function initializeAmaalOrganization(
         employeeNumber: input.ceoEmployeeNumber ?? null,
       },
       foundation: {
+        mainRegionCodes: REQUIRED_MAIN_REGIONS.map((item) => item.code),
+        mainWarehouseCodes: REQUIRED_MAIN_REGIONS.map((item) => item.warehouseCode),
         masterWarehouseReady: Boolean((await client.query(`select 1 from public.warehouses where organization_id = $1 and warehouse_type = 'MASTER' and status = 'ACTIVE' limit 1`, [row.organization_id])).rowCount),
         regionIds,
         warehouseIds,
@@ -337,9 +396,25 @@ export async function initializeAmaalOrganization(
         pricing: 'PENDING_CONFIGURATION',
         commission: 'PENDING_CONFIGURATION',
         bonus: 'PENDING_CONFIGURATION',
-        aging: 'PENDING_CONFIGURATION',
+        aging: 'CONFIGURED_DEFAULTS',
         recovery: 'PENDING_CONFIGURATION',
         approvals: 'PENDING_CONFIGURATION',
+      },
+      policyDefaults: {
+        aging: {
+          green: { minDays: 1, maxDays: 7 },
+          orange: { minDays: 8, maxDays: 13 },
+          red: { minDays: 14, maxDays: 17 },
+          purple: { minDays: 18, maxDays: null },
+        },
+        suspension: {
+          agentCriticalDays: 18,
+          agentAgedDeviceThreshold: 4,
+          teamLeaderAgedAgentThreshold: 4,
+          managerAgedTeamThreshold: 4,
+          teamAgedDeviceThreshold: 4,
+        },
+        mfa: { enforced: false },
       },
     };
 

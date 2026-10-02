@@ -45,3 +45,7 @@ The first Vercel deployment blocker (workspace/package-manager discovery) was co
 ## Infrastructure gate
 
 Render stage has been reached. The Amaal Valkey/Redis-compatible store is provisioned in Frankfurt on the free plan. Render API/worker creation is held until the canonical Git repository URL is available to the Render connector. Vercel deployment is prepared at repository level but the connected Vercel deployment action is currently unavailable in-session.
+
+
+## Current delivery gate — Phase 1
+Phase 1 is explicitly tracked as Amaal Setup: company foundation, four main regions, standard regional warehouses, pending CEO definition, policy-readiness markers, atomic audit/outbox completion and setup readiness verification.

@@ -8,6 +8,7 @@ import { BrandLogo } from '../../components/brand-logo';
 
 type Me = {
   user: { id: string; email: string | null };
+  accessState: 'ACTIVE' | 'PENDING_ASSIGNMENT' | 'SUSPENDED';
   authorization: { roles: string[]; permissions: string[]; regionIds: string[]; teamIds: string[]; shopIds: string[] };
   mfaRequired: boolean;
   mfaVerified: boolean;
@@ -30,6 +31,8 @@ export default function DashboardPage() {
       try {
         const identity = await apiFetch<Me>('/v1/me');
         if (!active) return;
+        if (identity.accessState === 'PENDING_ASSIGNMENT') { router.replace('/access-pending'); return; }
+        if (identity.accessState === 'SUSPENDED') { router.replace('/access-pending?state=suspended'); return; }
         if (identity.mfaRequired && !identity.mfaVerified) {
           router.replace('/mfa');
           return;

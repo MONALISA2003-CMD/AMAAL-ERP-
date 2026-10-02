@@ -1,7 +1,7 @@
 # Amaal Work Phases
 
 **Status:** Active delivery roadmap  
-**Phase currently active:** Phase 2B — Organization & Identity Model  
+**Phase currently active:** Phase 1 — Amaal Setup deep closure  
 **Date:** 1 October 2026
 
 ## Purpose
@@ -15,6 +15,7 @@ The approved Amaal specifications remain the primary product/domain authority. T
 | Phase | Name | Primary outcome |
 |---|---|---|
 | 0 | Foundation & Architecture Freeze | Provider boundaries, transaction/event rules, terminology, deployment contract and live baseline are frozen and validated |
+| 1 | Amaal Setup | First-run organization bootstrap: company root, Master Warehouse verification, four main regions, standard regional warehouses, pending CEO definition, policy-readiness markers and atomic audit/outbox completion |
 | 2A | Neon Auth End-to-End | Login → session → JWT → Render `/v1/me`; development MFA remains disabled |
 | 2B | Organization & Identity Model | CEO, Admin, RM, Manager, Team Leader, Agent, Shop Owner, Recovery Officer and organizational hierarchy |
 | 2C | Authorization & Governance | Role/scope enforcement, approvals, suspension/reinstatement, audit and negative authorization tests |

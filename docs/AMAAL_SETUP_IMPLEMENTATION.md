@@ -1,6 +1,8 @@
+# Current-state note (2026-10-02): Phase 1 setup is reconciled live with four main regions and four regional warehouses. CEO activation has completed; setup is locked.
+
 # Amaal Phase 1 — Organization Setup
 
-**Status:** Phase 1 implementation complete for the organization-foundation boundary.
+**Status:** Phase 1 deep implementation complete for the organization-foundation boundary; live organization reconciliation recorded 2 October 2026.
 
 ## Purpose
 
@@ -31,3 +33,44 @@ The final setup mutation is protected by a server-only `AMAAL_SETUP_KEY`. The ke
 ## Next phase
 
 Phase 2 implements the final CEO identity activation, Neon-centered authentication, sessions and privileged MFA without depending on Supabase Auth.
+
+
+## Deepened controls — 2 October 2026
+
+### Required regional foundation
+
+Phase 1 now server-enforces the four current main regions:
+
+- NORTH
+- WEST
+- CENTRAL
+- EAST
+
+and the standard regional warehouse codes:
+
+- NUWH → NORTH
+- WUWH → WEST
+- CUWH → CENTRAL
+- EUWH → EAST
+
+The browser provides these as defaults, but the backend is authoritative.
+
+### Readiness reporting
+
+`GET /v1/setup/status` now returns explicit readiness flags for:
+
+- organization
+- Master Warehouse
+- main regions
+- regional warehouses
+- pending CEO
+- policy-readiness markers
+- setup lock state
+
+### Safety properties
+
+The final setup mutation remains one PostgreSQL transaction, guarded by a transaction advisory lock. It cannot partially create the organization foundation and then commit a half-finished setup. A second attempt after `ORGANIZATION_READY` or `ACTIVATED` is rejected.
+
+### Live foundation reconciliation
+
+The production organization had already been activated before this deeper Phase 1 closure. The live Neon foundation was therefore reconciled without resetting the company or CEO identity: the missing main regions and standard regional warehouses were added, the existing Central regional warehouse was aligned to `CUWH`, and the resulting foundation was recorded in audit/outbox history.

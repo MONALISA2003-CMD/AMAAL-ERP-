@@ -1,3 +1,5 @@
+# Current-state note (2026-10-02): The active API verifies Neon Auth / Better Auth JWTs against Neon JWKS. Historical Supabase Auth references in this document are retained as implementation history.
+
 # Amaal API Implementation Status
 
 **Updated:** 30 September 2026

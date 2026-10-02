@@ -1,5 +1,8 @@
 # Amaal Phase 0 — Foundation & Architecture Freeze
 
+> **Current-state supersession (2026-10-02):** Neon Auth / Better Auth is now the active production identity provider. Supabase references below describe the historical transitional baseline only. The active AI name is **Amaal AI**.
+
+
 **Status:** Active / freeze established  
 **Date:** 2 October 2026  
 **Phase owner:** Amaal engineering  

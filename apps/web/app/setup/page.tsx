@@ -22,8 +22,18 @@ const initialDraft: Draft = {
   ceoEmail: '',
   ceoDisplayName: '',
   ceoEmployeeNumber: '',
-  regions: [{ code: 'CENTRAL', name: 'Central' }],
-  regionalWarehouses: [{ code: 'CENTRAL-01', name: 'Central Warehouse', regionCode: 'CENTRAL' }],
+  regions: [
+    { code: 'NORTH', name: 'North' },
+    { code: 'WEST', name: 'West' },
+    { code: 'CENTRAL', name: 'Central' },
+    { code: 'EAST', name: 'East' },
+  ],
+  regionalWarehouses: [
+    { code: 'NUWH', name: 'Northern Uganda Warehouse', regionCode: 'NORTH' },
+    { code: 'WUWH', name: 'Western Uganda Warehouse', regionCode: 'WEST' },
+    { code: 'CUWH', name: 'Central Uganda Warehouse', regionCode: 'CENTRAL' },
+    { code: 'EUWH', name: 'Eastern Uganda Warehouse', regionCode: 'EAST' },
+  ],
 };
 
 function loadDraft(): Draft {
@@ -129,6 +139,13 @@ export default function SetupPage() {
       }
       const regionCodes = draft.regions.map((region) => normalizeCode(region.code));
       if (new Set(regionCodes).size !== regionCodes.length) return 'Each region code must be unique.';
+      for (const required of ['NORTH','WEST','CENTRAL','EAST']) {
+        if (!regionCodes.includes(required)) return `The foundation requires the ${required} main region.`;
+      }
+      const warehouseCodes = draft.regionalWarehouses.map((warehouse) => normalizeCode(warehouse.code));
+      for (const required of ['NUWH','WUWH','CUWH','EUWH']) {
+        if (!warehouseCodes.includes(required)) return `The foundation requires the ${required} regional warehouse.`;
+      }
     }
     if (step === 3) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.ceoEmail.trim())) return 'Enter a valid CEO email address.';
@@ -224,8 +241,14 @@ export default function SetupPage() {
           <p className="setup-lead">The Amaal foundation is in place and ready for secure access.</p>
           <div className="setup-summary">
             <div><span>Company</span><strong>{status?.organization.name ?? 'Amaal'}</strong></div>
-            <div><span>Regions</span><strong>{status?.regions.length ?? draft.regions.length}</strong></div>
+            <div><span>Main regions</span><strong>{status?.regions.length ?? draft.regions.length}</strong></div>
             <div><span>CEO</span><strong>{status?.pendingCeo?.displayName ?? draft.ceoDisplayName}</strong></div>
+          </div>
+          <div className="setup-readiness">
+            <div><span>Master Warehouse</span><strong>{status?.readiness.masterWarehouse ? 'Ready' : 'Missing'}</strong></div>
+            <div><span>Main Regions</span><strong>{status?.readiness.mainRegions ? 'Ready' : 'Incomplete'}</strong></div>
+            <div><span>Regional Warehouses</span><strong>{status?.readiness.regionalWarehouses ? 'Ready' : 'Incomplete'}</strong></div>
+            <div><span>CEO Definition</span><strong>{status?.readiness.pendingCeo ? 'Ready' : 'Missing'}</strong></div>
           </div>
           <div className="setup-next">
             <strong>Next</strong>
@@ -259,11 +282,11 @@ export default function SetupPage() {
           <section className="setup-section">
             <p className="setup-kicker">Welcome</p>
             <h2>Start with the Amaal foundation</h2>
-            <p className="setup-lead">Amaal is a single company system. This first step prepares the organization, operating regions and the first CEO definition.</p>
+            <p className="setup-lead">Amaal is a single-company operating system. This first step establishes the company root, four main regions, their regional warehouses and the first CEO definition.</p>
             <div className="setup-cards">
               <div className="setup-card"><span>Company</span><strong>{status?.organization.name ?? 'Amaal'}</strong><p>Your company foundation is already present.</p></div>
               <div className="setup-card"><span>Master Warehouse</span><strong>{status?.masterWarehouse?.name ?? 'Master Warehouse'}</strong><p>Your central stock location is ready.</p></div>
-              <div className="setup-card"><span>Security</span><strong>CEO controlled</strong><p>Privileged account security is completed after this organization setup.</p></div>
+              <div className="setup-card"><span>Foundation</span><strong>4 main regions</strong><p>North, West, Central and East are established before secure access is activated.</p></div>
             </div>
           </section>
         ) : null}
@@ -272,7 +295,7 @@ export default function SetupPage() {
           <section className="setup-section">
             <p className="setup-kicker">Organization</p>
             <h2>Define the operating structure</h2>
-            <p className="setup-lead">Add the regions Amaal will operate in. Regional warehouses are optional and can be added now or later.</p>
+            <p className="setup-lead">Amaal starts with four main regions. Each main region must have its standard regional warehouse. Additional organizational structures are handled after setup.</p>
             <div className="setup-list">
               {draft.regions.map((region, index) => (
                 <div className="setup-row" key={`region-${index}`}>

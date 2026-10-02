@@ -14,8 +14,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "@neondatabase/auth": "0.5.0-beta",
-    "qrcode": "^1.5.4",
-    "@supabase/supabase-js": "2.117.2"
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

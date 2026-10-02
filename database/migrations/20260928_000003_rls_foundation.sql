@@ -1,3 +1,18 @@
+-- Neon-centered identity compatibility layer. The current API transaction
+-- supplies amaal.actor_user_id; the function preserves the historical RLS call shape.
+create schema if not exists auth;
+create or replace function auth.uid()
+returns uuid
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select nullif(current_setting('amaal.actor_user_id', true), '')::uuid;
+$$;
+revoke all on function auth.uid() from public;
+grant execute on function auth.uid() to public;
+
 -- Reproducible RLS foundation for the Amaal public schema.
 -- Live equivalent: 20260928163450 / rls_foundation.
 
@@ -36,15 +51,28 @@ returns boolean
 language sql security definer stable
 set search_path = pg_catalog, public
 as $$
-  select exists (
-    select 1
-    from public.role_assignments ra
-    join public.role_permissions rp on rp.role = ra.role
-    where ra.user_id = auth.uid()
-      and ra.status = 'ACTIVE'
-      and (ra.effective_to is null or ra.effective_to > now())
-      and rp.permission_key = p_permission
-  ) or private.user_has_role('CEO');
+  select private.user_has_role('CEO')
+      or (
+        private.user_has_role('ADMIN')
+        and exists (
+          select 1
+          from public.admin_profiles ap
+          join public.admin_profile_permissions app on app.profile_key=ap.profile_key
+          where ap.user_id=auth.uid()
+            and ap.status='ACTIVE'
+            and app.permission_key=p_permission
+        )
+      )
+      or exists (
+        select 1
+        from public.role_assignments ra
+        join public.role_permissions rp on rp.role = ra.role
+        where ra.user_id = auth.uid()
+          and ra.role <> 'ADMIN'
+          and ra.status = 'ACTIVE'
+          and (ra.effective_to is null or ra.effective_to > now())
+          and rp.permission_key = p_permission
+      );
 $$;
 
 create or replace function private.user_can_access_region(p_region_id uuid)

@@ -45,6 +45,15 @@ export type AmaalSetupStatus = {
     id: string;
     name: string;
   };
+  readiness: {
+    organization: boolean;
+    masterWarehouse: boolean;
+    mainRegions: boolean;
+    regionalWarehouses: boolean;
+    pendingCeo: boolean;
+    policyReadinessRecorded: boolean;
+    locked: boolean;
+  };
   masterWarehouse: {
     id: string;
     code: string;
@@ -109,4 +118,23 @@ export async function publicReady(): Promise<ApiReadiness> {
   const payload = (await response.json()) as ApiReadiness;
   if (!response.ok && !payload) throw new Error(`Amaal readiness check failed with ${response.status}.`);
   return payload;
+}
+
+
+export type OrganizationInvitationPreview = {
+  email: string;
+  displayName: string;
+  role: string;
+  expiresAt: string;
+};
+
+export async function getOrganizationInvitationPreview(token: string): Promise<OrganizationInvitationPreview> {
+  return fetchJson<OrganizationInvitationPreview>(`/v1/org/invitations/preview?token=${encodeURIComponent(token)}`);
+}
+
+export async function acceptOrganizationInvitation(token: string) {
+  return apiFetch<{ status: 'ACCEPTED'; invitationId: string; userId: string; role: string }>('/v1/org/invitations/accept', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
 }

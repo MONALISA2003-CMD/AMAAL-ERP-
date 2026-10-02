@@ -37,7 +37,7 @@ The same secret is used by the API and worker. Do not point these services back 
 
 ## Identity
 
-Supabase Auth remains the current production identity provider. The API validates the bearer token and derives the Amaal user identity/assurance level before loading authorization context.
+Neon Auth / Better Auth is the current production identity provider. The API validates the bearer token and derives the Amaal user identity/assurance level before loading authorization context.
 
 ## Probes
 

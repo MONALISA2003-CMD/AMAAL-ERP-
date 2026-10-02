@@ -1,3 +1,18 @@
+-- Neon-centered identity compatibility layer. The current API transaction
+-- supplies amaal.actor_user_id; the function preserves the historical RLS call shape.
+create schema if not exists auth;
+create or replace function auth.uid()
+returns uuid
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select nullif(current_setting('amaal.actor_user_id', true), '')::uuid;
+$$;
+revoke all on function auth.uid() from public;
+grant execute on function auth.uid() to public;
+
 -- Amaal ERP — RLS / authorization foundation
 -- Policy layer prepared for explicit approval before enabling RLS on the live project.
 -- Business writes to core transactional tables remain domain-service controlled.
@@ -51,6 +66,11 @@ as $$
       and ra.role = required_role
       and ra.status = 'ACTIVE'
       and (ra.effective_to is null or ra.effective_to >= now())
+      and (required_role <> 'ADMIN'::public.role_key or exists (
+        select 1
+        from public.admin_profiles ap
+        where ap.user_id=ra.user_id and ap.status='ACTIVE'
+      ))
   )
 $$;
 

@@ -15,6 +15,9 @@ type Person = {
   profileStatus: string;
   role: string;
   regionId: string | null;
+  subregionId: string | null;
+  subregionCode: string | null;
+  subregionName: string | null;
   regionCode: string | null;
   regionName: string | null;
   managerUserId: string | null;
@@ -27,7 +30,7 @@ type Person = {
   shopName: string | null;
 };
 
-const roleOrder = ['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'];
+const roleOrder = ['ADMIN','REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'];
 
 export default function OrganizationPage() {
   const router = useRouter();
@@ -38,9 +41,14 @@ export default function OrganizationPage() {
   const [action, setAction] = useState('');
   const [actionError, setActionError] = useState('');
   const [regionForm, setRegionForm] = useState({ code: '', name: '' });
-  const [teamForm, setTeamForm] = useState({ regionId: '', managerUserId: '', teamCode: '', teamName: '' });
+  const [subregionForm, setSubregionForm] = useState({ regionId: '', code: '', name: '' });
+  const [teamForm, setTeamForm] = useState({ regionId: '', managerUserId: '', subregionId: '', teamCode: '', teamName: '' });
   const [shopForm, setShopForm] = useState({ teamId: '', shopCode: '', shopName: '', location: '' });
-  const [personForm, setPersonForm] = useState({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', managerUserId: '', teamId: '', shopId: '' });
+  const [personForm, setPersonForm] = useState({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', regionalManagerUserId: '', subregionId: '', managerUserId: '', teamId: '', shopId: '' });
+  const [inviteForm, setInviteForm] = useState({ email: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', regionalManagerUserId: '', subregionId: '', managerUserId: '', teamId: '', shopId: '' });
+  const [inviteLink, setInviteLink] = useState('');
+  const [adminForm, setAdminForm] = useState({ userId: '', displayName: '', employeeNumber: '', phone: '', profileKey: 'USER_ADMIN' });
+  const [adminInviteForm, setAdminInviteForm] = useState({ email: '', displayName: '', employeeNumber: '', phone: '', profileKey: 'USER_ADMIN' });
 
   useEffect(() => {
     let active = true;
@@ -67,6 +75,8 @@ export default function OrganizationPage() {
     return [...map.values()];
   }, [setup, people]);
   const managers = useMemo(() => people.filter((p) => p.role === 'MANAGER'), [people]);
+  const regionalManagers = useMemo(() => people.filter((p) => p.role === 'REGIONAL_MANAGER'), [people]);
+  const subregions = useMemo(() => people.length ? people.filter((p) => p.subregionId).map((p) => ({ id: p.subregionId!, code: p.subregionCode ?? p.subregionId!, name: p.subregionName ?? p.subregionId! })).filter((r, i, a) => a.findIndex((x) => x.id === r.id) === i) : [], [people]);
   const teams = useMemo(() => {
     const map = new Map<string, { id: string; name: string }>();
     for (const p of people) if (p.teamId) map.set(p.teamId, { id: p.teamId, name: p.teamName ?? p.teamId });
@@ -93,9 +103,13 @@ export default function OrganizationPage() {
     e.preventDefault();
     if (await runAction('Create region', '/v1/org/regions', regionForm)) setRegionForm({ code: '', name: '' });
   }
+  async function submitSubregion(e: React.FormEvent) {
+    e.preventDefault();
+    if (await runAction('Create sub-region', '/v1/org/subregions', subregionForm)) setSubregionForm({ regionId: '', code: '', name: '' });
+  }
   async function submitTeam(e: React.FormEvent) {
     e.preventDefault();
-    if (await runAction('Create team', '/v1/org/teams', teamForm)) setTeamForm({ regionId: '', managerUserId: '', teamCode: '', teamName: '' });
+    if (await runAction('Create team', '/v1/org/teams', teamForm)) setTeamForm({ regionId: '', managerUserId: '', subregionId: '', teamCode: '', teamName: '' });
   }
   async function submitShop(e: React.FormEvent) {
     e.preventDefault();
@@ -104,7 +118,33 @@ export default function OrganizationPage() {
   async function submitPerson(e: React.FormEvent) {
     e.preventDefault();
     const body = Object.fromEntries(Object.entries(personForm).map(([k, v]) => [k, v || undefined]));
-    if (await runAction('Provision identity', '/v1/org/people', body)) setPersonForm({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', managerUserId: '', teamId: '', shopId: '' });
+    if (await runAction('Provision identity', '/v1/org/people', body)) setPersonForm({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', regionalManagerUserId: '', subregionId: '', managerUserId: '', teamId: '', shopId: '' });
+  }
+  async function submitInvitation(e: React.FormEvent) {
+    e.preventDefault();
+    setAction('Create invitation'); setActionError(''); setInviteLink('');
+    try {
+      const result = await apiFetch<{ inviteUrl: string }>('/v1/org/invitations', { method:'POST', body: JSON.stringify(Object.fromEntries(Object.entries(inviteForm).map(([k,v])=>[k,v||undefined]))) });
+      setInviteLink(result.inviteUrl);
+      setActionError('Invitation created. Share the secure link with the recruit.');
+      setInviteForm({ email:'',displayName:'',employeeNumber:'',phone:'',role:'AGENT',regionId:'',regionalManagerUserId:'',subregionId:'',managerUserId:'',teamId:'',shopId:'' });
+    } catch (e) { setActionError(e instanceof Error ? e.message : 'Unable to create invitation.'); } finally { setAction(''); }
+  }
+
+  async function submitAdmin(e: React.FormEvent) {
+    e.preventDefault();
+    if (await runAction('Provision admin', '/v1/org/admins', adminForm)) setAdminForm({ userId:'',displayName:'',employeeNumber:'',phone:'',profileKey:'USER_ADMIN' });
+  }
+
+  async function submitAdminInvitation(e: React.FormEvent) {
+    e.preventDefault();
+    setAction('Create Admin invitation'); setActionError(''); setInviteLink('');
+    try {
+      const result = await apiFetch<{ inviteUrl: string }>('/v1/org/admin-invitations', { method:'POST', body: JSON.stringify(adminInviteForm) });
+      setInviteLink(result.inviteUrl);
+      setActionError('Admin invitation created. Share the secure link with the recruit.');
+      setAdminInviteForm({ email:'',displayName:'',employeeNumber:'',phone:'',profileKey:'USER_ADMIN' });
+    } catch (e) { setActionError(e instanceof Error ? e.message : 'Unable to create Admin invitation.'); } finally { setAction(''); }
   }
 
   const counts = useMemo(() => roleOrder.reduce<Record<string, number>>((acc, role) => {
@@ -168,25 +208,36 @@ export default function OrganizationPage() {
           </section>
           <section className="card">
             <div className="card-label">2B CONTROL PLANE</div>
-            <p className="muted">Recruitment and structure mutations are deliberately scoped by Render authorization. This screen provides the operator surface; the API remains the security boundary.</p>
+            <p className="muted">Structure changes, recruitment and Admin profiles are governed by Render authorization. API scope remains authoritative.</p>
             {actionError ? <div className="alert-card">{actionError}</div> : null}
+            {inviteLink ? <div className="card emphasis"><div className="card-label">SECURE INVITATION LINK</div><code>{inviteLink}</code><p className="muted">Share this link through your approved Amaal communication channel. The token is stored only as a digest on the server.</p></div> : null}
+
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitRegion}>
-                <div><strong>Region</strong><p className="muted">CEO/Admin structure action.</p></div>
+                <div><strong>Main region</strong><p className="muted">CEO/Admin structure action.</p></div>
                 <label>Code<input value={regionForm.code} onChange={(e) => setRegionForm({ ...regionForm, code: e.target.value })} required placeholder="WEST" /></label>
                 <label>Name<input value={regionForm.name} onChange={(e) => setRegionForm({ ...regionForm, name: e.target.value })} required placeholder="Western Uganda" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create region' ? 'Creating…' : 'Create region'}</button>
               </form>
+              <form className="setup-form-grid" onSubmit={submitSubregion}>
+                <div><strong>Sub-region</strong><p className="muted">CEO/Admin can add named operating sub-regions.</p></div>
+                <label>Region<select value={subregionForm.regionId} onChange={(e) => setSubregionForm({ ...subregionForm, regionId: e.target.value })} required><option value="">Select</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
+                <label>Code<input value={subregionForm.code} onChange={(e) => setSubregionForm({ ...subregionForm, code: e.target.value })} required placeholder="N-W1" /></label>
+                <label>Name<input value={subregionForm.name} onChange={(e) => setSubregionForm({ ...subregionForm, name: e.target.value })} required placeholder="Northern Zone 1" /></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Create sub-region' ? 'Creating…' : 'Create sub-region'}</button>
+              </form>
+            </div>
+
+            <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitTeam}>
                 <div><strong>Team</strong><p className="muted">Manager-scoped team creation.</p></div>
                 <label>Region<select value={teamForm.regionId} onChange={(e) => setTeamForm({ ...teamForm, regionId: e.target.value })} required><option value="">Select</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
                 <label>Manager<select value={teamForm.managerUserId} onChange={(e) => setTeamForm({ ...teamForm, managerUserId: e.target.value })} required><option value="">Select</option>{managers.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}</select></label>
+                <label>Sub-region<select value={teamForm.subregionId} onChange={(e) => setTeamForm({ ...teamForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
                 <label>Team code<input value={teamForm.teamCode} onChange={(e) => setTeamForm({ ...teamForm, teamCode: e.target.value })} required placeholder="CEN-01" /></label>
                 <label>Team name<input value={teamForm.teamName} onChange={(e) => setTeamForm({ ...teamForm, teamName: e.target.value })} required placeholder="Central Team 01" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create team' ? 'Creating…' : 'Create team'}</button>
               </form>
-            </div>
-            <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitShop}>
                 <div><strong>Shop Owner location</strong><p className="muted">Create a shop scope inside an authorized team.</p></div>
                 <label>Team<select value={shopForm.teamId} onChange={(e) => setShopForm({ ...shopForm, teamId: e.target.value })} required><option value="">Select</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
@@ -195,17 +246,53 @@ export default function OrganizationPage() {
                 <label>Location<input value={shopForm.location} onChange={(e) => setShopForm({ ...shopForm, location: e.target.value })} placeholder="Kampala Road" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create shop' ? 'Creating…' : 'Create shop'}</button>
               </form>
+            </div>
+
+            <div className="grid two">
+              <form className="setup-form-grid" onSubmit={submitInvitation}>
+                <div><strong>Recruit / invite</strong><p className="muted">Preferred path. The recruit creates their own Neon Auth account through the invite.</p></div>
+                <label>Email<input type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} required /></label>
+                <label>Display name<input value={inviteForm.displayName} onChange={(e) => setInviteForm({ ...inviteForm, displayName: e.target.value })} required /></label>
+                <label>Role<select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>{['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Region<select value={inviteForm.regionId} onChange={(e) => setInviteForm({ ...inviteForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
+                <label>Sub-region<select value={inviteForm.subregionId} onChange={(e) => setInviteForm({ ...inviteForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
+                {inviteForm.role === 'MANAGER' ? <label>Regional Manager<select value={inviteForm.regionalManagerUserId} onChange={(e) => setInviteForm({ ...inviteForm, regionalManagerUserId: e.target.value })}><option value="">Select RM</option>{regionalManagers.map((rm) => <option key={rm.userId} value={rm.userId}>{rm.displayName}{rm.regionCode ? ` — ${rm.regionCode}` : ''}</option>)}</select></label> : null}
+                {['TEAM_LEADER','AGENT','SHOP_OWNER'].includes(inviteForm.role) ? <label>Manager ID<input value={inviteForm.managerUserId} onChange={(e) => setInviteForm({ ...inviteForm, managerUserId: e.target.value })} placeholder="Manager UUID" /></label> : null}
+                <label>Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+                <label>Shop ID<input value={inviteForm.shopId} onChange={(e) => setInviteForm({ ...inviteForm, shopId: e.target.value })} placeholder="Shop Owner only" /></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Create invitation' ? 'Creating…' : 'Create secure invite'}</button>
+              </form>
+              <form className="setup-form-grid" onSubmit={submitAdmin}>
+                <div><strong>Provision Admin</strong><p className="muted">CEO-only. Admin authority is profile-based, not automatically CEO-level.</p></div>
+                <label>Neon Auth user ID<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
+                <label>Display name<input value={adminForm.displayName} onChange={(e) => setAdminForm({ ...adminForm, displayName: e.target.value })} required /></label>
+                <label>Employee number<input value={adminForm.employeeNumber} onChange={(e) => setAdminForm({ ...adminForm, employeeNumber: e.target.value })} /></label>
+                <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Provision admin' ? 'Provisioning…' : 'Provision Admin'}</button>
+              </form>
+              <form className="setup-form-grid" onSubmit={submitAdminInvitation}>
+                <div><strong>Recruit Admin</strong><p className="muted">CEO-only controlled recruitment. The Admin creates their own Neon Auth account from the secure invitation.</p></div>
+                <label>Email<input type="email" value={adminInviteForm.email} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, email: e.target.value })} required /></label>
+                <label>Display name<input value={adminInviteForm.displayName} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, displayName: e.target.value })} required /></label>
+                <label>Employee number<input value={adminInviteForm.employeeNumber} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, employeeNumber: e.target.value })} /></label>
+                <label>Admin profile<select value={adminInviteForm.profileKey} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Create Admin invitation' ? 'Creating…' : 'Create Admin invite'}</button>
+              </form>
+            </div>
+
+            <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitPerson}>
-                <div><strong>Provision identity</strong><p className="muted">Links an existing Neon Auth user to the Amaal hierarchy.</p></div>
+                <div><strong>Existing identity binding</strong><p className="muted">For already-created Neon Auth identities when a controlled invite cannot be used.</p></div>
                 <label>Neon Auth user ID<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={personForm.displayName} onChange={(e) => setPersonForm({ ...personForm, displayName: e.target.value })} required /></label>
-                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'].map((r) => <option key={r} value={r}>{r.replace('_',' ')}</option>)}</select></label>
-                <label>Employee number<input value={personForm.employeeNumber} onChange={(e) => setPersonForm({ ...personForm, employeeNumber: e.target.value })} /></label>
+                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <label>Region<select value={personForm.regionId} onChange={(e) => setPersonForm({ ...personForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
-                <label>Manager user ID<input value={personForm.managerUserId} onChange={(e) => setPersonForm({ ...personForm, managerUserId: e.target.value })} /></label>
+                <label>Sub-region<select value={personForm.subregionId} onChange={(e) => setPersonForm({ ...personForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
+                <label>Regional Manager ID<input value={personForm.regionalManagerUserId} onChange={(e) => setPersonForm({ ...personForm, regionalManagerUserId: e.target.value })} /></label>
+                <label>Manager ID<input value={personForm.managerUserId} onChange={(e) => setPersonForm({ ...personForm, managerUserId: e.target.value })} /></label>
                 <label>Team<select value={personForm.teamId} onChange={(e) => setPersonForm({ ...personForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
                 <label>Shop ID<input value={personForm.shopId} onChange={(e) => setPersonForm({ ...personForm, shopId: e.target.value })} /></label>
-                <button className="setup-primary" disabled={!!action}>{action === 'Provision identity' ? 'Provisioning…' : 'Provision identity'}</button>
+                <button className="setup-primary" disabled={!!action}>{action === 'Provision identity' ? 'Provisioning…' : 'Bind existing identity'}</button>
               </form>
             </div>
           </section>

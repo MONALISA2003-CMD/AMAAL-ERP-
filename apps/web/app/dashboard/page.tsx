@@ -68,6 +68,7 @@ export default function DashboardPage() {
           <div className="section-label">OPERATIONS</div>
           <nav>
             <a className="nav-item active" href="/dashboard">Command Center</a>
+            <a className="nav-item" href="/organization">People & Structure</a>
             <a className="nav-item" href="#inventory">Inventory & IMEI</a>
             <a className="nav-item" href="#sales">Sales & Receipts</a>
             <a className="nav-item" href="#recovery">Recovery</a>

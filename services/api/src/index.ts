@@ -105,3 +105,5 @@ export { withIdempotency } from './idempotency.ts';
 export { createApiServer } from './http.ts';
 
 export { getAmaalSetupStatus, initializeAmaalOrganization, validateSetupInitializeInput } from './setup.ts';
+
+export { getOrganizationDirectory, createRegion, createTeam, createShop, provisionPerson } from './organization.ts';

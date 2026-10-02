@@ -29,6 +29,11 @@ import {
   addRecoveryActivity,
   acceptRecoveredStock,
   closeRecoveryCase,
+  getOrganizationDirectory,
+  createRegion,
+  createTeam,
+  createShop,
+  provisionPerson,
 } from './index.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -124,8 +129,8 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status')) return true;
-  if (method === 'POST' && (pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals')) return true;
+  if (method === 'GET' && (pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory')) return true;
+  if (method === 'POST' && (pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people')) return true;
   if (method !== 'POST') return false;
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close)|approvals\/[^/]+\/decision)$/.test(pathname);
 }
@@ -147,12 +152,22 @@ export function createApiServer() {
       .filter(Boolean);
     const allowedOrigins = new Set([
       ...configuredOrigins,
-      // Canonical production Vercel alias. This prevents a stale preview URL
-      // in Render from breaking the browser CORS contract for production.
       'https://amaal-erp.vercel.app',
     ]);
     const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin.replace(/\/$/, '') : '';
-    if (requestOrigin && allowedOrigins.has(requestOrigin)) {
+    const trustedVercelOrigin = (() => {
+      if (!requestOrigin) return false;
+      try {
+        const url = new URL(requestOrigin);
+        return url.protocol === 'https:'
+          && url.hostname.endsWith('.vercel.app')
+          && url.hostname.startsWith('amaal-')
+          && url.hostname.endsWith('-projects.vercel.app');
+      } catch {
+        return false;
+      }
+    })();
+    if (requestOrigin && (allowedOrigins.has(requestOrigin) || trustedVercelOrigin)) {
       res.setHeader('access-control-allow-origin', requestOrigin);
       res.setHeader('access-control-allow-headers', 'authorization,content-type,x-request-id,x-idempotency-key,x-amaal-mfa-assertion');
       res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
@@ -199,6 +214,12 @@ export function createApiServer() {
 
       const authorizationHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;
       const user = await authenticateBearerToken(authorizationHeader);
+
+      if (req.method === 'GET' && pathname === '/v1/org/directory') {
+        const directory = await getOrganizationDirectory(services, user.id);
+        json(res,200,{requestId,items:directory});
+        return;
+      }
 
       if (req.method === 'POST' && pathname === '/v1/setup/activate-ceo') {
         const body = await readJson(req);
@@ -250,6 +271,48 @@ export function createApiServer() {
         json(res,200,{requestId,status:'VERIFIED',mfaAssertion:assertion});
         return;
       }
+
+      if (req.method === 'POST' && pathname === '/v1/org/regions') {
+        const body = await readJson(req);
+        const region = await createRegion(services,user.id,{code:requiredString(body,'code'),name:requiredString(body,'name'),description:typeof body.description==='string'?body.description:undefined});
+        json(res,201,{requestId,...region});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/teams') {
+        const body = await readJson(req);
+        const team = await createTeam(services,user.id,{regionId:requiredString(body,'regionId'),managerUserId:requiredString(body,'managerUserId'),teamCode:requiredString(body,'teamCode'),teamName:requiredString(body,'teamName')});
+        json(res,201,{requestId,...team});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/shops') {
+        const body = await readJson(req);
+        const shop = await createShop(services,user.id,{teamId:requiredString(body,'teamId'),shopCode:requiredString(body,'shopCode'),shopName:requiredString(body,'shopName'),location:typeof body.location==='string'?body.location:undefined});
+        json(res,201,{requestId,...shop});
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/org/people') {
+        const body = await readJson(req);
+        const role = requiredString(body,'role');
+        const roles = ['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'] as const;
+        if (!roles.includes(role as typeof roles[number])) throw new Error('Unsupported organizational role.');
+        const person = await provisionPerson(services,user.id,{
+          userId:requiredString(body,'userId'),
+          displayName:requiredString(body,'displayName'),
+          employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,
+          phone:typeof body.phone==='string'?body.phone:undefined,
+          role:role as typeof roles[number],
+          regionId:typeof body.regionId==='string'?body.regionId:undefined,
+          managerUserId:typeof body.managerUserId==='string'?body.managerUserId:undefined,
+          teamId:typeof body.teamId==='string'?body.teamId:undefined,
+          shopId:typeof body.shopId==='string'?body.shopId:undefined,
+        });
+        json(res,201,{requestId,...person});
+        return;
+      }
+
       const idempotencyKey = typeof req.headers['x-idempotency-key'] === 'string' ? req.headers['x-idempotency-key'].trim() || undefined : undefined;
 
       if(req.method==='POST'&&pathname==='/v1/sales/cash'){

@@ -1,9 +1,11 @@
 import { authClient, getMfaAssertion } from './auth';
 
 function apiBase(): string {
-  const value = process.env.NEXT_PUBLIC_AMAAL_API_URL;
-  if (!value) throw new Error('Amaal is not configured yet.');
-  return value.replace(/\/$/, '');
+  if (typeof window === 'undefined') {
+    const serverValue = process.env.AMAAL_BACKEND_URL?.trim() || process.env.NEXT_PUBLIC_AMAAL_API_URL?.trim() || 'https://amaal-api.onrender.com';
+    return serverValue.replace(/\/$/, '');
+  }
+  return '/api/amaal';
 }
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {

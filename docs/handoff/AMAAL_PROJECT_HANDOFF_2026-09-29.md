@@ -62,7 +62,7 @@ A duplicate copy of those approved specifications is also preserved as the exter
 
 # 2. MASTER ARCHITECTURAL PRINCIPLE
 
-> **The ERP creates the truth. Events distribute the truth. Analytics explains the truth. ML predicts from the truth. Jarvis reasons over authorized truth and orchestrates approved action.**
+> **The ERP creates the truth. Events distribute the truth. Analytics explains the truth. ML predicts from the truth. Amaal AI reasons over authorized truth and orchestrates approved action.**
 
 The transactional database is authoritative.
 
@@ -98,7 +98,7 @@ Amaal is a closed internal company system for:
 - audit
 - reporting
 - realtime operational updates
-- Jarvis intelligence and orchestration
+- Amaal AI intelligence and orchestration
 
 Approximate expected user population from the approved specification:
 
@@ -373,7 +373,7 @@ Realtime is primary. Reconciliation is the guardrail.
 
 # 12. JARVIS
 
-Jarvis is an intelligence/orchestration layer, not the database and not a generic SQL agent.
+Amaal AI is an intelligence/orchestration layer, not the database and not a generic SQL agent.
 
 Required boundary:
 
@@ -428,7 +428,7 @@ prepare_approval_request
 
 High-risk actions require human approval.
 
-Jarvis must never have unrestricted SQL authority.
+Amaal AI must never have unrestricted SQL authority.
 
 ---
 
@@ -452,7 +452,7 @@ Supabase
 └── Realtime         → realtime delivery
 
 OpenAI
-└── Jarvis intelligence layer (future integration stage)
+└── Amaal AI intelligence layer (future integration stage)
 
 GitHub
 └── source control / ZIP sync
@@ -730,7 +730,7 @@ Current repository shape:
 ```text
 apps/
   web/
-  jarvis/
+  amaal-ai/
 
 packages/
   ui/
@@ -769,7 +769,7 @@ tests/
 docs/
 ```
 
-The repository is a monorepo workspace covering frontend, API/domain services, workers, database, AI/Jarvis and shared packages.
+The repository is a monorepo workspace covering frontend, API/domain services, workers, database, AI/Amaal AI and shared packages.
 
 ---
 
@@ -826,7 +826,7 @@ The repository is a monorepo workspace covering frontend, API/domain services, w
 - recovery threshold policy values
 - loan/payment-provider implementation
 - full frontend ERP UI
-- full Jarvis model integration
+- full Amaal AI model integration
 - governed RAG content loading
 - ML training/data pipeline
 - production worker deployment and verification
@@ -842,7 +842,7 @@ The repository is a monorepo workspace covering frontend, API/domain services, w
 
 The architecture and tool contract are defined, but production AI integration is not yet the current deployment blocker.
 
-Do not introduce an unrestricted database query tool for Jarvis.
+Do not introduce an unrestricted database query tool for Amaal AI.
 
 The tool boundary must remain permission-aware and re-authorize before execution.
 
@@ -952,8 +952,8 @@ AMAAL_DOMAIN_SERVICE_STATUS.md
 AMAAL_EVENT_CATALOG.md
 AMAAL_IMPLEMENTATION_STATUS.md
 AMAAL_INFRASTRUCTURE_MAPPING.md
-AMAAL_JARVIS_GATEWAY_IMPLEMENTATION_STATUS.md
-AMAAL_JARVIS_TOOL_CONTRACT.md
+AMAAL_AI_GATEWAY_IMPLEMENTATION_STATUS.md
+AMAAL_AI_TOOL_CONTRACT.md
 AMAAL_MFA_IMPLEMENTATION_STATUS.md
 AMAAL_PHASE1_ARCHITECTURE.md
 AMAAL_READ_MODEL_AND_REALTIME.md
@@ -1014,7 +1014,7 @@ Do not:
 - put the database password in GitHub
 - disable RLS to make the application work
 - expose service-role keys to the browser
-- give Jarvis unrestricted SQL
+- give Amaal AI unrestricted SQL
 - treat `/health` as proof of database readiness
 - treat the current empty database as production-ready data
 - start UI polish before the core transactional path is validated
@@ -1076,7 +1076,7 @@ Use the same authoritative database URL and the appropriate internal Valkey URL.
 
 Connect the Next.js application to the live API and Supabase Auth after the server/API path is proven.
 
-### Gate F — Jarvis
+### Gate F — Amaal AI
 
 Only after the deterministic ERP path is reliable:
 
@@ -1120,7 +1120,7 @@ Before declaring production readiness, require:
 [ ] secrets verified out of repository
 [ ] dependency/security scan clean
 [ ] frontend authenticated flow verified
-[ ] Jarvis tool authorization verified
+[ ] Amaal AI tool authorization verified
 [ ] AI governance/evaluation gates verified
 ```
 
@@ -1157,7 +1157,7 @@ IMEI data         ⏳ not populated
 Sales             ⏳ not populated
 Worker deployment ⏳ not verified
 Frontend          ⏳ incomplete
-Jarvis            ⏳ architecture defined; integration pending
+Amaal AI            ⏳ architecture defined; integration pending
 ML                ⏳ future phase
 Production E2E    ⏳ pending
 ```

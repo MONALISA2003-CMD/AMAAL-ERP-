@@ -16,7 +16,8 @@
     "render:worker": "node --experimental-transform-types services/outbox-worker/src/runner.ts",
     "validate:repo": "node scripts/validate-repository.mjs",
     "validate:phase0": "node scripts/validate-phase0.mjs",
-    "check:phase2a-auth": "node scripts/phase2a-auth-check.mjs"
+    "check:phase2a-auth": "node scripts/phase2a-auth-check.mjs",
+    "validate:phase2b": "node scripts/validate-phase2b.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

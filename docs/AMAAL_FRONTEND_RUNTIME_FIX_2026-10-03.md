@@ -1,6 +1,6 @@
-# Amaal ERP — Frontend Runtime Fix (2026-10-03)
+# Amaal ERP — Frontend Runtime / Build Fixes (2026-10-03)
 
-## Issue
+## Issue 1 — Root page redirect fallback
 
 The production Vercel build completed successfully, but `/` rendered the fallback message:
 
@@ -14,7 +14,7 @@ The API setup-status endpoint was healthy and returned `stage=ACTIVATED`.
 
 ## Fix
 
-The setup-status request remains inside `try/catch`, while `redirect()` now executes only after a successful request and outside the catch block.
+The setup-status request remains inside `try/catch`, while `redirect()` executes only after a successful request and outside the catch block.
 
 ## Expected behavior
 
@@ -22,14 +22,23 @@ The setup-status request remains inside `try/catch`, while `redirect()` now exec
 - `GET /` + setup stage other than `ACTIVATED` → redirect to `/setup`
 - setup-status request failure → render the retry fallback
 
+## Issue 2 — Next.js prerender failure from `useSearchParams()`
+
+A subsequent Vercel build failed during prerendering of `/access-pending` with:
+
+`useSearchParams() should be wrapped in a suspense boundary at page "/access-pending"`
+
+## Root cause
+
+`apps/web/app/access-pending/page.tsx` was a client page that directly called `useSearchParams()`. Next.js production prerendering requires a Suspense boundary for this client-side URL search-parameter bailout.
+
+## Fix
+
+The page is now a server component that renders a `<Suspense>` boundary around `apps/web/app/access-pending/content.tsx`, where `useSearchParams()` remains isolated to the client component.
+
+The same pattern was proactively applied to `/signup`, which also uses `useSearchParams()`, preventing the same production-build failure from surfacing on the next route after `/access-pending`.
+
 ## Validation basis
 
-The Vercel production deployment inspected on 2026-10-03 showed:
-
-- build completed successfully;
-- `/api/amaal/v1/setup/status` returned HTTP 200 with `stage=ACTIVATED`;
-- `/api/amaal/health` returned HTTP 200;
-- `/api/amaal/ready` returned HTTP 200 with the database check `ok`;
-- `/api/auth/get-session` returned HTTP 200.
-
-The runtime issue was isolated to the homepage redirect/catch control flow.
+- Vercel build log identified the `/access-pending` Suspense requirement at prerender time.
+- All active `useSearchParams()` usages are now contained in client content components rendered beneath explicit Suspense boundaries.

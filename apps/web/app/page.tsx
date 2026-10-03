@@ -5,9 +5,10 @@ import { getSetupStatus } from '../lib/api';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  let status;
+
   try {
-    const status = await getSetupStatus();
-    redirect(status.stage === 'ACTIVATED' ? '/login' : '/setup');
+    status = await getSetupStatus();
   } catch {
     return (
       <main className="center-page">
@@ -17,4 +18,8 @@ export default async function HomePage() {
       </main>
     );
   }
+
+  // Next.js redirect() throws an internal redirect signal. Keep it outside
+  // the catch block so a successful setup check is not rendered as an error.
+  redirect(status.stage === 'ACTIVATED' ? '/login' : '/setup');
 }

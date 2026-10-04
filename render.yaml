@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: amaal-api
+    runtime: node
+    region: frankfurt
+    plan: starter
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: node --experimental-transform-types services/api/src/http.ts
+    healthCheckPath: /ready
+    envVars:
+      - key: NODE_VERSION
+        value: 24.0.0
+      - key: AMAAL_VALKEY_URL
+        sync: false
+      - key: AMAAL_WEB_ORIGIN
+        sync: false
+      - key: AMAAL_DATABASE_URL
+        sync: false
+      - key: NEON_AUTH_COOKIE_SECRET
+        sync: false
+
+  - type: worker
+    name: amaal-worker
+    runtime: node
+    region: frankfurt
+    plan: starter
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: node --experimental-transform-types services/outbox-worker/src/runner.ts
+    envVars:
+      - key: NODE_VERSION
+        value: 24.0.0
+      - key: AMAAL_VALKEY_URL
+        sync: false
+      - key: AMAAL_DATABASE_URL
+        sync: false
+
+  - type: pserv
+    name: amaal-intelligence
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    dockerfilePath: ./services/intelligence/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: AMAAL_INTELLIGENCE_DATABASE_URL
+        sync: false
+      - key: AMAAL_INTELLIGENCE_INTERNAL_TOKEN
+        sync: false
+      - key: AMAAL_INTELLIGENCE_MODE
+        value: SHADOW_ONLY

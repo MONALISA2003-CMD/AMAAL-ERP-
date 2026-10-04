@@ -1,8 +1,9 @@
 # Amaal Work Phases
 
 **Status:** Active delivery roadmap  
-**Phase currently active:** Phase 3 — Products, IMEI & Inventory Custody  
-**Date:** 3 October 2026
+**Phase currently active:** Phase 9 — Predictive Intelligence
+**Delivery state:** Implemented locally; deployment deferred until Stage 10  
+**Date:** 4 October 2026
 
 ## Purpose
 
@@ -31,3 +32,7 @@ The approved Amaal specifications remain the primary product/domain authority. T
 ## Phase rule
 
 A later phase may depend on a previous phase, but may not redefine its source-of-truth rules silently. Any architecture change must be reconciled against the approved specifications and recorded in the current documentation.
+
+## Pre-Stage-10 hardening
+
+Stage 9.5 is a production-hardening layer covering reproducible dependency policy, model artifacts, delayed labels, drift/calibration monitoring, canary/rollback logic, observability, supply-chain provenance and release tests. It must pass before Stage 10 deployment/production-hardening work proceeds.

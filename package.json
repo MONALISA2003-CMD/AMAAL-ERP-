@@ -25,7 +25,22 @@
     "test:phase4": "node tests/unit/phase4-rules.test.mjs",
     "validate:phase5": "node scripts/validate-phase5.mjs",
     "validate:phase6": "node scripts/validate-phase6.mjs",
-    "test:phase5": "node --experimental-transform-types tests/unit/phase5-aging-recovery.test.mjs"
+    "test:phase5": "node --experimental-transform-types tests/unit/phase5-aging-recovery.test.mjs",
+    "validate:phase7": "node scripts/validate-phase7.mjs",
+    "test:phase7": "node --experimental-strip-types tests/unit/phase7-reporting.test.mjs",
+    "audit:project": "node scripts/audit-entire-project.mjs",
+    "validate:phase8": "node scripts/validate-phase8.mjs",
+    "test:phase8": "node --experimental-strip-types tests/unit/phase8-ai-policy.test.mjs && node --experimental-strip-types tests/unit/phase8-ai-redteam.test.mjs && node --experimental-strip-types tests/unit/phase8-output-guardrails.test.mjs",
+    "eval:phase8": "node --experimental-strip-types scripts/run-phase8-evals.mjs",
+    "validate:phase9": "node scripts/validate-phase9.mjs",
+    "test:phase9": "node --experimental-strip-types tests/unit/phase9-intelligence.test.mjs",
+    "test:ml": "PYTHONPATH=services/intelligence python3 -m pytest services/intelligence/tests -q",
+    "test:all": "node scripts/run-tests.mjs --all",
+    "validate:release": "node scripts/validate-release.mjs",
+    "verify:deps": "node scripts/verify-dependency-policy.mjs",
+    "audit:stage1-9": "node scripts/audit-stage1-9.mjs",
+    "sbom": "node scripts/generate-sbom.mjs",
+    "preflight:production": "node scripts/preflight-production.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

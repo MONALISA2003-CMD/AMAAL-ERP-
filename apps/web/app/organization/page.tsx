@@ -213,7 +213,7 @@ export default function OrganizationPage() {
           <a className="nav-item" href="/dashboard#sales">Sales & Receipts</a>
           <a className="nav-item" href="/dashboard#recovery">Recovery</a>
           <div className="section-label lower">INTELLIGENCE</div>
-          <a className="nav-item" href="/dashboard#amaal-ai">Amaal AI</a>
+          <a className="nav-item" href="/ai">Amaal AI</a>
         </aside>
         <section className="content">
           <div className="content-header">

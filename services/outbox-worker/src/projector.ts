@@ -18,45 +18,120 @@ async function consumeOnce(tx: DatabaseTransaction, consumerName: string, eventI
 
 async function projectSalesDaily(tx: DatabaseTransaction, message: OutboxMessage): Promise<void> {
   if (message.eventType !== 'SALE_COMPLETED' && message.eventType !== 'SALE_REVERSED') return;
-  const rows = await tx.query<{
-    organization_id:string;
-    sale_date:string;
-    region_id:string|null;
-    team_id:string|null;
-    seller_user_id:string;
-    total_amount:string;
-    sale_units:string;
+  const saleId = typeof message.payload.sale_id === 'string' ? message.payload.sale_id : message.aggregateId;
+  const saleRows = await tx.query<{
+    organization_id: string;
+    sale_date: string;
+    region_id: string;
+    team_id: string;
+    seller_user_id: string;
+    total_amount: string;
   }>(
-    `select s.organization_id,coalesce(s.completed_at,s.created_at)::date as sale_date,s.region_id,s.team_id,s.seller_user_id,s.total_amount::text,coalesce(sum(si.quantity),0)::bigint::text as sale_units
-     from public.sales s
-     left join public.sale_items si on si.sale_id=s.id
-     where s.id=$1
-     group by s.id`,
-    [message.eventType === 'SALE_REVERSED' ? message.aggregateId : (message.payload.sale_id as string ?? message.aggregateId)],
+    `select s.organization_id,coalesce(s.completed_at,s.created_at)::date as sale_date,s.region_id,s.team_id,s.seller_user_id,s.total_amount::text
+     from public.sales s where s.id=$1`, [saleId],
   );
-  if (rows.length !== 1) return;
-  const sale = rows[0]!;
-  if (!sale.region_id || !sale.team_id) {
-    throw new Error(`SALE projection ${message.id} is missing required region/team scope.`);
-  }
+  if (saleRows.length !== 1) return;
+  const sale = saleRows[0]!;
+  const itemCount = Number((await tx.query<{ n: string }>(
+    `select count(*)::bigint::text as n from public.sale_items si where si.sale_id=$1 ${message.eventType === 'SALE_COMPLETED' ? `and si.is_active=true` : ''}`,
+    [saleId],
+  ))[0]?.n ?? '0');
+
   if (message.eventType === 'SALE_COMPLETED') {
     await tx.query(
-      `insert into public.read_model_sales_daily(organization_id,sale_date,region_id,team_id,seller_user_id,units,revenue,updated_at)
-       values ($1,$2,$3,$4,$5,$6::bigint,$7::numeric,now())
+      `insert into public.read_model_sales_daily(organization_id,sale_date,region_id,team_id,seller_user_id,units,revenue,transaction_count,updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,1,now())
        on conflict (organization_id,sale_date,region_id,team_id,seller_user_id)
-       do update set units=read_model_sales_daily.units+excluded.units,revenue=read_model_sales_daily.revenue+excluded.revenue,updated_at=now()`,
-      [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,sale.sale_units,sale.total_amount],
+       do update set units=read_model_sales_daily.units+excluded.units,
+                     revenue=read_model_sales_daily.revenue+excluded.revenue,
+                     transaction_count=read_model_sales_daily.transaction_count+1,
+                     updated_at=now()`,
+      [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,itemCount,sale.total_amount],
     );
-  } else {
-    await tx.query(
-      `insert into public.read_model_sales_daily(organization_id,sale_date,region_id,team_id,seller_user_id,reversed_units,reversed_revenue,updated_at)
-       values ($1,$2,$3,$4,$5,$6::bigint,$7::numeric,now())
-       on conflict (organization_id,sale_date,region_id,team_id,seller_user_id)
-       do update set reversed_units=read_model_sales_daily.reversed_units+excluded.reversed_units,reversed_revenue=read_model_sales_daily.reversed_revenue+excluded.reversed_revenue,updated_at=now()`,
-      [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,sale.sale_units,sale.total_amount],
-    );
+    return;
+  }
+
+  await tx.query(
+    `insert into public.read_model_sales_daily(organization_id,sale_date,region_id,team_id,seller_user_id,reversed_units,reversed_revenue,reversed_transaction_count,updated_at)
+     values ($1,$2,$3,$4,$5,$6,$7,1,now())
+     on conflict (organization_id,sale_date,region_id,team_id,seller_user_id)
+     do update set reversed_units=read_model_sales_daily.reversed_units+excluded.reversed_units,
+                   reversed_revenue=read_model_sales_daily.reversed_revenue+excluded.reversed_revenue,
+                   reversed_transaction_count=read_model_sales_daily.reversed_transaction_count+1,
+                   updated_at=now()`,
+    [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,itemCount,sale.total_amount],
+  );
+}
+
+async function projectProductDaily(tx: DatabaseTransaction, message: OutboxMessage): Promise<void> {
+  if (message.eventType !== 'SALE_COMPLETED' && message.eventType !== 'SALE_REVERSED') return;
+  const saleId = typeof message.payload.sale_id === 'string' ? message.payload.sale_id : message.aggregateId;
+  const sales = await tx.query<{ organization_id:string; sale_date:string; region_id:string; team_id:string; seller_user_id:string }>(
+    `select organization_id,coalesce(completed_at,created_at)::date as sale_date,region_id,team_id,seller_user_id from public.sales where id=$1`, [saleId],
+  );
+  if (sales.length !== 1) return;
+  const sale = sales[0]!;
+  const items = await tx.query<{ product_variant_id:string; units:string; revenue:string }>(
+    `select product_variant_id,count(*)::bigint::text as units,coalesce(sum(line_total),0)::numeric::text as revenue
+     from public.sale_items where sale_id=$1 ${message.eventType === 'SALE_COMPLETED' ? `and is_active=true` : ''}
+     group by product_variant_id`, [saleId],
+  );
+  for (const item of items) {
+    if (message.eventType === 'SALE_COMPLETED') {
+      await tx.query(
+        `insert into public.read_model_product_daily(organization_id,sale_date,region_id,team_id,seller_user_id,product_variant_id,units,revenue,updated_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+         on conflict (organization_id,sale_date,region_id,team_id,seller_user_id,product_variant_id)
+         do update set units=read_model_product_daily.units+excluded.units,revenue=read_model_product_daily.revenue+excluded.revenue,updated_at=now()`,
+        [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,item.product_variant_id,item.units,item.revenue],
+      );
+    } else {
+      await tx.query(
+        `insert into public.read_model_product_daily(organization_id,sale_date,region_id,team_id,seller_user_id,product_variant_id,reversed_units,reversed_revenue,updated_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+         on conflict (organization_id,sale_date,region_id,team_id,seller_user_id,product_variant_id)
+         do update set reversed_units=read_model_product_daily.reversed_units+excluded.reversed_units,reversed_revenue=read_model_product_daily.reversed_revenue+excluded.reversed_revenue,updated_at=now()`,
+        [sale.organization_id,sale.sale_date,sale.region_id,sale.team_id,sale.seller_user_id,item.product_variant_id,item.units,item.revenue],
+      );
+    }
   }
 }
+
+async function projectCommissionDaily(tx: DatabaseTransaction, message: OutboxMessage): Promise<void> {
+  if (message.eventType !== 'COMMISSION_CREATED' && message.eventType !== 'COMMISSION_ADJUSTED') return;
+  const commissionId = message.aggregateId;
+  const rows = await tx.query<{
+    organization_id:string; sale_date:string; region_id:string; team_id:string; beneficiary_user_id:string; beneficiary_role:string|null; amount:string; adjustment_amount:string;
+  }>(
+    `select s.organization_id,coalesce(s.completed_at,s.created_at)::date as sale_date,s.region_id,s.team_id,c.beneficiary_user_id,coalesce(c.beneficiary_role::text,'UNKNOWN') as beneficiary_role,
+       c.amount::numeric::text as amount,
+       coalesce((select sum(a.amount) from public.commission_adjustments a where a.commission_id=c.id),0)::numeric::text as adjustment_amount
+     from public.commissions c join public.sales s on s.id=c.sale_id where c.id=$1`, [commissionId],
+  );
+  if (rows.length !== 1) return;
+  const row=rows[0]!;
+  if (message.eventType === 'COMMISSION_CREATED') {
+    await tx.query(
+      `insert into public.read_model_commission_daily(organization_id,sale_date,region_id,team_id,beneficiary_user_id,beneficiary_role,gross_amount,adjustment_amount,net_amount,updated_at)
+       values ($1,$2,$3,$4,$5,$6,$7,0,$7,now())
+       on conflict (organization_id,sale_date,region_id,team_id,beneficiary_user_id,beneficiary_role)
+       do update set gross_amount=read_model_commission_daily.gross_amount+excluded.gross_amount,
+                     net_amount=(read_model_commission_daily.gross_amount+excluded.gross_amount)-read_model_commission_daily.adjustment_amount,
+                     updated_at=now()`,
+      [row.organization_id,row.sale_date,row.region_id,row.team_id,row.beneficiary_user_id,row.beneficiary_role,row.amount],
+    );
+    return;
+  }
+  const adjustment = Number(row.adjustment_amount);
+  await tx.query(
+    `update public.read_model_commission_daily
+     set adjustment_amount=$1,net_amount=gross_amount-$1,updated_at=now()
+     where organization_id=$2 and sale_date=$3 and region_id=$4 and team_id=$5 and beneficiary_user_id=$6
+       and beneficiary_role is not distinct from $7`,
+    [adjustment,row.organization_id,row.sale_date,row.region_id,row.team_id,row.beneficiary_user_id,row.beneficiary_role],
+  );
+}
+
 
 export class PostgresRealtimePublisher implements OutboxPublisher {
   private readonly redis: Redis | null;
@@ -75,6 +150,8 @@ export class PostgresRealtimePublisher implements OutboxPublisher {
         if (!first) return false;
 
         await projectSalesDaily(tx, message);
+        await projectProductDaily(tx, message);
+        await projectCommissionDaily(tx, message);
 
         const recipientUserId = typeof message.payload.recipient_user_id === 'string' ? message.payload.recipient_user_id : null;
         await tx.query(

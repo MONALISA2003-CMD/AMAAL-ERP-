@@ -1,0 +1,69 @@
+Amaal Stage 8 Change Manifest — 2026-10-04
+
+ADDED
+- apps/amaal-ai/src/contracts.ts — governed tool/risk/autonomy contract
+- apps/amaal-ai/src/router.ts — deterministic intent and minimum-tool routing
+- apps/amaal-ai/src/gateway.ts — authorization-scoped AI tool boundary
+- apps/amaal-ai/src/knowledge.ts — permission-aware internal knowledge retrieval
+- apps/amaal-ai/src/audit.ts — conversations, invocations, action plans, approvals, execution
+- apps/amaal-ai/src/orchestrator.ts — OpenAI Responses orchestration and bounded tool loop
+- apps/amaal-ai/src/index.ts — AI package exports
+- apps/amaal-ai/src/output-guardrails.ts — deterministic protected-output guard
+- apps/amaal-ai/evals/stage8-eval-cases.json — 18 deterministic control-plane cases
+- scripts/run-phase8-evals.mjs — Evaluation Center runner
+- apps/web/app/ai/page.tsx — Amaal AI frontend workspace and approval inbox
+- database/migrations/20261004_000031_phase8_ai_operations.sql — AI schema and permissions
+- database/migrations/20261004_000032_phase8_ai_governance_versioning.sql — governance versioning + plan expiry
+- database/migrations/20261004_000033_phase8_ai_tool_policy_versioning.sql — tool-policy version pinning
+- tests/unit/phase8-ai-policy.test.mjs — policy tests
+- tests/unit/phase8-ai-redteam.test.mjs — adversarial routing/authorization regression tests
+- tests/unit/phase8-output-guardrails.test.mjs — deterministic output security tests
+- scripts/validate-phase8.mjs — Stage 8 repository validator
+- docs/AMAAL_PHASE8_IMPLEMENTATION.md — engineering implementation record
+- docs/AMAAL_AI_GOVERNANCE.md — AI governance/security standard
+- AMAAL_STAGE8_HANDOFF_2026-10-04.md — handoff
+- STAGE8_CHANGE_MANIFEST.txt — this manifest
+
+UPDATED
+- services/api/package.json — @amaal/ai workspace dependency
+- services/api/src/index.ts — AI service wrappers
+- services/api/src/http.ts — AI HTTP endpoints
+- services/approvals/src/index.ts — AI_ACTION approval type
+- Amaal AI approval inbox/decision API and executor UI
+- apps/web/lib/api.ts — AI API contracts/client methods
+- apps/web/app/globals.css — Amaal AI UI styles
+- web navigation — AI routes updated to /ai
+- .env.example — explicit AI runtime configuration defaults
+- README.md — active delivery status moved to Stage 8
+- docs/AMAAL_WORK_PHASES.md — active phase moved to Stage 8
+- docs/AMAAL_AI_TOOL_CONTRACT.md — orchestration/approval status aligned
+- docs/AMAAL_AI_GATEWAY_IMPLEMENTATION_STATUS.md — gateway + orchestration status aligned
+- apps/amaal-ai/README.md — current Stage 8 implementation summary
+
+GUARDRAILS
+- Products are preserved; no destructive product operation added.
+- Neon remains authoritative.
+- Outbox/realtime architecture is preserved.
+- Valkey remains transient and non-authoritative.
+- AI cannot run raw SQL.
+- AI cannot approve its own requests.
+- High-risk actions prepare plans; only approved recovery plans can execute in Stage 8.
+- Critical financial/security/destructive operations are not executable by AI in Stage 8.
+- AI provider is disabled by default.
+- Governance and tool-policy versions are pinned on AI records.
+- High-risk action plans expire after 24 hours.
+- Final model output passes a deterministic protected-content guard.
+- Rejected tool calls and output guardrail blocks are auditable.
+- No provider secret is exposed to the browser.
+
+VALIDATION
+- phase8-ai-policy.test.mjs: PASS 10/10
+- phase8-ai-redteam.test.mjs: PASS 5/5
+- phase8-output-guardrails.test.mjs: PASS 4/4
+- Stage 8 Evaluation Center: PASS 18/18
+- validate-phase8.mjs: PASS 43 checks
+- full repository validation remains required before Stage 10 deployment.
+
+DELIVERY
+- GitHub push: not performed
+- Production deployment: not performed

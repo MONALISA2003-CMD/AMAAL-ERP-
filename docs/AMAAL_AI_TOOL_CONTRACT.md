@@ -1,6 +1,6 @@
 # Amaal AI Tool Contract
 
-Status: Engineering contract — gateway implemented; LLM orchestration pending
+Status: Engineering contract — Stage 8 governed gateway/orchestration plus governance, output-guardrail and evaluation hardening implemented locally; production deployment deferred until Stage 10
 
 ## 1. Purpose
 
@@ -251,3 +251,22 @@ Amaal AI memory may store conversation/task context, but remembered information 
 There is deliberately no `run_sql()` or unrestricted database tool in the Amaal AI contract.
 
 If a new tool needs data, the tool must be implemented as a narrowly scoped business capability with explicit authorization.
+
+## 13. Governance versioning and expiry
+
+Current runtime contract versions:
+
+```text
+Governance: 8.2
+Tool policy: 2026-10-04.2
+```
+
+High-risk action plans expire after 24 hours and must pass expiry checks at submission, approval and execution.
+
+## 14. Output guardrail
+
+Final model narratives pass through a deterministic guard for protected secrets, raw SQL/database commands and explicit privilege-bypass language. Blocked output is replaced rather than partially redacted and is audit-visible without recording the protected value.
+
+## 15. Evaluation Center
+
+18 deterministic control-plane cases cover routing, prompt injection, authorization, critical-operation refusal, output leakage and schema/capability integrity. See `apps/amaal-ai/evals/stage8-eval-cases.json`.

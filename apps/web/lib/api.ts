@@ -184,3 +184,208 @@ export async function acceptRecoveredStockApi(caseId:string,warehouseId:string,s
 export async function closeRecoveryCaseApi(caseId:string,reason:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/close`,{method:'POST',body:JSON.stringify({reason}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
 export async function listRecoverySuspensionsApi(){return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/recovery/suspensions');}
 export async function reinstateSuspendedUserApi(userId:string,reason:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/suspensions/${encodeURIComponent(userId)}/reinstate`,{method:'POST',body:JSON.stringify({reason}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+
+
+export type OperationalReportOptions = {
+  period?: 'TODAY' | 'WEEK' | 'MONTH' | '3M' | '6M' | '12M';
+  comparison?: 'AGENT' | 'TEAM' | 'MANAGER' | 'REGION';
+  regionId?: string;
+  teamId?: string;
+};
+
+export async function getOperationalReportApi(options: OperationalReportOptions = {}) {
+  const qs = new URLSearchParams();
+  qs.set('period', options.period ?? 'MONTH');
+  qs.set('comparison', options.comparison ?? 'TEAM');
+  if (options.regionId) qs.set('regionId', options.regionId);
+  if (options.teamId) qs.set('teamId', options.teamId);
+  return apiFetch<any>(`/v1/reports/operational?${qs.toString()}`);
+}
+
+export async function exportOperationalReportCsvApi(options: OperationalReportOptions = {}): Promise<{ filename: string; csv: string }> {
+  const tokenResponse = await authClient.token();
+  const token = tokenResponse.data?.token ?? null;
+  if (!token) throw new Error('A secure session is required.');
+  const qs = new URLSearchParams();
+  qs.set('period', options.period ?? 'MONTH');
+  qs.set('comparison', options.comparison ?? 'TEAM');
+  if (options.regionId) qs.set('regionId', options.regionId);
+  if (options.teamId) qs.set('teamId', options.teamId);
+  const mfaAssertion = getMfaAssertion();
+  const response = await fetch(`${apiBase()}/v1/reports/operational.csv?${qs.toString()}`, {
+    cache: 'no-store',
+    headers: {
+      authorization: `Bearer ${token}`,
+      ...(mfaAssertion ? { 'x-amaal-mfa-assertion': mfaAssertion } : {}),
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    try {
+      const payload = JSON.parse(text) as { message?: string; error?: string };
+      throw new Error(payload.message || payload.error || `Report export failed with ${response.status}.`);
+    } catch (error) {
+      if (error instanceof Error && error.message !== text) throw error;
+      throw new Error(`Report export failed with ${response.status}.`);
+    }
+  }
+  const contentDisposition = response.headers.get('content-disposition') ?? '';
+  const match = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return { filename: match?.[1] ?? 'amaal-operational-report.csv', csv: text };
+}
+
+export type AmaalAIStatus = {
+  enabled: boolean;
+  configured: boolean;
+  provider: 'openai' | 'none';
+  model: string | null;
+  maxToolRounds: number;
+  governedTools: number;
+  governanceVersion: string;
+  toolPolicyVersion: string;
+};
+
+export type AmaalAIRoute = {
+  intent: string;
+  agent: string;
+  risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  candidateTools: string[];
+  rationale: string;
+};
+
+export type AmaalAIToolEvidence = {
+  tool: string;
+  agent: string;
+  risk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  authorization: string;
+  actionPlanId?: string;
+  classification?: string;
+};
+
+export type AmaalAIChatResult = {
+  conversationId: string;
+  message: string;
+  provider: string;
+  model: string | null;
+  mode: 'LIVE' | 'FOUNDATION';
+  route: AmaalAIRoute;
+  evidence: AmaalAIToolEvidence[];
+  actionPlanIds: string[];
+};
+
+export type AmaalAIActionPlan = {
+  id: string;
+  conversationId: string | null;
+  toolName: string;
+  riskLevel: 'HIGH' | 'CRITICAL';
+  autonomyLevel: number;
+  summary: string;
+  arguments: Record<string, unknown>;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'EXECUTED' | 'EXPIRED' | 'CANCELLED' | string;
+  approvalId: string | null;
+  executedTargetId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AmaalAIAwaitingApproval = {
+  approvalId: string;
+  planId: string;
+  requestedBy: string;
+  toolName: string;
+  riskLevel: 'HIGH' | 'CRITICAL';
+  summary: string;
+  reason: string;
+  createdAt: string;
+};
+
+export async function getAmaalAIStatusApi() {
+  return apiFetch<AmaalAIStatus>('/v1/ai/status');
+}
+
+export async function chatAmaalAIApi(input: { message: string; conversationId?: string }) {
+  return apiFetch<AmaalAIChatResult>('/v1/ai/chat', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function createAmaalAIConversationApi(title?: string) {
+  return apiFetch<{ conversation: { id: string } }>('/v1/ai/conversations', {
+    method: 'POST',
+    body: JSON.stringify(title ? { title } : {}),
+  });
+}
+
+export async function listAmaalAIActionPlansApi() {
+  return apiFetch<{ items: AmaalAIActionPlan[] }>('/v1/ai/action-plans');
+}
+
+export async function listAmaalAIAwaitingApprovalsApi() {
+  return apiFetch<{ items: AmaalAIAwaitingApproval[] }>('/v1/ai/approvals');
+}
+
+export async function decideAmaalAIAwaitingApprovalApi(approvalId: string, decision: 'APPROVED'|'REJECTED', reason: string) {
+  return apiFetch<{ approvalId: string; planId: string; status: 'APPROVED'|'REJECTED' }>(`/v1/ai/approvals/${encodeURIComponent(approvalId)}/decision`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, reason }),
+  });
+}
+
+export async function submitAmaalAIActionPlanApi(planId: string, reason: string) {
+  return apiFetch<{ planId: string; approvalId: string; status: 'PENDING_APPROVAL' }>(`/v1/ai/action-plans/${encodeURIComponent(planId)}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function executeAmaalAIRecoveryPlanApi(planId: string) {
+  return apiFetch<{ planId: string; targetId: string; status: 'EXECUTED' }>(`/v1/ai/action-plans/${encodeURIComponent(planId)}/execute`, {
+    method: 'POST',
+    body: '{}',
+  });
+}
+
+export type AmaalIntelligencePrediction = {
+  id: string;
+  model_key: string;
+  model_version: string;
+  prediction_kind: string;
+  entity_type: string;
+  entity_id: string;
+  region_id: string | null;
+  team_id: string | null;
+  seller_user_id: string | null;
+  product_variant_id: string | null;
+  as_of_date: string;
+  status: 'PREDICTED'|'INSUFFICIENT_HISTORY'|'SHADOW'|'BLOCKED';
+  value: unknown;
+  confidence: number | null;
+  explanation: unknown;
+  feature_schema_version: string;
+  governance_version: string;
+  updated_at: string;
+};
+
+export type AmaalIntelligenceStatus = {
+  requestId?: string;
+  featureSchemaVersion: string;
+  governanceVersion: string;
+  mode: 'FOUNDATION_ONLY'|'SHADOW_READY';
+  modelRegistryInstalled: boolean;
+  predictionsInstalled: boolean;
+  totals: { predictions: number; shadow: number; predicted: number };
+  latestPredictionAt: string | null;
+  activation: string;
+};
+
+export async function getAmaalIntelligenceStatusApi() {
+  return apiFetch<AmaalIntelligenceStatus>('/v1/intelligence/status');
+}
+
+export async function getAmaalIntelligenceSummaryApi() {
+  return apiFetch<AmaalIntelligenceStatus & { sections: Record<string, AmaalIntelligencePrediction[]> }>('/v1/intelligence/summary');
+}
+
+export async function listAmaalIntelligencePredictionsApi(kind?: string, limit = 20) {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (kind) query.set('kind', kind);
+  return apiFetch<{ mode: 'FOUNDATION_ONLY'|'SHADOW_READY'; items: AmaalIntelligencePrediction[] }>(`/v1/intelligence/predictions?${query.toString()}`);
+}

@@ -1,46 +1,27 @@
-# Vercel infrastructure status
+# Vercel infrastructure status — Stage 9.5 baseline
 
-**Phase 0 supersession note (1 Oct 2026):** The current browser still uses the transitional Supabase Auth client, but this is not the target architecture. Phase 2 removes that dependency. Vercel remains presentation-only.
-
-
-## Role
-
-Vercel is the presentation layer for the closed Amaal ERP:
+Vercel is the browser/presentation boundary for Amaal:
 
 - Next.js / React / TypeScript
 - authenticated PWA client
-- client-side realtime consumption through approved application paths
-- no authoritative database writes from the browser
+- SEO/static/catalog presentation where appropriate
+- report, AI and intelligence UI
+- no direct authoritative database writes
 
-## Current client
-
-`apps/web` contains the authenticated ERP shell, Supabase Auth browser client, bearer-token API client, `/login`, `/mfa`, `/dashboard`, `/v1/me` and `/v1/me/scope` integration. The dashboard checks `/ready` before presenting the ERP as operational.
-
-## Database boundary
-
-The browser never connects directly to Neon PostgreSQL. The production flow is:
+## Runtime boundary
 
 ```text
 Vercel / Next.js
-  ↓
-Supabase Auth session
-  ↓
+      ↓
+Amaal authentication/session
+      ↓
 Render API
-  ↓
-authorization + business service
-  ↓
+      ↓
+Amaal authorization + business services
+      ↓
 Neon PostgreSQL
 ```
 
-## Deployment configuration
+The AI and Python intelligence services are not public browser endpoints.
 
-The current Vercel project is `amaal-erp`, with `apps/web` as the web application boundary. The frontend is intentionally built independently from the root pnpm/Turborepo install:
-
-```text
-install: npm install --no-audit --no-fund
-build:   npm run build
-output:  .next
-Node:    24.x
-```
-
-This does not change the monorepo package manager used by Render or local development.
+The current `amaal-erp` Vercel project targets Node 24. The release gate requires a committed lockfile, frozen installation and a successful Next.js build/typecheck before production promotion.

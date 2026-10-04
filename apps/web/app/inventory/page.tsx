@@ -179,7 +179,7 @@ export default function InventoryPage() {
             <a className="nav-item" href="#reports">Reports</a>
           </nav>
           <div className="section-label lower">INTELLIGENCE</div>
-          <a className="nav-item" href="#amaal-ai">Amaal AI</a>
+          <a className="nav-item" href="/ai">Amaal AI</a>
         </aside>
         <section className="content">
           <div className="content-header">

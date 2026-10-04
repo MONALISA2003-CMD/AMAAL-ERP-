@@ -10,6 +10,7 @@ import type { AllocationRequest } from '@amaal/inventory';
 import { PostgresCatalogService } from '@amaal/catalog';
 import type { CreateRecoveryCaseInput, AssignRecoveryCaseInput, RecoveryActivityInput, AcceptRecoveredStockInput } from '@amaal/recovery';
 import { withIdempotency } from './idempotency.ts';
+import { chatAmaalAI, createConversation, decideAIApproval, executeApprovedRecoveryPlan, getAmaalAIStatus, listAIAwaitingApprovals, listActionPlans, submitActionPlanForApproval } from '@amaal/ai';
 
 export type ApiServices = {
   transactions: PgTransactionManager;
@@ -255,6 +256,8 @@ export function decideApproval(services:ApiServices,requestId:string,actorUserId
   return withIdempotency(services,requestId,actorUserId,'approvals.decision',idempotencyKey,{approvalId,decision,reason},(tx)=>services.approvals.decide(tx,actorUserId,approvalId,decision,reason));
 }
 
+export { getOperationalReport, parseReportPeriod, parseComparison } from './reporting.ts';
+export { getOperationalReportCsv } from './reporting-export.ts';
 export { withIdempotency } from './idempotency.ts';
 export { createApiServer } from './http.ts';
 
@@ -272,3 +275,25 @@ export function getRecoveryCase(services:ApiServices,requestId:string,actorUserI
 export function listRecoverySuspensions(services:ApiServices,requestId:string,actorUserId:string,activeOnly=true,limit?:number) { return services.transactions.withTransaction({requestId,actorUserId},tx=>services.recoveryGovernance.listSuspensions(tx,actorUserId,activeOnly,limit??100)); }
 export function reassignRecoveryCase(services:ApiServices,requestId:string,actorUserId:string,caseId:string,officerUserId:string,reason:string,idempotencyKey?:string) { return withIdempotency(services,requestId,actorUserId,'recovery.case.reassign',idempotencyKey,{caseId,officerUserId,reason},tx=>services.recoveryGovernance.reassignCase(tx,actorUserId,caseId,officerUserId,reason)); }
 export function reinstateSuspendedUser(services:ApiServices,requestId:string,actorUserId:string,userId:string,reason:string,idempotencyKey?:string) { return withIdempotency(services,requestId,actorUserId,'recovery.user.reinstate',idempotencyKey,{userId,reason},tx=>services.recoveryGovernance.reinstateUser(tx,actorUserId,userId,reason)); }
+
+
+export function getAIStatus(services:ApiServices,requestId:string,actorUserId:string) {
+  return services.transactions.withTransaction({requestId,actorUserId}, async (tx) => {
+    const result = await tx.query<{ai_use:boolean}>(`select private.user_has_permission('ai.use') as ai_use`);
+    if (!result[0]?.ai_use) throw new Error('Amaal AI is not enabled for this user.');
+    return getAmaalAIStatus();
+  });
+}
+export function chatAI(services:ApiServices,requestId:string,actorUserId:string,input:{message:string;conversationId?:string}) {
+  return chatAmaalAI(services.transactions,{userId:actorUserId,requestId,...input});
+}
+export function createAIConversation(services:ApiServices,requestId:string,actorUserId:string,input:{title?:string}) {
+  return createConversation(services.transactions,requestId,actorUserId,{title:input.title,provider:getAmaalAIStatus().configured?'openai':undefined,model:getAmaalAIStatus().model ?? undefined,autonomyLevel:1});
+}
+export function listAIActionPlans(services:ApiServices,requestId:string,actorUserId:string) { return listActionPlans(services.transactions,requestId,actorUserId); }
+export function listAIAwaitingApprovalRequests(services:ApiServices,requestId:string,actorUserId:string) { return listAIAwaitingApprovals(services.transactions,requestId,actorUserId); }
+export function submitAIActionPlan(services:ApiServices,requestId:string,actorUserId:string,planId:string,reason:string) { return submitActionPlanForApproval(services.transactions,requestId,actorUserId,planId,reason); }
+export function decideAIAwaitingApproval(services:ApiServices,requestId:string,actorUserId:string,approvalId:string,decision:'APPROVED'|'REJECTED',reason:string,idempotencyKey?:string) { return withIdempotency(services,requestId,actorUserId,'ai.approval.decision',idempotencyKey,{approvalId,decision,reason},(tx)=>decideAIApproval(services.transactions,requestId,actorUserId,approvalId,decision,reason)); }
+export function executeAIRecoveryPlan(services:ApiServices,requestId:string,actorUserId:string,planId:string) { return executeApprovedRecoveryPlan(services.transactions,requestId,actorUserId,planId); }
+
+export { getIntelligenceStatus, getIntelligenceSummary, listIntelligencePredictions } from './intelligence.ts';

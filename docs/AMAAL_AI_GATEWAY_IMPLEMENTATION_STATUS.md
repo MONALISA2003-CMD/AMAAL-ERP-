@@ -45,6 +45,8 @@ Amaal AI does not expose:
 - arbitrary authorization scopes supplied by the model
 - direct bypasses around approval or business services
 
-## Remaining AI gate
+## Stage 8 orchestration status
 
-The next phase is the LLM orchestration layer itself: model routing, governed prompts, tool schemas, conversation audit, RAG authorization filtering, and evaluation. Core ERP operations remain independent of Amaal AI availability.
+The LLM orchestration gate is now implemented locally. The runtime uses a deterministic router, only exposes tools authorized for the current request and user, persists bounded conversation history, calls the provider through the server, executes functions through the scoped gateway, records invocation audit data, and converts high-risk calls into approval-backed action plans.
+
+The supported provider integration is intentionally disabled by default. Core ERP operations remain independent of Amaal AI availability. The control plane now includes deterministic output guardrails, governance/tool-policy version pinning, 24-hour action-plan expiry and rejected-call audit events. The deterministic Stage 8 Evaluation Center and red-team suite are part of the local gate. Production provider testing, negative E2E authorization tests, rate limiting, observability and launch hardening remain Stage 10 gates.

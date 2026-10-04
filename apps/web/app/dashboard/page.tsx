@@ -97,6 +97,8 @@ export default function DashboardPage() {
       ['/sales', 'Sales & Receipts'],
       ['/finance', 'Finance'],
       ['/recovery', 'Recovery'],
+      ['/reports', 'Reports'],
+      ['/ai', 'Amaal AI'],
     ];
     return links;
   }, []);

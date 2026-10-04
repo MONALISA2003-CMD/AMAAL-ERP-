@@ -49,5 +49,20 @@ See `docs/AMAAL_WORK_PHASES.md`, `docs/phase0/AMAAL_PHASE0_FOUNDATION.md` and `d
 
 
 
-## Current delivery gate — Phase 1
-Phase 1 is explicitly tracked as Amaal Setup: company foundation, four main regions, standard regional warehouses, pending CEO definition, policy-readiness markers, atomic audit/outbox completion and setup readiness verification.
+## Historical delivery note — Phase 1
+The following Phase 1 wording is retained for handoff history; the active local delivery gate is Stage 9. Phase 1 is explicitly tracked as Amaal Setup: company foundation, four main regions, standard regional warehouses, pending CEO definition, policy-readiness markers, atomic audit/outbox completion and setup readiness verification.
+
+
+## Current delivery status — Stage 9.5 production hardening
+
+Stage 8 — Amaal AI is implemented locally and audited on top of the Stage 7 reporting/read-model foundation. GitHub upload and production deployment remain intentionally deferred until Stage 10.
+
+Amaal AI now has a governed server-side orchestration path: deterministic intent routing, permission-filtered tool exposure, scoped business tools, permission-aware knowledge retrieval, conversation audit/history, bounded provider calls, structured evidence, action-plan preparation and approval-aware recovery execution through the normal Amaal domain service. The model never receives raw SQL, unrestricted database access, service credentials or authority to approve its own actions.
+
+The ERP remains the source of truth. AI outputs are explicitly treated as facts from governed tools, analysis/recommendations, predictions, inferences or unknowns rather than silently promoted to business truth. High-risk operational requests produce human-reviewable plans; critical financial/security/destructive operations remain blocked from AI execution in Stage 8. Governance/tool-policy versions are pinned, high-risk plans expire after 24 hours, rejected tool attempts are auditable, and final AI output passes a deterministic protected-content guard.
+
+The existing transaction → outbox → worker → durable realtime/read models → Valkey fan-out architecture is unchanged, and Stage 8 adds no replacement event system.
+
+
+### Stage 9 intelligence
+The Python intelligence service, model registry, data-sufficiency gates, point-in-time feature snapshots, shadow predictions, and authorized ML/Jarvis read access are implemented locally. Production model activation remains deferred until Stage 10.

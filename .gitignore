@@ -18,3 +18,12 @@ node_modules/
 .next/
 dist/
 .turbo/
+# Python/ML runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+services/intelligence/artifacts/
+services/intelligence/runs/

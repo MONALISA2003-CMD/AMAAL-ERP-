@@ -2,7 +2,7 @@ import type { DatabaseTransaction } from '@amaal/database';
 import { authorize, loadAuthorizationContext } from '@amaal/permissions';
 import { AuthorizationError, ConflictError, ValidationError } from '@amaal/shared';
 
-export type ApprovalType = 'DISCOUNT'|'PRICE_CHANGE'|'INVENTORY_ADJUSTMENT'|'WRITE_OFF'|'COMMISSION_OVERRIDE'|'BONUS_OVERRIDE'|'IMEI_EXCEPTION'|'FINANCIAL_CORRECTION'|'ROLE_CHANGE'|'WAREHOUSE_CORRECTION';
+export type ApprovalType = 'DISCOUNT'|'PRICE_CHANGE'|'INVENTORY_ADJUSTMENT'|'WRITE_OFF'|'COMMISSION_OVERRIDE'|'BONUS_OVERRIDE'|'IMEI_EXCEPTION'|'FINANCIAL_CORRECTION'|'ROLE_CHANGE'|'WAREHOUSE_CORRECTION'|'AI_ACTION';
 
 export class PostgresApprovalService {
   async createRequest(tx: DatabaseTransaction, actorUserId: string, input: { approvalType: ApprovalType; targetType: string; targetId: string; requestedChanges: Record<string, unknown>; reason: string }): Promise<string> {

@@ -7,6 +7,7 @@ import { loadAuthorizationContext } from '@amaal/permissions';
 import type { ApprovalType } from '@amaal/approvals';
 import { SetupError, activateAmaalCeo } from './setup.ts';
 import { getWorkspaceSummary } from './workspace.ts';
+import { getIntelligenceStatus, getIntelligenceSummary, listIntelligencePredictions } from './intelligence.ts';
 import { installRealtimeServer, listRealtimeEvents } from './realtime.ts';
 import { MfaError, confirmMfaEnrollment, getMfaStatus, startMfaEnrollment, verifyMfaCode, verifyMfaAssertion } from './mfa.ts';
 import {
@@ -91,6 +92,18 @@ import {
   listRecoverySuspensions,
   reassignRecoveryCase,
   reinstateSuspendedUser,
+  getOperationalReport,
+  getOperationalReportCsv,
+  parseReportPeriod,
+  parseComparison,
+  getAIStatus,
+  chatAI,
+  createAIConversation,
+  listAIActionPlans,
+  listAIAwaitingApprovalRequests,
+  submitAIActionPlan,
+  decideAIAwaitingApproval,
+  executeAIRecoveryPlan,
 } from './index.ts';
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -192,11 +205,13 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/workspace/summary' || pathname === '/v1/realtime/events' || pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory' || pathname === '/v1/org/invitations/preview' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/inventory/warehouses' || pathname === '/v1/inventory/summary' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/imeis' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/customers' || pathname === '/v1/sales' || pathname === '/v1/finance/commissions' || pathname === '/v1/finance/bonuses' || pathname === '/v1/finance/receipts' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/aging/policies' || pathname === '/v1/aging/queue' || pathname === '/v1/recovery/cases' || pathname === '/v1/recovery/suspensions' || /^\/v1\/(customers|sales)\/[^/]+$/.test(pathname) || /^\/v1\/recovery\/cases\/[^/]+$/.test(pathname) || /^\/v1\/sales\/[^/]+\/payments$/.test(pathname) || /^\/v1\/finance\/receipts\/[^/]+$/.test(pathname))) return true;
+  if (method === 'GET' && (pathname === '/v1/workspace/summary' || pathname === '/v1/realtime/events' || pathname === '/v1/reports/operational' || pathname === '/v1/reports/operational.csv' || pathname === '/v1/ai/status' || pathname === '/v1/ai/action-plans' || pathname === '/v1/ai/approvals' || pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory' || pathname === '/v1/org/invitations/preview' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/inventory/warehouses' || pathname === '/v1/inventory/summary' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/imeis' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/customers' || pathname === '/v1/sales' || pathname === '/v1/finance/commissions' || pathname === '/v1/finance/bonuses' || pathname === '/v1/finance/receipts' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/aging/policies' || pathname === '/v1/aging/queue' || pathname === '/v1/recovery/cases' || pathname === '/v1/recovery/suspensions' || /^\/v1\/(customers|sales)\/[^/]+$/.test(pathname) || /^\/v1\/recovery\/cases\/[^/]+$/.test(pathname) || /^\/v1\/sales\/[^/]+\/payments$/.test(pathname) || /^\/v1\/finance\/receipts\/[^/]+$/.test(pathname))) return true;
   if (method === 'GET' && /^\/v1\/inventory\/imeis\/[^/]+\/movements$/.test(pathname)) return true;
-  if (method === 'POST' && (pathname === '/v1/aging/policies' || pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/inventory/receipts' || pathname === '/v1/recovery/cases' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/subregions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people' || pathname === '/v1/org/admins' || pathname === '/v1/org/admin-invitations' || pathname === '/v1/org/invitations' || pathname === '/v1/org/invitations/accept' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/variants' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/customers' || pathname === '/v1/customers/assign' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/recovery/cases' || /^\/v1\/(customers|sales)\/[^/]+\/(update|reverse)$/.test(pathname) || /^\/v1\/inventory\/reconciliations\/[^/]+\/(scan|finalize)$/.test(pathname) || /^\/v1\/finance\/loan-providers\/[^/]+\/archive$/.test(pathname))) return true;
+  if (method === 'POST' && (pathname === '/v1/aging/policies' || pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/inventory/receipts' || pathname === '/v1/recovery/cases' || pathname === '/v1/ai/chat' || pathname === '/v1/ai/conversations' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/subregions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people' || pathname === '/v1/org/admins' || pathname === '/v1/org/admin-invitations' || pathname === '/v1/org/invitations' || pathname === '/v1/org/invitations/accept' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/variants' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/customers' || pathname === '/v1/customers/assign' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/recovery/cases' || /^\/v1\/(customers|sales)\/[^/]+\/(update|reverse)$/.test(pathname) || /^\/v1\/inventory\/reconciliations\/[^/]+\/(scan|finalize)$/.test(pathname) || /^\/v1\/finance\/loan-providers\/[^/]+\/archive$/.test(pathname))) return true;
   if (method !== 'POST') return false;
   if (/^\/v1\/catalog\/(brands|products|variants)\/[^/]+\/(update|archive)$/.test(pathname)) return true;
+  if (/^\/v1\/ai\/action-plans\/[^/]+\/(submit|execute)$/.test(pathname)) return true;
+  if (/^\/v1\/ai\/approvals\/[^/]+\/decision$/.test(pathname)) return true;
   return /^\/v1\/(?:sales\/[^/]+\/reverse|inventory\/allocations\/[^/]+\/(?:approve|dispatch|receive|cancel|reject)|recovery\/cases\/[^/]+\/(?:assign|activity|accept|close|reassign)|recovery\/suspensions\/[^/]+\/reinstate|approvals\/[^/]+\/decision)$/.test(pathname);
 }
 
@@ -406,6 +421,108 @@ export function createApiServer() {
       if (req.method === 'GET' && pathname === '/v1/workspace/summary') {
         const summary = await getWorkspaceSummary(services, requestId, user.id);
         json(res, 200, { requestId, ...summary as Record<string, unknown> });
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/reports/operational') {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        const report = await getOperationalReport(services, requestId, user.id, {
+          period: parseReportPeriod(url.searchParams.get('period')),
+          comparison: parseComparison(url.searchParams.get('comparison')),
+          regionId: url.searchParams.get('regionId') ?? undefined,
+          teamId: url.searchParams.get('teamId') ?? undefined,
+        });
+        json(res, 200, { requestId, ...report as Record<string, unknown> });
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/reports/operational.csv') {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        const exported = await getOperationalReportCsv(services, requestId, user.id, {
+          period: parseReportPeriod(url.searchParams.get('period')),
+          comparison: parseComparison(url.searchParams.get('comparison')),
+          regionId: url.searchParams.get('regionId') ?? undefined,
+          teamId: url.searchParams.get('teamId') ?? undefined,
+        });
+        res.writeHead(200, {
+          'content-type': 'text/csv; charset=utf-8',
+          'content-disposition': `attachment; filename="${exported.filename}"`,
+          'cache-control': 'private, no-store',
+          'x-request-id': requestId,
+        });
+        res.end(exported.csv);
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/intelligence/status') {
+        const status = await getIntelligenceStatus(services,requestId,user.id);
+        json(res,200,status);
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/intelligence/summary') {
+        const summary = await getIntelligenceSummary(services,requestId,user.id);
+        json(res,200,summary);
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/intelligence/predictions') {
+        const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+        const kind = url.searchParams.get('kind') ?? undefined;
+        const limit = Number(url.searchParams.get('limit') ?? 20);
+        const result = await listIntelligencePredictions(services,requestId,user.id,{kind: kind as any, limit});
+        json(res,200,{requestId,...result});
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/ai/status') {
+        const status = await getAIStatus(services,requestId,user.id);
+        json(res,200,{requestId,...status});
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/ai/action-plans') {
+        const items = await listAIActionPlans(services,requestId,user.id);
+        json(res,200,{requestId,items});
+        return;
+      }
+      if (req.method === 'GET' && pathname === '/v1/ai/approvals') {
+        const items = await listAIAwaitingApprovalRequests(services,requestId,user.id);
+        json(res,200,{requestId,items});
+        return;
+      }
+      if (req.method === 'POST' && pathname === '/v1/ai/conversations') {
+        const body = await readJson(req);
+        const title = typeof body.title === 'string' ? body.title : undefined;
+        const conversation = await createAIConversation(services,requestId,user.id,{title});
+        json(res,201,{requestId,conversation});
+        return;
+      }
+      if (req.method === 'POST' && pathname === '/v1/ai/chat') {
+        const body = await readJson(req);
+        const message = requiredString(body,'message');
+        const conversationId = typeof body.conversationId === 'string' && body.conversationId.trim() ? body.conversationId.trim() : undefined;
+        const result = await chatAI(services,requestId,user.id,{message,...(conversationId?{conversationId}: {})});
+        json(res,200,{requestId,...result});
+        return;
+      }
+      const aiSubmitMatch=req.method==='POST'?pathname.match(/^\/v1\/ai\/action-plans\/([^/]+)\/submit$/):null;
+      if(aiSubmitMatch){
+        const body=await readJson(req);
+        const result=await submitAIActionPlan(services,requestId,user.id,aiSubmitMatch[1]!,requiredString(body,'reason'));
+        json(res,200,{requestId,...result,status:'PENDING_APPROVAL'});
+        return;
+      }
+      const aiExecuteMatch=req.method==='POST'?pathname.match(/^\/v1\/ai\/action-plans\/([^/]+)\/execute$/):null;
+      if(aiExecuteMatch){
+        const result=await executeAIRecoveryPlan(services,requestId,user.id,aiExecuteMatch[1]!);
+        json(res,200,{requestId,...result});
+        return;
+      }
+      const aiApprovalDecisionMatch=req.method==='POST'?pathname.match(/^\/v1\/ai\/approvals\/([^/]+)\/decision$/):null;
+      if(aiApprovalDecisionMatch){
+        const body=await readJson(req);
+        const decision=requiredString(body,'decision');
+        if(decision!=='APPROVED'&&decision!=='REJECTED') throw new Error('decision must be APPROVED or REJECTED.');
+        const approvalId=aiApprovalDecisionMatch[1];
+        if(!approvalId) throw new Error('approvalId is required.');
+        const result=await decideAIAwaitingApproval(services,requestId,user.id,approvalId,decision,requiredString(body,'reason'),idempotencyKey);
+        json(res,200,{requestId,...result});
         return;
       }
 

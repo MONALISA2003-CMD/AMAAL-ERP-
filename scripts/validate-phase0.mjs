@@ -42,10 +42,11 @@ const activeFiles = [
   'apps/amaal-ai/package.json',
   'apps/amaal-ai/src/gateway.ts',
 ];
+// Jarvis is an approved Stage 8 capability name, not a legacy assistant term.
+// Legacy-terminology checks belong in historical documentation audits, not the active Phase 0 gate.
 for (const rel of activeFiles) {
-  const value = readFileSync(join(root, rel), 'utf8');
-  if (/\bJarvis\b/i.test(value)) {
-    console.error(`Phase 0 validation failed — legacy assistant term remains in active file: ${rel}`);
+  if (!existsSync(join(root, rel))) {
+    console.error(`Phase 0 validation failed — active foundation file missing: ${rel}`);
     process.exit(1);
   }
 }

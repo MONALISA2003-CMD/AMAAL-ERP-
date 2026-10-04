@@ -19,6 +19,7 @@
     "@amaal/business-rules": "workspace:*",
     "pg": "^8.16.3",
     "@amaal/catalog": "workspace:*",
+    "@amaal/ai": "workspace:*",
     "@amaal/customers": "workspace:*",
     "ioredis": "^5.7.0",
     "ws": "^8.18.3"

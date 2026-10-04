@@ -20,6 +20,10 @@ function params(): Params {
   return { values, add(value: unknown) { values.push(value); return `$${values.length}`; } };
 }
 
+function appendAnd(clauses: readonly string[]): string {
+  return clauses.length ? ` and ${clauses.join(' and ')}` : '';
+}
+
 async function one<T>(tx: DatabaseTransaction, sql: string, values: readonly unknown[]): Promise<T> {
   const rows = await tx.query<T>(sql, values);
   if (!rows[0]) throw new Error('Report query returned no summary row.');
@@ -60,6 +64,13 @@ function inventoryFilterClause(alias: string, p: Params, regionId?: string, team
   if (regionId) clauses.push(`${alias}.current_region_id = ${p.add(regionId)}`);
   if (teamId) clauses.push(`${alias}.current_team_id = ${p.add(teamId)}`);
   return clauses;
+}
+
+function scopedSalesExtra(p: Params, regionId?: string, teamId?: string): string {
+  const clauses: string[] = [];
+  if (regionId) clauses.push(`s.region_id=${p.add(regionId)}`);
+  if (teamId) clauses.push(`s.team_id=${p.add(teamId)}`);
+  return appendAnd(clauses);
 }
 
 function assertFilterAllowed(context: AuthorizationContext, regionId?: string, teamId?: string): void {
@@ -187,7 +198,7 @@ async function buildSalesHeadline(tx: DatabaseTransaction, context: Authorizatio
        where s.organization_id=${org}
          and s.status in ('COMPLETED','REVERSED')
          and ${date} >= ${fromP} and ${date} < ${toP}
-         and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}`, p.values);
+         and ${scope}${appendAnd(extra)}`, p.values);
 
     const up = params();
     const uscope = salesScope(context, 's', up);
@@ -199,7 +210,7 @@ async function buildSalesHeadline(tx: DatabaseTransaction, context: Authorizatio
       `select count(si.id)::bigint::text as units
        from public.sale_items si join public.sales s on s.id=si.sale_id
        where s.organization_id=${uorg} and s.status='COMPLETED' and si.is_active=true
-         and ${date} >= ${ufrom} and ${date} < ${uto} and ${uscope}${uextra.length ? ` and ${uextra.join(' and ')}` : ''}`, up.values);
+         and ${date} >= ${ufrom} and ${date} < ${uto} and ${uscope}${appendAnd(uextra)}`, up.values);
     return {
       transactions: Number(sales.transactions),
       units: Number(units.units),
@@ -229,7 +240,7 @@ async function buildPaymentMix(tx: DatabaseTransaction, context: AuthorizationCo
        from public.sales s
        where s.organization_id=${org} and s.status='COMPLETED'
          and ${date} >= ${fromP} and ${date} < ${toP}
-         and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}
+         and ${scope}${appendAnd(extra)}
        group by upper(s.payment_type::text)
        order by upper(s.payment_type::text)`, p.values);
     const byType = Object.fromEntries(rows.map((row) => [row.payment_type, {
@@ -271,8 +282,7 @@ async function buildCommissionHeadline(tx: DatabaseTransaction, context: Authori
        from public.commissions c join public.sales s on s.id=c.sale_id
        left join lateral(select sum(a.amount) as total_adjustment from public.commission_adjustments a where a.commission_id=c.id) adj on true
        where c.status='ACTIVE' and s.organization_id=${org} and s.status='COMPLETED'
-         and ${date} >= ${fromP} and ${date} < ${toP} and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}`, p.values),
-    );
+         and ${date} >= ${fromP} and ${date} < ${toP} and ${scope}${appendAnd(extra)}`, p.values);
   };
   return { current: await build(window.from, window.to), previous: await build(window.previousFrom, window.previousTo) };
 }
@@ -293,7 +303,7 @@ async function buildInventoryHeadline(tx: DatabaseTransaction, context: Authoriz
      join public.products prod_i on prod_i.id=pv_i.product_id
      join public.brands brand_i on brand_i.id=prod_i.brand_id
      left join lateral(select p.selling_price from public.price_policies p where p.product_variant_id=i.product_variant_id and p.status='ACTIVE' and p.effective_from <= now() and (p.effective_to is null or p.effective_to > now()) order by p.effective_from desc limit 1) pp on true
-     where brand_i.organization_id=${p.add(organizationId)} and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}`, p.values);
+     where brand_i.organization_id=${p.add(organizationId)} and ${scope}${appendAnd(extra)}`, p.values);
   return {
     totalUnits: Number(rows.total_units),
     sellableUnits: Number(rows.sellable_units),
@@ -315,7 +325,7 @@ async function buildAging(tx: DatabaseTransaction, context: AuthorizationContext
      join public.products prod_i on prod_i.id=pv_i.product_id
      join public.brands brand_i on brand_i.id=prod_i.brand_id
      where brand_i.organization_id=${p.add(organizationId)} and i.field_age_started_at is not null
-       and i.state not in ('SOLD','RETURNED','DAMAGED','LOST') and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}
+       and i.state not in ('SOLD','RETURNED','DAMAGED','LOST') and ${scope}${appendAnd(extra)}
      group by 1 order by 1`, p.values,
   );
   const bands: Record<'GREEN'|'ORANGE'|'RED'|'PURPLE'|'UNAGED', number> = { GREEN: 0, ORANGE: 0, RED: 0, PURPLE: 0, UNAGED: 0 };
@@ -365,7 +375,7 @@ async function buildRecovery(tx: DatabaseTransaction, context: AuthorizationCont
      join public.product_variants pv_i on pv_i.id=i.product_variant_id
      join public.products prod_i on prod_i.id=pv_i.product_id
      join public.brands brand_i on brand_i.id=prod_i.brand_id
-     where brand_i.organization_id=${org} and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}`,
+     where brand_i.organization_id=${org} and ${scope}${appendAnd(extra)}`,
     p.values,
   );
 
@@ -387,7 +397,7 @@ async function buildRecovery(tx: DatabaseTransaction, context: AuthorizationCont
      join public.products prod_i on prod_i.id=pv_i.product_id
      join public.brands brand_i on brand_i.id=prod_i.brand_id
      left join lateral(select a.occurred_at from public.recovery_activities a where a.recovery_case_id=rc.id and a.activity_type='RECOVERED' order by a.occurred_at asc limit 1) recovered on true
-     where brand_i.organization_id=${org2} and ${scope2}${extra2.length ? ` and ${extra2.join(' and ')}` : ''}`,
+     where brand_i.organization_id=${org2} and ${scope2}${appendAnd(extra2)}`,
     openedP.values,
   );
 
@@ -410,7 +420,7 @@ async function buildRecovery(tx: DatabaseTransaction, context: AuthorizationCont
      join public.brands brand_i on brand_i.id=prod_i.brand_id
      join public.profiles p on p.user_id=rc.assigned_officer_user_id
      left join lateral(select a.occurred_at from public.recovery_activities a where a.recovery_case_id=rc.id and a.activity_type='RECOVERED' order by a.occurred_at asc limit 1) rec on true
-     where brand_i.organization_id=${org3} and rc.assigned_officer_user_id is not null and ${officerScope}${officerExtra.length ? ` and ${officerExtra.join(' and ')}` : ''}
+     where brand_i.organization_id=${org3} and rc.assigned_officer_user_id is not null and ${officerScope}${appendAnd(officerExtra)}
        and ((rc.opened_at >= ${fromP} and rc.opened_at < ${toP}) or (rc.closed_at >= ${fromP} and rc.closed_at < ${toP}) or exists(select 1 from public.recovery_activities rx where rx.recovery_case_id=rc.id and rx.occurred_at >= ${fromP} and rx.occurred_at < ${toP}))
      group by rc.assigned_officer_user_id,p.display_name order by recovered_count desc,closed_count desc,opened_count desc`, officerP.values);
 
@@ -451,7 +461,7 @@ async function buildTrend(tx: DatabaseTransaction, context: AuthorizationContext
     ) cr on cr.organization_id=r.organization_id and cr.sale_date=r.sale_date
         and cr.region_id=r.region_id and cr.team_id=r.team_id and cr.beneficiary_user_id=r.seller_user_id
     where r.organization_id=${org} and r.sale_date >= ${from}::timestamptz::date and r.sale_date < ${to}::timestamptz::date
-      and ${scope}${extras.length ? ` and ${extras.join(' and ')}` : ''}
+      and ${scope}${appendAnd(extras)}
     group by r.sale_date
     order by r.sale_date` : `
     select date_trunc('day',s.completed_at)::date as bucket,
@@ -461,7 +471,7 @@ async function buildTrend(tx: DatabaseTransaction, context: AuthorizationContext
       coalesce(sum((select coalesce(sum(c0.amount-coalesce((select sum(a.amount) from public.commission_adjustments a where a.commission_id=c0.id),0)),0) from public.commissions c0 where c0.sale_id=s.id and c0.status='ACTIVE')),0)::numeric::text as commission
     from public.sales s
     where s.organization_id=${org} and s.status='COMPLETED' and s.completed_at >= ${from} and s.completed_at < ${to}
-      and ${salesScope(context,'s',p)}${regionId ? ` and s.region_id=${p.add(regionId)}` : ''}${teamId ? ` and s.team_id=${p.add(teamId)}` : ''}
+      and ${salesScope(context,'s',p)}${scopedSalesExtra(p, regionId, teamId)}
     group by 1 order by 1`;
   const rows = await tx.query<{ bucket: string; units: string; transactions: string; revenue: string; commission: string }>(source, p.values);
   const result = rows.map((row) => ({ bucket: row.bucket, units: Number(row.units), transactions: Number(row.transactions), revenue: Number(row.revenue), commission: Number(row.commission) }));
@@ -508,7 +518,7 @@ async function buildComparison(tx: DatabaseTransaction, context: AuthorizationCo
     baseSql = `select r.id,r.region_name as name,r.region_code as secondary from public.regions r where r.status='ACTIVE' and ${entityScope('r.id')} and r.organization_id=${org}`;
   }
   if (regionId) {
-    if (type === 'REGION') baseSql += ` and ${type === 'REGION' ? `id=${baseP.add(regionId)}` : `1=1`}`;
+    if (type === 'REGION' && regionId) baseSql += ` and id=${baseP.add(regionId)}`;
   }
   if (teamId && type === 'TEAM') baseSql += ` and t.id=${baseP.add(teamId)}`;
   const baseRows = await tx.query<BaseRow>(baseSql, baseP.values);
@@ -526,7 +536,7 @@ async function buildComparison(tx: DatabaseTransaction, context: AuthorizationCo
        coalesce(sum((select count(*) from public.sale_items si where si.sale_id=s.id and si.is_active=true)),0)::bigint::text as units,
        coalesce(sum((select coalesce(sum(c.amount-coalesce((select sum(a.amount) from public.commission_adjustments a where a.commission_id=c.id),0)),0) from public.commissions c where c.sale_id=s.id and c.status='ACTIVE')),0)::numeric::text as commission
      from public.sales s left join public.teams t on t.id=s.team_id
-     where s.organization_id=${salesP.add(organizationId)} and s.status='COMPLETED' and ${date} >= ${salesP.add(window.from)} and ${date} < ${salesP.add(window.to)} and ${scope}${salesExtra.length ? ` and ${salesExtra.join(' and ')}` : ''}
+     where s.organization_id=${salesP.add(organizationId)} and s.status='COMPLETED' and ${date} >= ${salesP.add(window.from)} and ${date} < ${salesP.add(window.to)} and ${scope}${comparisonSalesExtra}
      group by ${entityExpr}`, salesP.values,
   );
 
@@ -540,7 +550,7 @@ async function buildComparison(tx: DatabaseTransaction, context: AuthorizationCo
      from public.imei_units i
      left join public.teams mt on mt.id=i.current_team_id
      left join public.managers mh on mh.user_id=i.current_holder_user_id
-     where ${invScope}${invExtra.length ? ` and ${invExtra.join(' and ')}` : ''} and ${stockExpr} is not null
+     where ${invScope}${appendAnd(invExtra)} and ${stockExpr} is not null
      group by ${stockExpr}`, stockP.values,
   );
   const salesMap = new Map(salesAgg.map((row) => [row.id, row]));
@@ -579,7 +589,7 @@ async function buildProductPerformance(tx: DatabaseTransaction, context: Authori
      from public.sale_items si join public.sales s on s.id=si.sale_id join public.product_variants pv on pv.id=si.product_variant_id
      join public.products p on p.id=pv.product_id join public.brands b on b.id=p.brand_id
      where s.organization_id=${p.add(organizationId)} and s.status='COMPLETED' and si.is_active=true and ${date} >= ${p.add(window.from)} and ${date} < ${p.add(window.to)}
-       and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}
+       and ${scope}${appendAnd(extra)}
      group by pv.id,b.brand_name,p.model_name,pv.sku order by units desc,revenue desc limit 100`, p.values,
   );
 
@@ -591,7 +601,7 @@ async function buildProductPerformance(tx: DatabaseTransaction, context: Authori
      join public.product_variants pv_i on pv_i.id=i.product_variant_id
      join public.products prod_i on prod_i.id=pv_i.product_id
      join public.brands brand_i on brand_i.id=prod_i.brand_id
-     where brand_i.organization_id=${stockP.add(organizationId)} and i.state not in ('SOLD','RETURNED') and ${invScope}${invExtra.length ? ` and ${invExtra.join(' and ')}` : ''}
+     where brand_i.organization_id=${stockP.add(organizationId)} and i.state not in ('SOLD','RETURNED') and ${invScope}${appendAnd(invExtra)}
      group by i.product_variant_id`, stockP.values,
   );
   const stockMap = new Map(stock.map((row) => [row.variant_id, Number(row.current_stock)]));
@@ -614,7 +624,7 @@ async function buildInventoryBreakdown(tx: DatabaseTransaction, context: Authori
   const scope = inventoryScope(context, 'i', p);
   const extra = inventoryFilterClause('i', p, regionId, teamId);
   const joins = `join public.product_variants pv_i on pv_i.id=i.product_variant_id join public.products prod_i on prod_i.id=pv_i.product_id join public.brands brand_i on brand_i.id=prod_i.brand_id`;
-  const where = `brand_i.organization_id=${org} and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}`;
+  const where = `brand_i.organization_id=${org} and ${scope}${appendAnd(extra)}`;
   const states = await tx.query<{ state:string; units:string }>(`select i.state::text as state,count(*)::bigint::text as units from public.imei_units i ${joins} where ${where} group by i.state order by units desc`, p.values);
   const sellable = `(i.state in ('RECEIVED','MASTER_WAREHOUSE','REGIONAL_WAREHOUSE','ALLOCATED_TO_MANAGER','ALLOCATED_TO_TEAM','ALLOCATED_TO_AGENT','ALLOCATED_TO_SHOP','RECOVERED'))`;
   const regions = await tx.query<{ id:string; name:string; units:string }>(`select r.id,r.region_name as name,count(*)::bigint::text as units from public.imei_units i ${joins} join public.regions r on r.id=i.current_region_id where ${where} and ${sellable} group by r.id,r.region_name order by units desc`, p.values);
@@ -662,7 +672,7 @@ async function buildCustomerCount(tx: DatabaseTransaction, context: Authorizatio
     `select count(*)::bigint::text as total from public.customers c
      where c.organization_id=${salesP.add(organizationId)}
        and (${owner}=${salesP.add(context.userId)} or exists(
-         select 1 from public.sales s where s.customer_id=c.id and ${scope}${extra.length ? ` and ${extra.join(' and ')}` : ''}
+         select 1 from public.sales s where s.customer_id=c.id and ${scope}${appendAnd(extra)}
        ))`, salesP.values);
 }
 

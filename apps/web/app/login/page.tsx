@@ -77,6 +77,7 @@ export default function LoginPage() {
           </label>
           {error ? <p className="error-text" role="alert">{error}</p> : null}
           <button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in securely'}</button>
+          <p className="microcopy"><a href="/forgot-password">Forgot your password?</a></p>
         </form>
         <p className="microcopy">Your access is protected by Amaal security controls.</p>
       </section>

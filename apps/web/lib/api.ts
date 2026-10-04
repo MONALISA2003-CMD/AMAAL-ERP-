@@ -138,3 +138,49 @@ export async function acceptOrganizationInvitation(token: string) {
     body: JSON.stringify({ token }),
   });
 }
+
+export type Customer = {
+  id:string; customerNumber:string; fullName:string; phone:string; alternativePhone:string|null; email:string|null; address:string|null;
+  customerType:string|null; identityReference:string|null; consentStatus:string|null; ownerUserId:string; ownerName:string|null;
+  regionId:string|null; regionName:string|null; subregionId:string|null; subregionName:string|null; teamId:string|null; teamName:string|null; shopId:string|null; shopName:string|null;
+  createdAt:string; updatedAt:string;
+};
+
+export async function listCustomersApi(q='') { return apiFetch<{items:Customer[]}>(`/v1/customers?q=${encodeURIComponent(q)}`); }
+export async function createCustomerApi(input:Partial<Customer> & {fullName:string;phone:string}) { return apiFetch<{id:string;customerNumber:string}>('/v1/customers',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+export async function updateCustomerApi(customerId:string,input:Record<string,unknown>) { return apiFetch<{item:Customer}>(`/v1/customers/${encodeURIComponent(customerId)}/update`,{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+export async function assignCustomerApi(customerId:string,newOwnerUserId:string,reason:string) { return apiFetch<{id:string;ownerUserId:string}>(`/v1/customers/assign`,{method:'POST',body:JSON.stringify({customerId,newOwnerUserId,reason}),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+
+export type Sale = { id:string; saleNumber:string; saleDate:string; status:string; paymentType:'CASH'|'LOAN'; subtotal:number; discountAmount:number; totalAmount:number; amountPaid:number; balance:number; sellerUserId:string; sellerName:string; customerId:string; customerNumber:string; customerName:string; teamName:string|null; managerName:string|null; regionName:string|null; loanProviderName:string|null; loanReference:string|null; externalReference:string|null; };
+export async function listSalesApi(options:{q?:string;from?:string;to?:string;paymentType?:string}={}) { const qs=new URLSearchParams(); for(const [k,v] of Object.entries(options)){ if(v) qs.set(k,v); } return apiFetch<{items:Sale[]}>(`/v1/sales?${qs.toString()}`); }
+export async function getSaleApi(id:string) { return apiFetch<{item:Sale & {customerPhone:string|null;customerEmail:string|null;depositAmount:number;financedAmount:number;items:Array<{saleItemId:string;imeiId:string;imei:string;imei2:string|null;brandName:string;modelName:string;sku:string;listPrice:number;discountAmount:number;finalPrice:number;lineTotal:number;commissionAmount:number;priceSnapshot:Record<string,unknown>}>;payments:Array<Record<string,unknown>>}}>(`/v1/sales/${encodeURIComponent(id)}`); }
+export async function createSaleApi(input:Record<string,unknown>) { return apiFetch<Record<string,unknown>>('/v1/sales',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+
+export type Commission = { commissionId:string; saleId:string; saleNumber:string; beneficiaryUserId:string; beneficiaryName:string; beneficiaryRole:string; amount:number; status:string; createdAt:string; policyId:string|null; policySnapshot:Record<string,unknown>; saleDate:string; teamName:string|null; regionName:string|null; };
+export async function listCommissionsApi(options:{from?:string;to?:string;userId?:string;role?:string}={}) { const qs=new URLSearchParams(); for(const [k,v] of Object.entries(options)){ if(v) qs.set(k,v); } return apiFetch<{items:Commission[]}>(`/v1/finance/commissions?${qs.toString()}`); }
+export async function listBonusesApi() { return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/finance/bonuses'); }
+export async function listReceiptsApi() { return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/finance/receipts'); }
+export async function listLoanProvidersApi() { return apiFetch<{items:Array<{id:string;providerCode:string;providerName:string;contactReference:string|null;status:string}>}>('/v1/finance/loan-providers'); }
+export async function createLoanProviderApi(input:{providerCode:string;providerName:string;contactReference?:string}) { return apiFetch<{id:string}>('/v1/finance/loan-providers',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+export async function createCommissionPolicyApi(input:Record<string,unknown>) { return apiFetch<{id:string}>('/v1/finance/commission-policies',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+export async function createBonusPolicyApi(input:Record<string,unknown>) { return apiFetch<{id:string}>('/v1/finance/bonus-policies',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+export async function listCommissionPoliciesApi() { return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/finance/commission-policies'); }
+export async function listBonusPoliciesApi() { return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/finance/bonus-policies'); }
+export async function listPaymentAdjustmentsApi(paymentId?:string) { const qs=paymentId?`?paymentId=${encodeURIComponent(paymentId)}`:''; return apiFetch<{items:Array<Record<string,unknown>>}>(`/v1/finance/payment-adjustments${qs}`); }
+export async function adjustPaymentApi(input:Record<string,unknown>) { return apiFetch<Record<string,unknown>>('/v1/finance/payment-adjustments',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+
+export type AgingPolicy = { id:string; organizationId:string; policyName:string; maximumDays:number; warningDays:number; criticalOverdueDays:number; effectiveFrom:string; effectiveTo:string|null; status:string; bandConfig:Record<string,unknown>; suspensionConfig:Record<string,unknown>; autoRecoveryEnabled:boolean; createdAt:string };
+export async function listAgingPoliciesApi(){ return apiFetch<{items:AgingPolicy[]}>('/v1/aging/policies'); }
+export async function createAgingPolicyApi(input:Record<string,unknown>){ return apiFetch<{id:string;status:string}>('/v1/aging/policies',{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}}); }
+
+export type AgingQueueItem = { imeiId:string; imei:string; imei2:string|null; agingStatus:'GREEN'|'ORANGE'|'RED'|'PURPLE'; totalFieldAgeDays:number; currentHolderAgeDays:number; daysRemaining:number; daysOverdue:number; isWarning:boolean; isOverdue:boolean; isCritical:boolean; holderUserId:string|null; holderName:string|null; teamId:string|null; teamName:string|null; regionId:string|null; regionName:string|null; shopId:string|null; shopName:string|null; recoveryCaseId:string|null; recoveryStatus:string|null; };
+export async function listAgingQueueApi(options:{status?:string;regionId?:string;teamId?:string;holderUserId?:string;criticalOnly?:boolean}={}){const qs=new URLSearchParams();for(const[k,v]of Object.entries(options)){if(v!==undefined&&v!=='')qs.set(k,String(v));}return apiFetch<{items:AgingQueueItem[]}>(`/v1/aging/queue?${qs.toString()}`);}
+export async function listRecoveryQueueApi(){return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/recovery/cases');}
+export async function getRecoveryCaseApi(caseId:string){return apiFetch<{item:Record<string,unknown>}>(`/v1/recovery/cases/${encodeURIComponent(caseId)}`);}
+export async function assignRecoveryCaseApi(caseId:string,officerUserId:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/assign`,{method:'POST',body:JSON.stringify({officerUserId}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+export async function reassignRecoveryCaseApi(caseId:string,officerUserId:string,reason:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/reassign`,{method:'POST',body:JSON.stringify({officerUserId,reason}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+export async function addRecoveryActivityApi(caseId:string,input:Record<string,unknown>){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/activity`,{method:'POST',body:JSON.stringify(input),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+export async function acceptRecoveredStockApi(caseId:string,warehouseId:string,scannedImei:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/accept`,{method:'POST',body:JSON.stringify({warehouseId,scannedImei}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+export async function closeRecoveryCaseApi(caseId:string,reason:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/cases/${encodeURIComponent(caseId)}/close`,{method:'POST',body:JSON.stringify({reason}),headers:{'x-idempotency-key':crypto.randomUUID()}});}
+export async function listRecoverySuspensionsApi(){return apiFetch<{items:Array<Record<string,unknown>>}>('/v1/recovery/suspensions');}
+export async function reinstateSuspendedUserApi(userId:string,reason:string){return apiFetch<Record<string,unknown>>(`/v1/recovery/suspensions/${encodeURIComponent(userId)}/reinstate`,{method:'POST',body:JSON.stringify({reason}),headers:{'x-idempotency-key':crypto.randomUUID()}});}

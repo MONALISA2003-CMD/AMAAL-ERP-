@@ -6,6 +6,14 @@ import { apiFetch, getSetupStatus, type AmaalSetupStatus } from '../../lib/api';
 import { authClient } from '../../lib/auth';
 import { BrandLogo } from '../../components/brand-logo';
 
+type Me = {
+  user: { id: string; email: string | null };
+  accessState: 'ACTIVE' | 'PENDING_ASSIGNMENT' | 'SUSPENDED';
+  authorization: { roles: string[]; permissions: string[]; regionIds: string[]; teamIds: string[]; shopIds: string[] };
+  mfaRequired: boolean;
+  mfaVerified: boolean;
+};
+
 type Person = {
   userId: string;
   email: string | null;
@@ -35,6 +43,7 @@ const roleOrder = ['ADMIN','REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','S
 export default function OrganizationPage() {
   const router = useRouter();
   const [people, setPeople] = useState<Person[]>([]);
+  const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [setup, setSetup] = useState<AmaalSetupStatus | null>(null);
@@ -56,7 +65,8 @@ export default function OrganizationPage() {
       try {
         const session = await authClient.getSession();
         if (!session?.data) { router.replace('/login'); return; }
-        const [setupStatus, payload] = await Promise.all([getSetupStatus(), apiFetch<{ items: Person[] }>('/v1/org/directory')]);
+        const [identity, setupStatus, payload] = await Promise.all([apiFetch<Me>('/v1/me'), getSetupStatus(), apiFetch<{ items: Person[] }>('/v1/org/directory')]);
+        if (active) setMe(identity);
         if (active) setSetup(setupStatus);
         if (active) setPeople(payload.items);
       } catch (e) {
@@ -67,6 +77,25 @@ export default function OrganizationPage() {
     })();
     return () => { active = false; };
   }, [router]);
+
+  const actorRoles = me?.authorization.roles ?? [];
+  const isCeo = actorRoles.includes('CEO');
+  const isAdmin = actorRoles.includes('ADMIN');
+  const recruitableRoles = useMemo(() => {
+    if (isCeo) return [];
+    if (isAdmin) return ['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'];
+    if (actorRoles.includes('REGIONAL_MANAGER')) return ['MANAGER','RECOVERY_OFFICER'];
+    if (actorRoles.includes('MANAGER')) return ['TEAM_LEADER'];
+    if (actorRoles.includes('TEAM_LEADER')) return ['AGENT','SHOP_OWNER'];
+    return [];
+  }, [actorRoles, isAdmin, isCeo]);
+
+  useEffect(() => {
+    const first = recruitableRoles[0];
+    if (!first) return;
+    setInviteForm((current) => current.role && recruitableRoles.includes(current.role) ? current : { ...current, role: first });
+    setPersonForm((current) => current.role && recruitableRoles.includes(current.role) ? current : { ...current, role: first });
+  }, [recruitableRoles]);
 
   const regions = useMemo(() => {
     const map = new Map<string, { id: string; code: string; name: string }>();
@@ -208,7 +237,7 @@ export default function OrganizationPage() {
           </section>
           <section className="card">
             <div className="card-label">2B CONTROL PLANE</div>
-            <p className="muted">Structure changes, recruitment and Admin profiles are governed by Render authorization. API scope remains authoritative.</p>
+            <p className="muted">Structure changes, recruitment and Admin profiles are governed by Render authorization. CEO creates Admins; Admins recruit subordinate operating roles. API and database rules remain authoritative.</p>
             {actionError ? <div className="alert-card">{actionError}</div> : null}
             {inviteLink ? <div className="card emphasis"><div className="card-label">SECURE INVITATION LINK</div><code>{inviteLink}</code><p className="muted">Share this link through your approved Amaal communication channel. The token is stored only as a digest on the server.</p></div> : null}
 
@@ -249,11 +278,11 @@ export default function OrganizationPage() {
             </div>
 
             <div className="grid two">
-              <form className="setup-form-grid" onSubmit={submitInvitation}>
-                <div><strong>Recruit / invite</strong><p className="muted">Preferred path. The recruit creates their own Neon Auth account through the invite.</p></div>
+              {recruitableRoles.length ? <form className="setup-form-grid" onSubmit={submitInvitation}>
+                <div><strong>Recruit / invite</strong><p className="muted">Preferred path. CEO creates Admins. Admins recruit Regional Managers, Managers, Team Leaders, Agents and Shop Owners. Recovery Officers are recruited by Regional Managers.</p></div>
                 <label>Email<input type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} required /></label>
                 <label>Display name<input value={inviteForm.displayName} onChange={(e) => setInviteForm({ ...inviteForm, displayName: e.target.value })} required /></label>
-                <label>Role<select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>{['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Role<select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <label>Region<select value={inviteForm.regionId} onChange={(e) => setInviteForm({ ...inviteForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Sub-region<select value={inviteForm.subregionId} onChange={(e) => setInviteForm({ ...inviteForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 {inviteForm.role === 'MANAGER' ? <label>Regional Manager<select value={inviteForm.regionalManagerUserId} onChange={(e) => setInviteForm({ ...inviteForm, regionalManagerUserId: e.target.value })}><option value="">Select RM</option>{regionalManagers.map((rm) => <option key={rm.userId} value={rm.userId}>{rm.displayName}{rm.regionCode ? ` — ${rm.regionCode}` : ''}</option>)}</select></label> : null}
@@ -261,23 +290,23 @@ export default function OrganizationPage() {
                 <label>Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
                 <label>Shop ID<input value={inviteForm.shopId} onChange={(e) => setInviteForm({ ...inviteForm, shopId: e.target.value })} placeholder="Shop Owner only" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create invitation' ? 'Creating…' : 'Create secure invite'}</button>
-              </form>
-              <form className="setup-form-grid" onSubmit={submitAdmin}>
+              </form> : <div className="card"><div className="card-label">RECRUITMENT</div><h3>No recruitment roles available</h3><p className="muted">Your current role does not have authority to create organizational logins from this workspace.</p></div>}
+              {isCeo ? <form className="setup-form-grid" onSubmit={submitAdmin}>
                 <div><strong>Provision Admin</strong><p className="muted">CEO-only. Admin authority is profile-based, not automatically CEO-level.</p></div>
                 <label>Neon Auth user ID<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={adminForm.displayName} onChange={(e) => setAdminForm({ ...adminForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminForm.employeeNumber} onChange={(e) => setAdminForm({ ...adminForm, employeeNumber: e.target.value })} /></label>
                 <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Provision admin' ? 'Provisioning…' : 'Provision Admin'}</button>
-              </form>
-              <form className="setup-form-grid" onSubmit={submitAdminInvitation}>
+              </form> : null}
+              {isCeo ? <form className="setup-form-grid" onSubmit={submitAdminInvitation}>
                 <div><strong>Recruit Admin</strong><p className="muted">CEO-only controlled recruitment. The Admin creates their own Neon Auth account from the secure invitation.</p></div>
                 <label>Email<input type="email" value={adminInviteForm.email} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, email: e.target.value })} required /></label>
                 <label>Display name<input value={adminInviteForm.displayName} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminInviteForm.employeeNumber} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, employeeNumber: e.target.value })} /></label>
                 <label>Admin profile<select value={adminInviteForm.profileKey} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create Admin invitation' ? 'Creating…' : 'Create Admin invite'}</button>
-              </form>
+              </form> : null}
             </div>
 
             <div className="grid two">
@@ -285,7 +314,7 @@ export default function OrganizationPage() {
                 <div><strong>Existing identity binding</strong><p className="muted">For already-created Neon Auth identities when a controlled invite cannot be used.</p></div>
                 <label>Neon Auth user ID<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={personForm.displayName} onChange={(e) => setPersonForm({ ...personForm, displayName: e.target.value })} required /></label>
-                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER','RECOVERY_OFFICER'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <label>Region<select value={personForm.regionId} onChange={(e) => setPersonForm({ ...personForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Sub-region<select value={personForm.subregionId} onChange={(e) => setPersonForm({ ...personForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Regional Manager ID<input value={personForm.regionalManagerUserId} onChange={(e) => setPersonForm({ ...personForm, regionalManagerUserId: e.target.value })} /></label>

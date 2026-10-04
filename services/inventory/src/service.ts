@@ -30,6 +30,8 @@ interface ImeiRow {
   current_holder_user_id: string | null;
   current_warehouse_id: string | null;
   current_region_id: string | null;
+  current_team_id: string | null;
+  current_shop_id: string | null;
   condition_status: string;
 }
 
@@ -42,7 +44,7 @@ interface ScopeRow {
 
 async function targetScope(tx: DatabaseTransaction, target: AllocationTarget): Promise<ScopeRow> {
   if (target.kind === 'WAREHOUSE') {
-    const rows = await tx.query<{ region_id: string | null }>(`select region_id from public.warehouses where id=$1 and status='ACTIVE'`, [target.warehouseId]);
+    const rows = await tx.query<{ region_id: string | null; organization_id: string }>(`select region_id,organization_id from public.warehouses where id=$1 and status='ACTIVE'`, [target.warehouseId]);
     if (rows.length !== 1) throw new ValidationError('Target warehouse not found or inactive.');
     return { region_id: rows[0]!.region_id, team_id: null, manager_user_id: null };
   }
@@ -67,6 +69,15 @@ async function targetScope(tx: DatabaseTransaction, target: AllocationTarget): P
 
 async function assertTargetOwnership(tx: DatabaseTransaction, actorUserId: string, target: AllocationTarget, context: Awaited<ReturnType<typeof loadAuthorizationContext>>): Promise<void> {
   const scope = await targetScope(tx, target);
+  const actorOrg = (await tx.query<{ organization_id: string }>(`select organization_id from public.profiles where user_id=$1 and status='ACTIVE'`, [actorUserId]))[0]?.organization_id;
+  if (!actorOrg) throw new AuthorizationError('Actor is not linked to an active Amaal organization.');
+  let targetOrg: string | null = null;
+  if (target.kind === 'WAREHOUSE') targetOrg = (await tx.query<{ organization_id:string }>(`select organization_id from public.warehouses where id=$1 and status='ACTIVE'`, [target.warehouseId]))[0]?.organization_id ?? null;
+  else if (target.kind === 'MANAGER') targetOrg = (await tx.query<{ organization_id:string }>(`select p.organization_id from public.managers m join public.profiles p on p.user_id=m.user_id where m.user_id=$1 and m.status='ACTIVE' limit 1`, [target.holderUserId]))[0]?.organization_id ?? null;
+  else if (target.kind === 'TEAM') targetOrg = (await tx.query<{ organization_id:string }>(`select r.organization_id from public.teams t join public.regions r on r.id=t.region_id where t.id=$1 and t.status='ACTIVE'`, [target.teamId]))[0]?.organization_id ?? null;
+  else if (target.kind === 'SHOP') targetOrg = (await tx.query<{ organization_id:string }>(`select organization_id from public.shops where id=$1 and status='ACTIVE'`, [target.shopId]))[0]?.organization_id ?? null;
+  else targetOrg = (await tx.query<{ organization_id:string }>(`select r.organization_id from public.teams t join public.regions r on r.id=t.region_id where t.id=$1 and t.status='ACTIVE'`, [target.teamId]))[0]?.organization_id ?? null;
+  if (!targetOrg || targetOrg !== actorOrg) throw new AuthorizationError('Allocation target is outside the Amaal organization.');
   if (context.roles.includes('CEO') || context.roles.includes('ADMIN')) return;
   if (context.roles.includes('REGIONAL_MANAGER') && scope.region_id && context.regionIds.includes(scope.region_id)) return;
   if (scope.team_id && context.teamIds.includes(scope.team_id)) return;
@@ -93,6 +104,8 @@ export class PostgresInventoryService {
     if (!command.reason.trim()) throw new ValidationError('Reason is required.');
 
     const context = await loadAuthorizationContext(tx, actorUserId);
+    const actorOrg = (await tx.query<{ organization_id: string }>(`select organization_id from public.profiles where user_id=$1 and status='ACTIVE'`, [actorUserId]))[0]?.organization_id;
+    if (!actorOrg) throw new AuthorizationError('Actor is not linked to an active Amaal organization.');
     const decision = authorize(context, 'inventory.allocate');
     if (!decision.allowed) throw new AuthorizationError(decision.reason);
     await assertTargetOwnership(tx, actorUserId, command.target, context);
@@ -101,12 +114,14 @@ export class PostgresInventoryService {
     const locked: ImeiRow[] = [];
     for (const imeiId of [...new Set(command.imeiIds)]) {
       const rows = await tx.query<ImeiRow>(
-        `select id, imei, state, current_holder_user_id, current_warehouse_id, current_region_id, condition_status
+        `select id, imei, state, current_holder_user_id, current_warehouse_id, current_region_id, current_team_id, current_shop_id, condition_status
          from public.imei_units where id=$1 for update`, [imeiId]);
       if (rows.length !== 1) throw new ValidationError(`IMEI ${imeiId} not found.`);
       const imei = rows[0]!;
         if (imei.state === 'SOLD' || imei.state === 'LOST') throw new ConflictError(`IMEI ${imei.imei} is not allocatable from state ${imei.state}.`);
       assertImeiTransition(imei.state, 'TRANSFER_PENDING');
+      const sourceOrg = (await tx.query<{ organization_id:string }>(`select b.organization_id from public.imei_units i join public.product_variants pv on pv.id=i.product_variant_id join public.products p on p.id=pv.product_id join public.brands b on b.id=p.brand_id where i.id=$1`, [imei.id]))[0]?.organization_id;
+      if (sourceOrg !== actorOrg) throw new AuthorizationError(`IMEI ${imei.imei} is outside the Amaal organization.`);
       const resource = {
         ...(imei.current_holder_user_id ? { ownerUserId: imei.current_holder_user_id } : {}),
         ...(imei.current_region_id ? { regionId: imei.current_region_id } : {}),
@@ -119,16 +134,16 @@ export class PostgresInventoryService {
     if (!locked.length) throw new ValidationError('At least one unique IMEI is required.');
     const source = locked[0]!;
     for (const imei of locked) {
-      if (imei.current_holder_user_id !== source.current_holder_user_id || imei.current_warehouse_id !== source.current_warehouse_id || imei.state !== source.state) {
+      if (imei.current_holder_user_id !== source.current_holder_user_id || imei.current_warehouse_id !== source.current_warehouse_id || imei.current_region_id !== source.current_region_id || imei.current_team_id !== source.current_team_id || imei.current_shop_id !== source.current_shop_id || imei.state !== source.state) {
         throw new ValidationError('An allocation batch must contain IMEIs from one source holder/location and state.');
       }
     }
 
     const allocationRows = await tx.query<{ id: string }>(
       `insert into public.stock_allocations
-       (source_warehouse_id,source_holder_user_id,source_region_id,target_warehouse_id,target_holder_user_id,target_team_id,target_shop_id,status,requested_by,notes)
-       values ($1,$2,$3,$4,$5,$6,$7,'REQUESTED',$8,$9) returning id`,
-      [source.current_warehouse_id,source.current_holder_user_id,source.current_region_id,destination.warehouseId,destination.holderUserId,destination.teamId,destination.shopId,actorUserId,command.notes ?? command.reason],
+       (source_warehouse_id,source_holder_user_id,source_region_id,source_team_id,source_shop_id,target_warehouse_id,target_holder_user_id,target_team_id,target_shop_id,status,requested_by,notes)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'REQUESTED',$10,$11) returning id`,
+      [source.current_warehouse_id,source.current_holder_user_id,source.current_region_id,source.current_team_id,source.current_shop_id,destination.warehouseId,destination.holderUserId,destination.teamId,destination.shopId,actorUserId,command.notes ?? command.reason],
     );
     if (allocationRows.length !== 1) throw new ValidationError('Allocation could not be created.');
     const allocationId = allocationRows[0]!.id;
@@ -137,9 +152,9 @@ export class PostgresInventoryService {
       await tx.query(`insert into public.stock_allocation_items(allocation_id,imei_id,source_state) values ($1,$2,$3)`, [allocationId,imei.id,imei.state]);
       await tx.query(
         `insert into public.inventory_movements
-         (imei_id,from_holder_user_id,from_warehouse_id,reason,movement_type,requested_by,requested_at,condition_before,condition_after,notes,allocation_id)
-         values ($1,$2,$3,$4,'ALLOCATION',$5,now(),$6,$6,$7,$8)`,
-        [imei.id,imei.current_holder_user_id,imei.current_warehouse_id,command.reason,actorUserId,imei.condition_status,`Allocation ${allocationId} reserved stock`,allocationId],
+         (imei_id,from_holder_user_id,from_warehouse_id,from_team_id,from_shop_id,reason,movement_type,requested_by,requested_at,condition_before,condition_after,notes,allocation_id)
+         values ($1,$2,$3,$4,$5,$6,'ALLOCATION',$7,now(),$8,$8,$9,$10)`,
+        [imei.id,imei.current_holder_user_id,imei.current_warehouse_id,imei.current_team_id,imei.current_shop_id,command.reason,actorUserId,imei.condition_status,`Allocation ${allocationId} reserved stock`,allocationId],
       );
       await tx.query(`update public.imei_units set state='TRANSFER_PENDING',updated_at=now() where id=$1`, [imei.id]);
     }
@@ -176,7 +191,14 @@ export class PostgresInventoryService {
           : allocation.target_holder_user_id
             ? { kind:'MANAGER', holderUserId: allocation.target_holder_user_id }
             : { kind:'WAREHOUSE', warehouseId: allocation.target_warehouse_id ?? '' };
+    await assertTargetOwnership(tx, actorUserId, approvalTarget, context);
     const approvalScope = await targetDetails(tx, approvalTarget);
+    const sourceResource = {
+      ...(allocation.source_holder_user_id ? { ownerUserId: allocation.source_holder_user_id } : {}),
+      ...(allocation.source_region_id ? { regionId: allocation.source_region_id } : {}),
+    };
+    const sourceDecision = authorize(context, 'inventory.allocate', sourceResource);
+    if (!sourceDecision.allowed) throw new AuthorizationError('Allocation source is outside your organizational scope.');
     assertAllocationTransition(allocation.status as AllocationStatus, 'APPROVED');
     await tx.query(`update public.stock_allocations set status='APPROVED',approved_by=$1,approved_at=now() where id=$2`,[actorUserId,allocationId]);
     await tx.query(`update public.inventory_movements set approved_by=$1,approved_at=now() where allocation_id=$2 and approved_by is null`,[actorUserId,allocationId]);
@@ -221,8 +243,8 @@ export class PostgresInventoryService {
     const decision = authorize(context, permission);
     if (!decision.allowed) throw new AuthorizationError(decision.reason);
     const rows = await tx.query<{
-      status:string; requested_by:string; source_holder_user_id:string|null; source_warehouse_id:string|null; source_region_id:string|null;
-    }>(`select status,requested_by,source_holder_user_id,source_warehouse_id,source_region_id from public.stock_allocations where id=$1 for update`,[allocationId]);
+      status:string; requested_by:string; source_holder_user_id:string|null; source_warehouse_id:string|null; source_region_id:string|null; source_team_id:string|null; source_shop_id:string|null;
+    }>(`select status,requested_by,source_holder_user_id,source_warehouse_id,source_region_id,source_team_id,source_shop_id from public.stock_allocations where id=$1 for update`,[allocationId]);
     if (rows.length !== 1) throw new ValidationError('Allocation not found.');
     const allocation = rows[0]!;
     if (mode === 'CANCELLED' && allocation.requested_by !== actorUserId) throw new AuthorizationError('Only the allocation requester may cancel it before approval.');
@@ -235,8 +257,8 @@ export class PostgresInventoryService {
       const imei = imeis[0]!;
       if (imei.state !== 'TRANSFER_PENDING') throw new ConflictError(`IMEI ${imei.imei} is ${imei.state}; cancellation would be unsafe.`);
       assertImeiTransition('TRANSFER_PENDING',item.source_state);
-      await tx.query(`update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,updated_at=now() where id=$5`,[item.source_state,allocation.source_holder_user_id,allocation.source_warehouse_id,allocation.source_region_id,item.imei_id]);
-      await tx.query(`insert into public.inventory_movements(imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,allocation_id) values ($1,null,$2,null,$3,$4,'ADJUSTMENT',$5,$5,now(),now(),$6,$6,$7,$8)`,[item.imei_id,allocation.source_holder_user_id,allocation.source_warehouse_id,reason,actorUserId,imei.condition_status,`Allocation ${allocationId} ${mode.toLowerCase()}; stock returned to source`,allocationId]);
+      await tx.query(`update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_team_id=$5,current_shop_id=$6,current_holder_started_at=case when $2 is not null then coalesce(current_holder_started_at,now()) else null end,updated_at=now() where id=$7`,[item.source_state,allocation.source_holder_user_id,allocation.source_warehouse_id,allocation.source_region_id,allocation.source_team_id,allocation.source_shop_id,item.imei_id]);
+      await tx.query(`insert into public.inventory_movements(imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,to_team_id,to_shop_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,allocation_id) values ($1,null,$2,null,$3,$4,$5,$6,'ADJUSTMENT',$7,$7,now(),now(),$8,$8,$9,$10)`,[item.imei_id,allocation.source_holder_user_id,allocation.source_warehouse_id,allocation.source_team_id,allocation.source_shop_id,reason,actorUserId,imei.condition_status,`Allocation ${allocationId} ${mode.toLowerCase()}; stock returned to source`,allocationId]);
     }
     await tx.query(`update public.stock_allocations set status=$1 where id=$2`,[mode,allocationId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,reason,request_id) values ($1,$2,'STOCK_ALLOCATION',$3,$4::jsonb,$5,current_setting('amaal.request_id',true))`,[actorUserId,mode==='CANCELLED'?'STOCK_ALLOCATION_CANCELLED':'STOCK_ALLOCATION_REJECTED',allocationId,JSON.stringify({status:mode,imei_count:items.length}),reason]);
@@ -247,8 +269,8 @@ export class PostgresInventoryService {
     const context = await loadAuthorizationContext(tx,actorUserId);
     const decision = authorize(context,'inventory.allocate');
     if (!decision.allowed) throw new AuthorizationError(decision.reason);
-    const rows = await tx.query<{ status:string;source_warehouse_id:string|null;source_holder_user_id:string|null;source_region_id:string|null;target_warehouse_id:string|null;target_holder_user_id:string|null;target_team_id:string|null;target_shop_id:string|null }>(
-      `select status,source_warehouse_id,source_holder_user_id,source_region_id,target_warehouse_id,target_holder_user_id,target_team_id,target_shop_id from public.stock_allocations where id=$1 for update`,[allocationId]);
+    const rows = await tx.query<{ status:string;source_warehouse_id:string|null;source_holder_user_id:string|null;source_region_id:string|null;source_team_id:string|null;source_shop_id:string|null;target_warehouse_id:string|null;target_holder_user_id:string|null;target_team_id:string|null;target_shop_id:string|null }>(
+      `select status,source_warehouse_id,source_holder_user_id,source_region_id,source_team_id,source_shop_id,target_warehouse_id,target_holder_user_id,target_team_id,target_shop_id from public.stock_allocations where id=$1 for update`,[allocationId]);
     if (rows.length !== 1) throw new ValidationError('Allocation not found.');
     const allocation = rows[0]!;
     if (allocation.status !== 'IN_TRANSIT') throw new ConflictError(`Allocation is ${allocation.status}, not IN_TRANSIT.`);
@@ -307,8 +329,8 @@ export class PostgresInventoryService {
       if (imei.state!=='TRANSFER_PENDING') throw new ConflictError(`IMEI ${imei.imei} is ${imei.state}; expected TRANSFER_PENDING.`);
       assertImeiTransition(imei.state,finalState);
       const targetWarehouse=(finalState==='MASTER_WAREHOUSE'||finalState==='REGIONAL_WAREHOUSE')?allocation.target_warehouse_id:null;
-      await tx.query(`update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_holder_started_at=case when $2 is not null then now() else null end,field_age_started_at=coalesce(field_age_started_at,now()),updated_at=now() where id=$5`,[finalState,allocation.target_holder_user_id,targetWarehouse,finalRegionId,item.imei_id]);
-      await tx.query(`insert into public.inventory_movements(imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,allocation_id) values ($1,$2,$3,$4,$5,'ALLOCATION_RECEIVED','ALLOCATION',$6,(select approved_by from public.stock_allocations where id=$7),$8,(select requested_at from public.stock_allocations where id=$7),(select approved_at from public.stock_allocations where id=$7),now(),$9,$9,$10,$7)`,[item.imei_id,allocation.source_holder_user_id,allocation.target_holder_user_id,allocation.source_warehouse_id,targetWarehouse,actorUserId,allocationId,actorUserId,imei.condition_status,`Allocation ${allocationId} received`]);
+      await tx.query(`update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_team_id=$5,current_shop_id=$6,current_holder_started_at=case when $2 is not null then now() else null end,field_age_started_at=coalesce(field_age_started_at,now()),aging_due_at=coalesce(aging_due_at, now() + interval '18 days'),updated_at=now() where id=$7`,[finalState,allocation.target_holder_user_id,targetWarehouse,finalRegionId,allocation.target_team_id,allocation.target_shop_id,item.imei_id]);
+      await tx.query(`insert into public.inventory_movements(imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,from_team_id,to_team_id,from_shop_id,to_shop_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,allocation_id) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'ALLOCATION_RECEIVED','ALLOCATION',$10,(select approved_by from public.stock_allocations where id=$11),$12,(select requested_at from public.stock_allocations where id=$11),(select approved_at from public.stock_allocations where id=$11),now(),$13,$13,$14,$11)`,[item.imei_id,allocation.source_holder_user_id,allocation.target_holder_user_id,allocation.source_warehouse_id,targetWarehouse,allocation.source_team_id,allocation.target_team_id,allocation.source_shop_id,allocation.target_shop_id,actorUserId,allocationId,actorUserId,imei.condition_status,`Allocation ${allocationId} received`]);
     }
     await tx.query(`update public.stock_allocations set status='RECEIVED',received_by=$1,received_at=now(),aging_start_at=coalesce(aging_start_at,now()) where id=$2`,[actorUserId,allocationId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,request_id) values ($1,'STOCK_ALLOCATION_RECEIVED','STOCK_ALLOCATION',$2,$3::jsonb,current_setting('amaal.request_id', true))`,[actorUserId,allocationId,JSON.stringify({status:'RECEIVED',imei_count:items.length,final_state:finalState})]);
@@ -332,7 +354,7 @@ export class PostgresInventoryService {
     const warehouse = warehouseRows[0]!;
 
     const imeiRows = await tx.query<ImeiRow>(
-      `select id,imei,state,current_holder_user_id,current_warehouse_id,current_region_id,condition_status
+      `select id,imei,state,current_holder_user_id,current_warehouse_id,current_region_id,current_team_id,current_shop_id,condition_status
        from public.imei_units where id=$1 for update`, [input.imeiId],
     );
     if (imeiRows.length !== 1) throw new ValidationError('IMEI not found.');
@@ -362,24 +384,24 @@ export class PostgresInventoryService {
     await tx.query(`update public.imei_units set state='RETURNED',updated_at=now() where id=$1`, [input.imeiId]);
     await tx.query(
       `insert into public.inventory_movements
-       (imei_id,from_holder_user_id,from_warehouse_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
-       values ($1,$2,$3,$4,'RETURN',$5,$6,$5,now(),case when $6 is null then null else now() end,now(),$7,$7,$8,$9)`,
-      [input.imeiId,imei.current_holder_user_id,imei.current_warehouse_id,input.reason,actorUserId,returnApproval?.decided_by ?? null,imei.condition_status,`Field custody returned; awaiting warehouse state transition`,input.approvalId ?? null],
+       (imei_id,from_holder_user_id,from_warehouse_id,from_team_id,from_shop_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
+       values ($1,$2,$3,$4,$5,$6,'RETURN',$7,$8,$7,now(),case when $8 is null then null else now() end,now(),$9,$9,$10,$11)`,
+      [input.imeiId,imei.current_holder_user_id,imei.current_warehouse_id,imei.current_team_id,imei.current_shop_id,input.reason,actorUserId,returnApproval?.decided_by ?? null,imei.condition_status,`Field custody returned; awaiting warehouse state transition`,input.approvalId ?? null],
     );
 
     const finalState: ImeiState = warehouse.warehouse_type === 'MASTER' ? 'MASTER_WAREHOUSE' : 'REGIONAL_WAREHOUSE';
     assertImeiTransition('RETURNED', finalState);
     await tx.query(
       `update public.imei_units
-       set state=$1,current_holder_user_id=null,current_warehouse_id=$2,current_region_id=$3,current_holder_started_at=null,field_age_started_at=null,aging_due_at=null,updated_at=now()
+       set state=$1,current_holder_user_id=null,current_warehouse_id=$2,current_region_id=$3,current_team_id=null,current_shop_id=null,current_holder_started_at=null,field_age_started_at=null,aging_due_at=null,updated_at=now()
        where id=$4`,
       [finalState,input.warehouseId,warehouse.region_id,input.imeiId],
     );
     await tx.query(
       `insert into public.inventory_movements
-       (imei_id,from_holder_user_id,to_warehouse_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
-       values ($1,$2,$3,$4,'RETURN',$5,$6,$5,now(),case when $6 is null then null else now() end,now(),$7,$7,$8,$9)`,
-      [input.imeiId,imei.current_holder_user_id,input.warehouseId,'WAREHOUSE_ACCEPTED_RETURN',actorUserId,returnApproval?.decided_by ?? null,imei.condition_status,`Return accepted into ${finalState}`,input.approvalId ?? null],
+       (imei_id,from_holder_user_id,to_warehouse_id,from_team_id,from_shop_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
+       values ($1,$2,$3,$4,$5,$6,'RETURN',$7,$8,$7,now(),case when $8 is null then null else now() end,now(),$9,$9,$10,$11)`,
+      [input.imeiId,imei.current_holder_user_id,input.warehouseId,imei.current_team_id,imei.current_shop_id,'WAREHOUSE_ACCEPTED_RETURN',actorUserId,returnApproval?.decided_by ?? null,imei.condition_status,`Return accepted into ${finalState}`,input.approvalId ?? null],
     );
     await tx.query(
       `insert into public.audit_events(actor_user_id,action,target_type,target_id,previous_state,new_state,reason,approval_id,request_id)
@@ -396,7 +418,7 @@ export class PostgresInventoryService {
   async executeApprovedCorrection(
     tx: DatabaseTransaction,
     actorUserId: string,
-    input: { imeiId: string; approvalId: string; targetState: ImeiState; targetHolderUserId?: string; targetWarehouseId?: string; targetRegionId?: string; targetTeamId?: string; reason: string; movementType?: 'ADJUSTMENT' | 'WRITE_OFF' },
+    input: { imeiId: string; approvalId: string; targetState: ImeiState; targetHolderUserId?: string; targetWarehouseId?: string; targetRegionId?: string; targetTeamId?: string; targetShopId?: string; reason: string; movementType?: 'ADJUSTMENT' | 'WRITE_OFF' },
   ): Promise<void> {
     if (!input.reason.trim()) throw new ValidationError('Correction reason is required.');
     if (!input.approvalId.trim()) throw new ValidationError('approvalId is required.');
@@ -418,7 +440,7 @@ export class PostgresInventoryService {
     if (approval.requested_by === actorUserId) throw new AuthorizationError('Requester and correction executor must be different users.');
 
     const imeiRows = await tx.query<ImeiRow>(
-      `select id,imei,state,current_holder_user_id,current_warehouse_id,current_region_id,condition_status from public.imei_units where id=$1 for update`, [input.imeiId],
+      `select id,imei,state,current_holder_user_id,current_warehouse_id,current_region_id,current_team_id,current_shop_id,condition_status from public.imei_units where id=$1 for update`, [input.imeiId],
     );
     if (imeiRows.length !== 1) throw new ValidationError('IMEI not found.');
     const imei = imeiRows[0]!;
@@ -433,14 +455,14 @@ export class PostgresInventoryService {
     if (input.targetState === 'ALLOCATED_TO_TEAM' && !input.targetTeamId) throw new ValidationError('Team is required for ALLOCATED_TO_TEAM.');
 
     await tx.query(
-      `update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_holder_started_at=case when $2 is not null then now() else null end,updated_at=now() where id=$5`,
-      [input.targetState,holder,warehouse,region,input.imeiId],
+      `update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_holder_started_at=case when $2 is not null then now() else null end,current_team_id=$5,current_shop_id=$6,updated_at=now() where id=$7`,
+      [input.targetState,holder,warehouse,region,input.targetTeamId ?? null,input.targetShopId ?? null,input.imeiId],
     );
     await tx.query(
       `insert into public.inventory_movements
-       (imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$8,now(),now(),now(),$10,$11,$12,$13)`,
-      [input.imeiId,imei.current_holder_user_id,holder,imei.current_warehouse_id,warehouse,input.reason,input.movementType ?? 'ADJUSTMENT',approval.requested_by,actorUserId,imei.condition_status,input.targetState,`Approved correction executed; team=${input.targetTeamId ?? 'n/a'}`,input.approvalId],
+       (imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,from_team_id,to_team_id,from_shop_id,to_shop_id,reason,movement_type,requested_by,approved_by,accepted_by,requested_at,approved_at,accepted_at,condition_before,condition_after,notes,approval_id)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$12,now(),now(),now(),$14,$15,$16,$17)`,
+      [input.imeiId,imei.current_holder_user_id,holder,imei.current_warehouse_id,warehouse,imei.current_team_id,input.targetTeamId ?? null,imei.current_shop_id,input.targetShopId ?? null,input.reason,input.movementType ?? 'ADJUSTMENT',approval.requested_by,actorUserId,imei.condition_status,input.targetState,`Approved correction executed; team=${input.targetTeamId ?? 'n/a'}; shop=${input.targetShopId ?? 'n/a'}`,input.approvalId],
     );
     await tx.query(
       `insert into public.audit_events(actor_user_id,action,target_type,target_id,previous_state,new_state,reason,approval_id,request_id)

@@ -1,0 +1,32 @@
+AMAAL STAGE 6 — Realtime + Role Workspaces
+Build package: 2026-10-04
+
+This package is based on the Phase 5 source package and contains targeted Stage 6 changes only.
+It preserves the existing project structure and products.
+
+Core additions:
+- services/api/src/workspace.ts
+- services/api/src/realtime.ts
+- apps/web/lib/realtime.ts
+- Stage 6 dashboard integration
+- Render worker -> Valkey realtime fan-out
+- durable Neon realtime replay
+- role/scoped workspace summary
+- Admin realtime least-privilege filtering
+- production-schema guardrails
+- Stage 6 validator/tests/docs
+
+Validation completed:
+- workspace validation: PASS
+- Phase 3 validation: PASS (31 checks)
+- Phase 4 validation: PASS
+- Phase 5 validation: PASS
+- Stage 6 validation: PASS
+- TypeScript/TSX syntax diagnostics: PASS (10 Stage 6 files)
+
+Important deployment gates:
+- GitHub connector write is currently blocked by a 403 integration permission, so no repository push was performed.
+- Render environment/Key Value URL still needs inspection in the selected Render workspace before production realtime is declared live.
+- Package dependencies need installation with pnpm 12.7.0 in the deployment environment.
+- Real authenticated WebSocket + disconnect/replay test remains required before enabling AMAAL_REALTIME_REQUIRE_VALKEY=true.
+- No Neon production migration was applied.

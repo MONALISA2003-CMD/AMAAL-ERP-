@@ -1,0 +1,14 @@
+{
+  "name": "@amaal/customers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {
+    "@amaal/business-rules": "workspace:*",
+    "@amaal/database": "workspace:*",
+    "@amaal/permissions": "workspace:*",
+    "@amaal/shared": "workspace:*"
+  }
+}

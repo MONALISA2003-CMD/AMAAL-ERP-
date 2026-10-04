@@ -1,16 +1,11 @@
-# Amaal PostgreSQL migrations
+# Amaal ERP migrations
 
-These migrations define the authoritative Amaal PostgreSQL schema.
+Migrations are ordered by timestamp and are intended to run once, in order.
 
-## Current provider
+Phase 0–2B: `20260928_*` through `20261002_*`
 
-Production is hosted on **Neon PostgreSQL**, database `neondb`, production branch `production` in project `icy-lake-57952361`.
+Phase 3: `20261003_000024`, `20261003_000025`
 
-Historical references to Supabase PostgreSQL in archived snapshots remain for traceability only. They are not instructions for the current deployment.
+Phase 4: `20261004_000026`, `20261004_000027`, `20261004_000028`
 
-## Migration discipline
-
-- Every production schema change must exist as a migration file.
-- Apply/test schema changes against an isolated Neon branch before production where possible.
-- Preserve RLS, constraints, state-transition rules and transactional integrity.
-- Keep migrations idempotent where the database supports safe `if not exists` guards.
+The Phase 4 migrations are packaged as a release candidate. They are intentionally not applied to production during the build-only workflow.

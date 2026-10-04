@@ -60,3 +60,7 @@ Migrations `20261002_000021_phase0_2b_identity_scope_hardening.sql` and `2026100
 ## Not included yet
 
 Phase 2B does not implement inventory, sales, commissions, aging, recovery, dashboard analytics or ML. Those are later phases and will consume this identity/scope foundation.
+
+
+### Current login authority rule — Phase 3 reinforced
+The current organizational control plane enforces: **CEO creates Admin logins; Admins create/invite Regional Managers, Managers, Team Leaders, Agents and Shop Owners; Regional Managers control Recovery Officer recruitment in-region.** Admins cannot directly recruit Recovery Officers. This rule is enforced in the application control plane and by the Phase 3 database invitation-authority trigger.

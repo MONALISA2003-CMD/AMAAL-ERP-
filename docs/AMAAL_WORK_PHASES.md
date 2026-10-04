@@ -1,8 +1,8 @@
 # Amaal Work Phases
 
 **Status:** Active delivery roadmap  
-**Phase currently active:** Phase 1 — Amaal Setup deep closure  
-**Date:** 1 October 2026
+**Phase currently active:** Phase 3 — Products, IMEI & Inventory Custody  
+**Date:** 3 October 2026
 
 ## Purpose
 

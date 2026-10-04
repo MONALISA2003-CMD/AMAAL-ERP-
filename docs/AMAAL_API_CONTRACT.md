@@ -300,3 +300,18 @@ POST /api/v1/setup/initialize
 `POST /api/v1/setup/initialize` is protected by the server-only `AMAAL_SETUP_KEY`. It creates or confirms the Phase 1 organization foundation, records policy readiness without inventing business values, writes an audit event and publishes an outbox event. The backend uses a PostgreSQL transaction advisory lock and rejects subsequent initialization attempts.
 
 The route deliberately does **not** create a password or a legacy identity-provider user. CEO account activation belongs to Phase 2's final Neon-centered identity architecture.
+
+
+## Phase 3 inventory endpoints
+- `GET /v1/catalog/brands`
+- `GET /v1/catalog/products`
+- `POST /v1/catalog/brands`
+- `POST /v1/catalog/products`
+- `POST /v1/catalog/variants`
+- `GET /v1/inventory/warehouses`
+- `GET /v1/inventory/summary`
+- `GET /v1/inventory/imeis`
+- `GET /v1/inventory/imeis/:id/movements`
+- `GET /v1/inventory/allocations`
+- `POST /v1/inventory/receipts`
+- Existing allocation/return/correction endpoints continue to use the Phase 3 custody model.

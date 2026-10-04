@@ -19,7 +19,13 @@
     "check:phase2a-auth": "node scripts/phase2a-auth-check.mjs",
     "validate:phase2b": "node scripts/validate-phase2b.mjs",
     "validate:phase1": "node scripts/validate-phase1.mjs",
-    "validate:phase0-2b": "node scripts/validate-phase0-2b.mjs"
+    "validate:phase0-2b": "node scripts/validate-phase0-2b.mjs",
+    "validate:phase3": "node scripts/validate-phase3.mjs",
+    "validate:phase4": "node scripts/validate-phase4.mjs",
+    "test:phase4": "node tests/unit/phase4-rules.test.mjs",
+    "validate:phase5": "node scripts/validate-phase5.mjs",
+    "validate:phase6": "node scripts/validate-phase6.mjs",
+    "test:phase5": "node --experimental-transform-types tests/unit/phase5-aging-recovery.test.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

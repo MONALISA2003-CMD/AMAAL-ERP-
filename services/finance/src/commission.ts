@@ -2,6 +2,7 @@ import type { DatabaseTransaction } from '@amaal/database';
 import type { RoleKey } from '@amaal/permissions';
 import { ValidationError, DomainError } from '@amaal/shared';
 import { calculateCommissionAmount, type CommissionRuleDefinition } from './commission-rules.ts';
+import { policyConditionsMatch } from './phase4-finance-rules.ts';
 
 export type CommissionOutcome = {
   commissionId: string;
@@ -30,7 +31,7 @@ function parseRule(value: unknown): CommissionRuleDefinition {
 
 export async function createDirectSellerCommission(
   tx: DatabaseTransaction,
-  input: { saleId: string; saleAmount: number; productVariantId: string; sellerUserId: string; organizationId: string },
+  input: { saleId: string; saleAmount: number; productVariantId: string; sellerUserId: string; organizationId: string; paymentType?: 'CASH'|'LOAN' },
 ): Promise<CommissionOutcome | null> {
   const roles = await tx.query<{ role: RoleKey }>(
     `select role from public.role_assignments where user_id=$1 and status='ACTIVE' and (effective_to is null or effective_to > now()) order by case role when 'SHOP_OWNER' then 1 when 'AGENT' then 2 when 'TEAM_LEADER' then 3 when 'MANAGER' then 4 when 'REGIONAL_MANAGER' then 5 when 'ADMIN' then 6 else 7 end limit 1`,
@@ -39,8 +40,8 @@ export async function createDirectSellerCommission(
   if (roles.length !== 1) return null;
   const sellerRole = roles[0]!.role;
 
-  const policies = await tx.query<{ id:string; role:RoleKey|null; product_variant_id:string|null; rule_definition:Record<string, unknown>; effective_from:string }>(
-    `select id,role,product_variant_id,rule_definition,effective_from
+  const policies = await tx.query<{ id:string; role:RoleKey|null; product_variant_id:string|null; rule_definition:Record<string, unknown>; conditions:Record<string, unknown>; effective_from:string }>(
+    `select id,role,product_variant_id,rule_definition,conditions,effective_from
      from public.commission_policies
      where organization_id=$1 and status='ACTIVE'
        and effective_from <= now() and (effective_to is null or effective_to > now())
@@ -52,11 +53,11 @@ export async function createDirectSellerCommission(
             when product_variant_id is null and role=$2 then 2
             else 3 end,
        effective_from desc
-     limit 1`,
+     limit 25`,
     [input.organizationId, sellerRole, input.productVariantId],
   );
-  if (policies.length !== 1) return null;
-  const policy = policies[0]!;
+  const policy = policies.find((candidate) => policyConditionsMatch({ conditions: candidate.conditions, saleAmount: input.saleAmount, paymentType: input.paymentType }));
+  if (!policy) return null;
   const rule = parseRule(policy.rule_definition);
   let amount: number;
   try { amount = calculateCommissionAmount(rule, input.saleAmount); } catch (error) {
@@ -68,7 +69,16 @@ export async function createDirectSellerCommission(
   const rows = await tx.query<{ id:string }>(
     `insert into public.commissions(sale_id,beneficiary_user_id,beneficiary_role,policy_id,amount,policy_snapshot)
      values ($1,$2,$3,$4,$5::numeric,$6::jsonb) returning id`,
-    [input.saleId,input.sellerUserId,sellerRole,policy.id,amount,JSON.stringify({policy_id:policy.id,effective_from:policy.effective_from,rule_definition:policy.rule_definition,sale_amount:input.saleAmount})],
+    [input.saleId,input.sellerUserId,sellerRole,policy.id,amount,JSON.stringify({
+      policy_id:policy.id,
+      effective_from:policy.effective_from,
+      role:sellerRole,
+      product_variant_id:input.productVariantId,
+      rule_definition:policy.rule_definition,
+      conditions:policy.conditions ?? {},
+      sale_amount:input.saleAmount,
+      payment_type:input.paymentType ?? null,
+    })],
   );
   if (rows.length !== 1) throw new DomainError('Commission could not be recorded.', 'COMMISSION_CREATE_FAILED');
   return { commissionId: rows[0]!.id, policyId: policy.id, beneficiaryUserId: input.sellerUserId, beneficiaryRole: sellerRole, amount };

@@ -19,6 +19,8 @@ type SaleItemContext = {
   pre_sale_holder_user_id: string | null;
   pre_sale_warehouse_id: string | null;
   pre_sale_region_id: string | null;
+  pre_sale_team_id: string | null;
+  pre_sale_shop_id: string | null;
 };
 
 export class PostgresFinanceService {
@@ -34,7 +36,7 @@ export class PostgresFinanceService {
     if (sale.status !== 'COMPLETED') throw new ConflictError(`Sale is ${sale.status}; only COMPLETED sales may be reversed.`);
 
     const items = await tx.query<SaleItemContext>(
-      `select id,imei_id,pre_sale_state,pre_sale_holder_user_id,pre_sale_warehouse_id,pre_sale_region_id
+      `select id,imei_id,pre_sale_state,pre_sale_holder_user_id,pre_sale_warehouse_id,pre_sale_region_id,pre_sale_team_id,pre_sale_shop_id
        from public.sale_items where sale_id=$1 and is_active=true for update`, [saleId]);
     if (!items.length) throw new ValidationError('Sale has no active line items.');
 
@@ -48,15 +50,15 @@ export class PostgresFinanceService {
       if (imei.state !== 'SOLD') throw new ConflictError(`IMEI ${imei.imei} is ${imei.state}; expected SOLD.`);
       assertImeiTransition(imei.state, item.pre_sale_state);
       await tx.query(
-        `update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,
-         current_holder_started_at=case when $2 is not null then now() else null end,updated_at=now() where id=$5`,
-        [item.pre_sale_state,item.pre_sale_holder_user_id,item.pre_sale_warehouse_id,item.pre_sale_region_id,item.imei_id],
+        `update public.imei_units set state=$1,current_holder_user_id=$2,current_warehouse_id=$3,current_region_id=$4,current_team_id=$5,current_shop_id=$6,
+         current_holder_started_at=case when $2 is not null then now() else null end,updated_at=now() where id=$7`,
+        [item.pre_sale_state,item.pre_sale_holder_user_id,item.pre_sale_warehouse_id,item.pre_sale_region_id,item.pre_sale_team_id,item.pre_sale_shop_id,item.imei_id],
       );
       await tx.query(
         `insert into public.inventory_movements
-         (imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes)
-         values ($1,null,$2,null,$3,$4,'RETURN',$5,$5,now(),now(),$6,$6,$7)`,
-        [item.imei_id,item.pre_sale_holder_user_id,item.pre_sale_warehouse_id,reason,actorUserId,imei.condition_status,`Sale ${saleId} reversed`],
+         (imei_id,from_holder_user_id,to_holder_user_id,from_warehouse_id,to_warehouse_id,from_team_id,to_team_id,from_shop_id,to_shop_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes)
+         values ($1,null,$2,null,$3,null,$4,null,$5,$6,'RETURN',$7,$7,now(),now(),$8,$8,$9)`,
+        [item.imei_id,item.pre_sale_holder_user_id,item.pre_sale_warehouse_id,item.pre_sale_team_id,item.pre_sale_shop_id,reason,actorUserId,imei.condition_status,`Sale ${saleId} reversed`],
       );
       await tx.query(`update public.sale_items set is_active=false,reversed_at=now() where id=$1`, [item.id]);
     }

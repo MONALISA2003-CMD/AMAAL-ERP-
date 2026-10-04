@@ -131,9 +131,9 @@ export class PostgresRecoveryService {
     );
     await tx.query(
       `insert into public.inventory_movements
-       (imei_id,from_holder_user_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,recovery_case_id)
-       values ($1,$2,$3,'RECOVERY',$4,$4,now(),now(),$5,$5,$6,$7)`,
-      [input.imeiId,imei.current_holder_user_id,input.reason,actorUserId,imei.condition_status,`Recovery case ${caseId} opened`,caseId],
+       (imei_id,from_holder_user_id,from_team_id,from_shop_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,recovery_case_id)
+       values ($1,$2,$3,$4,$5,'RECOVERY',$6,$6,now(),now(),$7,$7,$8,$9)`,
+      [input.imeiId,imei.current_holder_user_id,imei.current_team_id,imei.current_shop_id,input.reason,actorUserId,imei.condition_status,`Recovery case ${caseId} opened`,caseId],
     );
     await tx.query(
       `insert into public.audit_events(actor_user_id,action,target_type,target_id,previous_state,new_state,reason,request_id)
@@ -173,6 +173,8 @@ export class PostgresRecoveryService {
 
     assertRecoveryTransition('OPEN','ASSIGNED');
     await tx.query(`update public.recovery_cases set status='ASSIGNED',assigned_officer_user_id=$1,updated_at=now() where id=$2`,[input.officerUserId,input.caseId]);
+await tx.query(`update public.recovery_case_assignments set ended_at=now() where recovery_case_id=$1 and ended_at is null`,[input.caseId]);
+    await tx.query(`insert into public.recovery_case_assignments(recovery_case_id,officer_user_id,assigned_by,assignment_reason) values($1,$2,$3,'Manual recovery assignment')`,[input.caseId,input.officerUserId,actorUserId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,request_id) values ($1,'RECOVERY_ASSIGNED','RECOVERY_CASE',$2,$3::jsonb,current_setting('amaal.request_id',true))`,[actorUserId,input.caseId,JSON.stringify({status:'ASSIGNED',assigned_officer_user_id:input.officerUserId})]);
     await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,actor_user_id,payload) values ('RECOVERY_ASSIGNED','RECOVERY_CASE',$1,$2,$3,$4::jsonb)`,[input.caseId,recoveryCase.current_region_id,actorUserId,JSON.stringify({case_id:input.caseId,assigned_officer_user_id:input.officerUserId})]);
   }
@@ -221,7 +223,7 @@ export class PostgresRecoveryService {
     if (!auth.allowed) throw new AuthorizationError(auth.reason);
 
     const cases = await tx.query<{ status:string; assigned_officer_user_id:string|null; imei_id:string; current_region_id:string|null; current_holder_user_id:string|null }>(
-      `select rc.status,rc.assigned_officer_user_id,rc.imei_id,i.current_region_id,i.current_holder_user_id from public.recovery_cases rc join public.imei_units i on i.id=rc.imei_id where rc.id=$1 for update`,
+      `select rc.status,rc.assigned_officer_user_id,rc.imei_id,i.current_region_id,i.current_holder_user_id,i.current_team_id,i.current_shop_id from public.recovery_cases rc join public.imei_units i on i.id=rc.imei_id where rc.id=$1 for update`,
       [input.caseId],
     );
     if(cases.length!==1) throw new ValidationError('Recovery case not found.');
@@ -230,7 +232,7 @@ export class PostgresRecoveryService {
     assertAssignedOrPrivileged(context,actorUserId,recoveryCase.assigned_officer_user_id);
     assertRecoveryTransition(recoveryCase.status as RecoveryState,'RECOVERED');
 
-    const imeis=await tx.query<{ imei:string; state:ImeiState; condition_status:string }>(`select imei,state,condition_status from public.imei_units where id=$1 for update`,[recoveryCase.imei_id]);
+    const imeis=await tx.query<{ imei:string; state:ImeiState; condition_status:string; current_team_id:string|null; current_shop_id:string|null }>(`select imei,state,condition_status,current_team_id,current_shop_id from public.imei_units where id=$1 for update`,[recoveryCase.imei_id]);
     if(imeis.length!==1) throw new ValidationError('IMEI not found.');
     const imei=imeis[0]!;
     if(imei.imei!==input.scannedImei.trim()) throw new ConflictError('Scanned IMEI does not match the recovery case asset.');
@@ -241,15 +243,16 @@ export class PostgresRecoveryService {
     assertImeiTransition(imei.state,'RECOVERED');
     assertImeiTransition('RECOVERED',finalState);
 
-    await tx.query(`update public.imei_units set state=$1,current_holder_user_id=null,current_warehouse_id=$2,current_region_id=$3,current_holder_started_at=null,field_age_started_at=null,aging_due_at=null,updated_at=now() where id=$4`,[finalState,input.warehouseId,warehouse.regionId,recoveryCase.imei_id]);
+    await tx.query(`update public.imei_units set state=$1,current_holder_user_id=null,current_warehouse_id=$2,current_region_id=$3,current_team_id=null,current_shop_id=null,current_holder_started_at=null,field_age_started_at=null,aging_due_at=null,updated_at=now() where id=$4`,[finalState,input.warehouseId,warehouse.regionId,recoveryCase.imei_id]);
     await tx.query(
       `insert into public.inventory_movements
-       (imei_id,from_holder_user_id,to_warehouse_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,recovery_case_id)
-       values ($1,$2,$3,'RECOVERY_WAREHOUSE_ACCEPTED','RECOVERY',$4,$4,now(),now(),$5,$5,$6,$7)`,
-      [recoveryCase.imei_id,recoveryCase.current_holder_user_id,input.warehouseId,actorUserId,imei.condition_status,`Recovery case ${input.caseId} accepted into ${finalState}`,input.caseId],
+       (imei_id,from_holder_user_id,to_warehouse_id,from_team_id,from_shop_id,reason,movement_type,requested_by,accepted_by,requested_at,accepted_at,condition_before,condition_after,notes,recovery_case_id)
+       values ($1,$2,$3,$4,$5,$6,'RECOVERY',$7,$7,now(),now(),$8,$8,$9,$10)`,
+      [recoveryCase.imei_id,recoveryCase.current_holder_user_id,input.warehouseId,imei.current_team_id,imei.current_shop_id,'RECOVERY_WAREHOUSE_ACCEPTED',actorUserId,imei.condition_status,`Recovery case ${input.caseId} accepted into ${finalState}`,input.caseId],
     );
     await tx.query(`insert into public.recovery_activities(recovery_case_id,officer_user_id,activity_type,result,verified_imei,notes) values ($1,$2,'RECOVERED','Warehouse accepted recovery',$3,$4)`,[input.caseId,actorUserId,input.scannedImei.trim(),`Accepted into warehouse ${input.warehouseId}`]);
     await tx.query(`update public.recovery_cases set status='RECOVERED',updated_at=now() where id=$1`,[input.caseId]);
+    await tx.query(`update public.aging_alerts set status='RESOLVED',resolved_at=now(),last_seen_at=now() where recovery_case_id=$1 and status<>'RESOLVED'`,[input.caseId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,previous_state,new_state,reason,request_id) values ($1,'RECOVERY_COMPLETED','RECOVERY_CASE',$2,$3::jsonb,$4::jsonb,'Physical recovery verified and warehouse accepted',current_setting('amaal.request_id',true))`,[actorUserId,input.caseId,JSON.stringify({case_status:recoveryCase.status,imei_state:'RECOVERY_PENDING'}),JSON.stringify({case_status:'RECOVERED',imei_state:finalState,warehouse_id:input.warehouseId})]);
     await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,actor_user_id,payload) values ('RECOVERY_COMPLETED','RECOVERY_CASE',$1,$2,$3,$4::jsonb)`,[input.caseId,warehouse.regionId,actorUserId,JSON.stringify({case_id:input.caseId,imei_id:recoveryCase.imei_id,warehouse_id:input.warehouseId,imei_state:finalState})]);
   }
@@ -265,6 +268,7 @@ export class PostgresRecoveryService {
     assertAssignedOrPrivileged(context,actorUserId,recoveryCase.assigned_officer_user_id);
     if(recoveryCase.status!=='RECOVERED') throw new ConflictError(`Recovery case is ${recoveryCase.status}; only RECOVERED cases can close.`);
     assertRecoveryTransition('RECOVERED','CLOSED');
+    await tx.query(`update public.recovery_case_assignments set ended_at=now() where recovery_case_id=$1 and ended_at is null`,[caseId]);
     await tx.query(`update public.recovery_cases set status='CLOSED',closed_at=now(),updated_at=now(),notes=coalesce(notes,'') || case when notes is null or notes='' then '' else E'\\n' end || $1 where id=$2`,[reason,caseId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,reason,request_id) values ($1,'RECOVERY_CLOSED','RECOVERY_CASE',$2,$3::jsonb,$4,current_setting('amaal.request_id',true))`,[actorUserId,caseId,JSON.stringify({status:'CLOSED'}),reason]);
     await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,actor_user_id,payload) values ('RECOVERY_CLOSED','RECOVERY_CASE',$1,$2,$3,$4::jsonb)`,[caseId,recoveryCase.current_region_id,actorUserId,JSON.stringify({case_id:caseId,status:'CLOSED',reason})]);
@@ -284,3 +288,5 @@ export function validateRecoveryTransition(command: RecoveryTransitionCommand): 
   if (!command.actorUserId.trim()) throw new ValidationError('actorUserId is required.');
   assertRecoveryTransition(command.fromState, command.toState);
 }
+export { AgingRecoveryEngine } from './aging-engine.ts';
+export { PostgresRecoveryGovernanceService } from './governance.ts';

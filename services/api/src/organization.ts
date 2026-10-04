@@ -24,7 +24,15 @@ function requirePermission(context: AuthorizationContext, permission: string): v
 
 function canManageTarget(context: AuthorizationContext, role: RoleKey, regionId?: string, teamId?: string): void {
   if (!MANAGEABLE_ROLES.has(role)) throw new ValidationError('This role cannot be provisioned through the organizational control plane.');
-  if (context.roles.includes('CEO') || context.roles.includes('ADMIN')) return;
+  if (context.roles.includes('CEO')) {
+    throw new AuthorizationError('CEO may create or invite Admins only; subordinate organizational roles are Admin-controlled.');
+  }
+  if (context.roles.includes('ADMIN')) {
+    if (!['REGIONAL_MANAGER','MANAGER','TEAM_LEADER','AGENT','SHOP_OWNER'].includes(role)) {
+      throw new AuthorizationError('Admins can recruit Regional Managers, Managers, Team Leaders, Agents and Shop Owners only.');
+    }
+    return;
+  }
   if (context.roles.includes('REGIONAL_MANAGER')) {
     if (!['MANAGER','RECOVERY_OFFICER'].includes(role) || !regionId || !context.regionIds.includes(regionId)) {
       throw new AuthorizationError('Regional Managers can provision Managers or Recovery Officers only inside their assigned regions.');

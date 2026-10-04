@@ -90,3 +90,22 @@ Implemented in source and schema:
 - Production source deployment is still gated by GitHub MFA; a disposable Neon release-test branch has already validated cross-region, cross-team, Recovery Officer, Manager→RM and Admin-profile authorization behavior.
 
 Phase 3 must not begin until these release-gate items are explicitly reconciled.
+
+
+## 2026-10-03 Phase 3 status
+Phase 3 is active. Production Neon migrations 024 and 025 are applied. Phase 3 includes IMEI custody hardening, allocation lifecycle, physical-vs-system reconciliation, audited catalog edit/archive lifecycle, and immutable IMEI movement trace. The login authority boundary is exact: CEO creates Admins; Admins create Regional Managers, Managers, Team Leaders, Agents and Shop Owners; Recovery Officers are not directly recruited by Admins.
+
+---
+
+## Current continuation — Phase 4 started (2026-10-04)
+
+Phase 4 Sales + Finance source implementation is now the active development checkpoint. The Phase 4 release candidate includes customer ownership, cash/loan sales, receipts, payments, loan providers, CEO-controlled commercial policies, commission/bonus ledgers, financial correction controls, and deeper immutability/correction-chain hardening.
+
+The user elected to **build now and deploy/debug later**. Accordingly, the Phase 4 migrations are packaged but have not been applied to production, and Vercel/Render deployment is deferred.
+
+
+## Phase 5 update — 2026-10-04
+
+Phase 5 aging, recovery and suspension source is now implemented as a deployment-later release candidate. It includes CEO-controlled aging policy versions, automated aging evaluation, immutable aging transitions, recovery automation, Recovery Officer load balancing, due-date escalation, durable suspension records, CEO/Admin reinstatement, recovery governance APIs and the Recovery workspace. Production Vercel/Render deployment remains intentionally deferred.
+
+The organizational login authority remains unchanged: CEO creates/invites Admins only; Admins create/invite Regional Managers, Managers, Team Leaders, Agents and Shop Owners; Regional Managers may create/invite Managers and Recovery Officers inside their regions; Managers create/invite Team Leaders inside their teams; Team Leaders create/invite Agents and Shop Owners inside their teams.

@@ -54,7 +54,7 @@ export async function resetPasswordWithOtp(
 
   const emailOtp = authClient.emailOtp;
   if (!emailOtp?.resetPassword) {
-    throw new Error('We couldn’t send a recovery code right now. Please try again in a moment.');
+    throw new Error('We couldn’t complete the password reset right now. Please try again in a moment.');
   }
 
   const result = await emailOtp.resetPassword({
@@ -64,7 +64,7 @@ export async function resetPasswordWithOtp(
   });
 
   if ('error' in result && result.error) {
-    throw new Error(result.error.message ?? 'Unable to reset the password. The code may be expired or invalid.');
+    throw new Error('The code could not be accepted. It may have expired. Request a new code and try again.');
   }
 }
 
@@ -76,7 +76,7 @@ export async function resetPasswordWithToken(
   const normalizedToken = token.trim();
 
   if (!normalizedToken) {
-    throw new Error('The password reset link is missing its token.');
+    throw new Error('This password reset link is missing required information. Please request a new link.');
   }
 
   validateNewPassword(password, confirmation);
@@ -87,6 +87,6 @@ export async function resetPasswordWithToken(
   });
 
   if ('error' in result && result.error) {
-    throw new Error(result.error.message ?? 'Unable to reset the password. The link may be expired or invalid.');
+    throw new Error('This password reset link is no longer valid. Request a new one and try again.');
   }
 }

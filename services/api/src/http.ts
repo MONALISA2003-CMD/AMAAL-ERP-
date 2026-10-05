@@ -220,21 +220,22 @@ function isMfaEnforced(): boolean {
   return raw !== 'false';
 }
 
-async function getAmaalAccessState(services: ReturnType<typeof createApiServices>, userId: string, bannedClaim: boolean | null): Promise<'ACTIVE'|'PENDING_ASSIGNMENT'|'SUSPENDED'> {
+async function getAmaalAccessState(services: ReturnType<typeof createApiServices>, userId: string, bannedClaim: boolean | null, roles: readonly string[]): Promise<'ACTIVE'|'PENDING_ASSIGNMENT'|'SUSPENDED'> {
   if (bannedClaim === true) return 'SUSPENDED';
-  const suspended = await services.pool.query<{user_id:string}>({ text: `select user_id from public.business_access_suspensions where user_id=$1 and status='ACTIVE' limit 1`, values:[userId] } as any);
-  if (suspended.length) return 'SUSPENDED';
-  const rows = await services.pool.query<{profile_status:string|null; active_roles:string[]}>({
-    text: `select p.status as profile_status, coalesce(array_agg(distinct ra.role) filter (where ra.user_id is not null), '{}'::text[]) as active_roles
-            from neon_auth."user" u
-            left join public.profiles p on p.user_id=u.id
-            left join public.role_assignments ra on ra.user_id=u.id and ra.status='ACTIVE' and (ra.effective_to is null or ra.effective_to > now())
-            where u.id=$1
-            group by p.status`,
+
+  const suspended = await services.pool.query<{ user_id: string }>({
+    text: `select user_id from public.business_access_suspensions where user_id=$1 and status='ACTIVE' limit 1`,
     values: [userId],
   } as any);
-  const row = rows[0];
-  if (!row || row.profile_status !== 'ACTIVE' || !row.active_roles?.length) return row?.profile_status === 'SUSPENDED' ? 'SUSPENDED' : 'PENDING_ASSIGNMENT';
+  if (suspended.length) return 'SUSPENDED';
+
+  const profileRows = await services.pool.query<{ status: string | null }>({
+    text: `select status::text as status from public.profiles where user_id=$1 limit 1`,
+    values: [userId],
+  } as any);
+  const profileStatus = profileRows[0]?.status ?? null;
+  if (profileStatus === 'SUSPENDED') return 'SUSPENDED';
+  if (profileStatus !== 'ACTIVE' || roles.length === 0) return 'PENDING_ASSIGNMENT';
   return 'ACTIVE';
 }
 
@@ -542,7 +543,7 @@ export function createApiServer() {
 
       if(req.method==='GET'&&(pathname==='/v1/me'||pathname==='/v1/me/scope')){
         const scope = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
-        const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null);
+        const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null,scope.roles);
         const privileged = scope.roles.includes('CEO') || scope.roles.includes('ADMIN');
         const mfaRequired = privileged && mfaEnforced;
         const mfaVerified = !mfaRequired || verifyMfaAssertion(mfaAssertion, user.id, user.sessionId);
@@ -551,15 +552,15 @@ export function createApiServer() {
       }
 
       const context = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
-      const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null);
+      const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null,context.roles);
       const privileged = context.roles.includes('CEO') || context.roles.includes('ADMIN');
       const onboardingAllowed = pathname === '/v1/org/invitations/accept' || pathname === '/v1/mfa/status' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify';
       if (accessState !== 'ACTIVE' && !onboardingAllowed) {
-        json(res,403,{error:accessState==='SUSPENDED'?'ACCOUNT_SUSPENDED':'ACCESS_PENDING',message:accessState==='SUSPENDED'?'Your Amaal account is suspended.':'Your Neon Auth account is authenticated but has not been assigned active Amaal organizational access.',requestId});
+        json(res,403,{error:accessState==='SUSPENDED'?'ACCOUNT_SUSPENDED':'ACCESS_PENDING',message:accessState==='SUSPENDED'?'Your Amaal account is suspended.':'Your account is recognized, but your Amaal access is not ready yet. Please contact an administrator.',requestId});
         return;
       }
       if (mfaEnforced && privileged && pathname !== '/v1/mfa/status' && pathname !== '/v1/mfa/enroll/start' && pathname !== '/v1/mfa/enroll/confirm' && pathname !== '/v1/mfa/verify' && !verifyMfaAssertion(mfaAssertion, user.id, user.sessionId)) {
-        json(res,403,{error:'MFA_REQUIRED',message:'CEO and Admin ERP operations require verified multi-factor authentication.',requestId,mfaRequired:true});
+        json(res,403,{error:'MFA_REQUIRED',message:'Please complete the extra sign-in step before continuing.',requestId,mfaRequired:true});
         return;
       }
 
@@ -569,20 +570,20 @@ export function createApiServer() {
         return;
       }
       if (req.method === 'POST' && pathname === '/v1/mfa/enroll/start') {
-        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'MFA setup is only available to privileged Amaal roles.',requestId}); return; }
+        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'Extra sign-in security is only available to authorized administrators.',requestId}); return; }
         const enrolled = await startMfaEnrollment(services.pool,user.id,user.email);
         json(res,200,{requestId,...enrolled});
         return;
       }
       if (req.method === 'POST' && pathname === '/v1/mfa/enroll/confirm') {
-        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'MFA setup is only available to privileged Amaal roles.',requestId}); return; }
+        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'Extra sign-in security is only available to authorized administrators.',requestId}); return; }
         const body = await readJson(req);
         const assertion = await confirmMfaEnrollment(services.pool,user.id,requiredString(body,'code'),user.sessionId);
         json(res,200,{requestId,status:'VERIFIED',mfaAssertion:assertion});
         return;
       }
       if (req.method === 'POST' && pathname === '/v1/mfa/verify') {
-        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'MFA verification is only available to privileged Amaal roles.',requestId}); return; }
+        if (!privileged) { json(res,403,{error:'AUTHORIZATION_DENIED',message:'Extra sign-in security is only available to authorized administrators.',requestId}); return; }
         const body = await readJson(req);
         const assertion = await verifyMfaCode(services.pool,user.id,requiredString(body,'code'),user.sessionId);
         json(res,200,{requestId,status:'VERIFIED',mfaAssertion:assertion});
@@ -939,7 +940,8 @@ export function createApiServer() {
       if(error instanceof DomainError){ const status=domainStatus(error); json(res,status,{error:error.code,message:error.message,requestId}); return; }
       const message=error instanceof Error?error.message:'Internal server error.';
       const status=message.includes('required')||message.includes('Unsupported')||message.includes('must be')?400:500;
-      json(res,status,{error:status===500?'INTERNAL_SERVER_ERROR':'REQUEST_REJECTED',message:status===500?'Request could not be completed.':message,requestId});
+      if (status === 500) console.error(JSON.stringify({ requestId, path: requestPath(req), error: message }));
+      json(res,status,{error:status===500?'INTERNAL_SERVER_ERROR':'REQUEST_REJECTED',message:status===500?'We could not complete that request right now. Please try again.':message,requestId});
     }
   });
   const closeRealtime = installRealtimeServer(server, services);

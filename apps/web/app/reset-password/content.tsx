@@ -19,7 +19,7 @@ export default function ResetPasswordContent() {
     const nextToken = searchParams.get('token') ?? '';
     const recoveryError = searchParams.get('error');
     setToken(nextToken);
-    if (recoveryError || !nextToken) setError('This recovery link is missing, invalid, or expired. Start a new recovery request.');
+    if (recoveryError || !nextToken) setError('This recovery link is missing, invalid, or expired. Request a new code request.');
   }, [searchParams]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -45,8 +45,8 @@ export default function ResetPasswordContent() {
         <h1>Choose a new password</h1>
         {done ? (
           <div className="auth-form">
-            <p className="microcopy" role="status">Your password has been reset successfully. Your Amaal role and organizational access remain unchanged.</p>
-            <button type="button" onClick={() => router.replace('/login')}>Continue to login</button>
+            <p className="microcopy" role="status">Your password has been changed. You can now sign in with your new password.</p>
+            <button type="button" onClick={() => router.replace('/login')}>Continue to sign in</button>
           </div>
         ) : (
           <form onSubmit={submit} className="auth-form">
@@ -54,7 +54,7 @@ export default function ResetPasswordContent() {
             <label>Confirm new password<input autoComplete="new-password" type="password" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} required minLength={10} /></label>
             {error ? <p className="error-text" role="alert">{error}</p> : null}
             <button type="submit" disabled={busy || !token}>{busy ? 'Resetting securely…' : 'Set new password'}</button>
-            <button type="button" className="setup-secondary" disabled={busy} onClick={() => router.replace('/forgot-password')}>Start a new recovery</button>
+            <button type="button" className="setup-secondary" disabled={busy} onClick={() => router.replace('/forgot-password')}>Request a new code</button>
           </form>
         )}
       </section>

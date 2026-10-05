@@ -43,7 +43,10 @@
     "preflight:production": "node scripts/preflight-production.mjs",
     "audit:deployment": "node scripts/forensic-deployment-audit.mjs",
     "validate:deployment-architecture": "node scripts/validate-deployment-architecture.mjs",
-    "check:user-language": "node scripts/check-user-language.mjs"
+    "check:user-language": "node scripts/check-user-language.mjs",
+    "check:web-imports": "node scripts/check-web-imports.mjs",
+    "validate:repair": "node scripts/validate-repair.mjs",
+    "check:ts-syntax": "node scripts/check-typescript-syntax.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

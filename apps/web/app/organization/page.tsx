@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, getSetupStatus, type AmaalSetupStatus } from '../../lib/api';
+import { adminProfileLabel, roleLabel } from '../../lib/display';
 import { authClient } from '../../lib/auth';
 import { BrandLogo } from '../../components/brand-logo';
 
@@ -147,7 +148,7 @@ export default function OrganizationPage() {
   async function submitPerson(e: React.FormEvent) {
     e.preventDefault();
     const body = Object.fromEntries(Object.entries(personForm).map(([k, v]) => [k, v || undefined]));
-    if (await runAction('Provision identity', '/v1/org/people', body)) setPersonForm({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', regionalManagerUserId: '', subregionId: '', managerUserId: '', teamId: '', shopId: '' });
+    if (await runAction('Add staff member', '/v1/org/people', body)) setPersonForm({ userId: '', displayName: '', employeeNumber: '', phone: '', role: 'AGENT', regionId: '', regionalManagerUserId: '', subregionId: '', managerUserId: '', teamId: '', shopId: '' });
   }
   async function submitInvitation(e: React.FormEvent) {
     e.preventDefault();
@@ -209,7 +210,7 @@ export default function OrganizationPage() {
           <a className="nav-item active" href="/organization">People & Structure</a>
           <div className="section-label lower">OPERATIONS</div>
           <a className="nav-item" href="/dashboard">Command Center</a>
-          <a className="nav-item" href="/dashboard#inventory">Inventory & IMEI</a>
+          <a className="nav-item" href="/dashboard#inventory">Inventory & Devices</a>
           <a className="nav-item" href="/dashboard#sales">Sales & Receipts</a>
           <a className="nav-item" href="/dashboard#recovery">Recovery</a>
           <div className="section-label lower">INTELLIGENCE</div>
@@ -217,19 +218,19 @@ export default function OrganizationPage() {
         </aside>
         <section className="content">
           <div className="content-header">
-            <div><div className="eyebrow">PHASE 2B</div><h1>Organizational command map</h1><p className="muted">Identity, hierarchy and scope are now visible from one governed source.</p></div>
-            <div className="status-pill ready">Scoped</div>
+            <div><div className="eyebrow">PEOPLE & STRUCTURE</div><h1>Your organization</h1><p className="muted">See the people, teams and locations you manage in one place.</p></div>
+            <div className="status-pill ready">In your area</div>
           </div>
           {error ? <div className="alert-card">{error}</div> : null}
           <div className="grid three">
-            {roleOrder.map((role) => <section className="card module" key={role}><div className="module-icon">{counts[role] ?? 0}</div><h3>{role.replace('_',' ')}</h3><p>Active identities visible inside your authorized scope.</p><span>Scoped</span></section>)}
+            {roleOrder.map((role) => <section className="card module" key={role}><div className="module-icon">{counts[role] ?? 0}</div><h3>{roleLabel(role)}</h3><p>Active people in your area.</p><span>In your area</span></section>)}
           </div>
           <section className="card">
             <div className="card-label">HIERARCHY</div>
-            {loading ? <p className="muted">Loading organizational structure…</p> : grouped.length === 0 ? <p className="muted">No subordinate identities are provisioned yet.</p> : grouped.map((region) => (
+            {loading ? <p className="muted">Loading organizational structure…</p> : grouped.length === 0 ? <p className="muted">No staff members have been added below this level yet.</p> : grouped.map((region) => (
               <div className="roadmap" key={region.code+region.name}>
                 <div className="roadmap-item current"><span>REGION</span><div><strong>{region.name}</strong><p>{region.code}</p></div></div>
-                {[...region.managers.entries()].map(([managerKey, manager]) => <div className="roadmap-item" key={managerKey}><span>MGR</span><div><strong>{manager.name}</strong><p>{manager.teams.size} team scope(s)</p>
+                {[...region.managers.entries()].map(([managerKey, manager]) => <div className="roadmap-item" key={managerKey}><span>MANAGER</span><div><strong>{manager.name}</strong><p>{manager.teams.size} team(s)</p>
                   {[...manager.teams.entries()].map(([teamKey, team]) => <div className="scope-grid" key={teamKey}><div><span>{team.name}</span><strong>{team.people.length}</strong></div><div><span>Team Leader</span><strong>{team.people.filter((p) => p.role === 'TEAM_LEADER').length}</strong></div><div><span>Agents</span><strong>{team.people.filter((p) => p.role === 'AGENT').length}</strong></div><div><span>Shop Owners</span><strong>{team.people.filter((p) => p.role === 'SHOP_OWNER').length}</strong></div></div>)}
                 </div></div>)}
               </div>
@@ -237,9 +238,9 @@ export default function OrganizationPage() {
           </section>
           <section className="card">
             <div className="card-label">ACCESS MANAGEMENT</div>
-            <p className="muted">Organization changes and new staff access follow Amaal’s approval rules. The CEO creates Administrators, and Administrators can add the roles assigned to them.</p>
+            <p className="muted">Organization changes and new staff access follow Amaal’s approval rules. The CEO creates Administrators, and Administrators can add the staff roles they manage.</p>
             {actionError ? <div className="alert-card">{actionError}</div> : null}
-            {inviteLink ? <div className="card emphasis"><div className="card-label">SECURE INVITATION LINK</div><code>{inviteLink}</code><p className="muted">Share this link through your approved Amaal communication channel. The token is stored only as a digest on the server.</p></div> : null}
+            {inviteLink ? <div className="card emphasis"><div className="card-label">INVITATION LINK</div><code>{inviteLink}</code><p className="muted">Share this link with the invited person through your approved Amaal communication channel.</p></div> : null}
 
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitRegion}>
@@ -282,13 +283,13 @@ export default function OrganizationPage() {
                 <div><strong>Recruit / invite</strong><p className="muted">Preferred path. CEO creates Admins. Admins recruit Regional Managers, Managers, Team Leaders, Agents and Shop Owners. Recovery Officers are recruited by Regional Managers.</p></div>
                 <label>Email<input type="email" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} required /></label>
                 <label>Display name<input value={inviteForm.displayName} onChange={(e) => setInviteForm({ ...inviteForm, displayName: e.target.value })} required /></label>
-                <label>Role<select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Role<select value={inviteForm.role} onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></label>
                 <label>Region<select value={inviteForm.regionId} onChange={(e) => setInviteForm({ ...inviteForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Sub-region<select value={inviteForm.subregionId} onChange={(e) => setInviteForm({ ...inviteForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 {inviteForm.role === 'MANAGER' ? <label>Regional Manager<select value={inviteForm.regionalManagerUserId} onChange={(e) => setInviteForm({ ...inviteForm, regionalManagerUserId: e.target.value })}><option value="">Select RM</option>{regionalManagers.map((rm) => <option key={rm.userId} value={rm.userId}>{rm.displayName}{rm.regionCode ? ` — ${rm.regionCode}` : ''}</option>)}</select></label> : null}
-                {['TEAM_LEADER','AGENT','SHOP_OWNER'].includes(inviteForm.role) ? <label>Manager ID<input value={inviteForm.managerUserId} onChange={(e) => setInviteForm({ ...inviteForm, managerUserId: e.target.value })} placeholder="Manager UUID" /></label> : null}
+                {['TEAM_LEADER','AGENT','SHOP_OWNER'].includes(inviteForm.role) ? <label>Manager account<input value={inviteForm.managerUserId} onChange={(e) => setInviteForm({ ...inviteForm, managerUserId: e.target.value })} placeholder="Manager UUID" /></label> : null}
                 <label>Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-                <label>Shop ID<input value={inviteForm.shopId} onChange={(e) => setInviteForm({ ...inviteForm, shopId: e.target.value })} placeholder="Shop Owner only" /></label>
+                <label>Shop account<input value={inviteForm.shopId} onChange={(e) => setInviteForm({ ...inviteForm, shopId: e.target.value })} placeholder="Shop Owner only" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create invitation' ? 'Creating…' : 'Create secure invite'}</button>
               </form> : <div className="card"><div className="card-label">RECRUITMENT</div><h3>No recruitment roles available</h3><p className="muted">Your current role does not have authority to create organizational logins from this workspace.</p></div>}
               {isCeo ? <form className="setup-form-grid" onSubmit={submitAdmin}>
@@ -296,32 +297,32 @@ export default function OrganizationPage() {
                 <label>Account reference<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={adminForm.displayName} onChange={(e) => setAdminForm({ ...adminForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminForm.employeeNumber} onChange={(e) => setAdminForm({ ...adminForm, employeeNumber: e.target.value })} /></label>
-                <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
-                <button className="setup-primary" disabled={!!action}>{action === 'Provision admin' ? 'Provisioning…' : 'Provision Admin'}</button>
+                <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{adminProfileLabel(r)}</option>)}</select></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Provision admin' ? 'Adding…' : 'Provision Admin'}</button>
               </form> : null}
               {isCeo ? <form className="setup-form-grid" onSubmit={submitAdminInvitation}>
                 <div><strong>Recruit Admin</strong><p className="muted">CEO-only controlled recruitment. The person creates their Amaal account from the secure invitation.</p></div>
                 <label>Email<input type="email" value={adminInviteForm.email} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, email: e.target.value })} required /></label>
                 <label>Display name<input value={adminInviteForm.displayName} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminInviteForm.employeeNumber} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, employeeNumber: e.target.value })} /></label>
-                <label>Admin profile<select value={adminInviteForm.profileKey} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Admin profile<select value={adminInviteForm.profileKey} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{adminProfileLabel(r)}</option>)}</select></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create Admin invitation' ? 'Creating…' : 'Create Admin invite'}</button>
               </form> : null}
             </div>
 
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitPerson}>
-                <div><strong>Existing identity binding</strong><p className="muted">For an account that already exists when a normal invitation cannot be used.</p></div>
+                <div><strong>Link existing account</strong><p className="muted">Use this when the person already has an Amaal account.</p></div>
                 <label>Account reference<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={personForm.displayName} onChange={(e) => setPersonForm({ ...personForm, displayName: e.target.value })} required /></label>
-                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
+                <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></label>
                 <label>Region<select value={personForm.regionId} onChange={(e) => setPersonForm({ ...personForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Sub-region<select value={personForm.subregionId} onChange={(e) => setPersonForm({ ...personForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
-                <label>Regional Manager ID<input value={personForm.regionalManagerUserId} onChange={(e) => setPersonForm({ ...personForm, regionalManagerUserId: e.target.value })} /></label>
-                <label>Manager ID<input value={personForm.managerUserId} onChange={(e) => setPersonForm({ ...personForm, managerUserId: e.target.value })} /></label>
+                <label>Regional Manager account<input value={personForm.regionalManagerUserId} onChange={(e) => setPersonForm({ ...personForm, regionalManagerUserId: e.target.value })} /></label>
+                <label>Manager account<input value={personForm.managerUserId} onChange={(e) => setPersonForm({ ...personForm, managerUserId: e.target.value })} /></label>
                 <label>Team<select value={personForm.teamId} onChange={(e) => setPersonForm({ ...personForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-                <label>Shop ID<input value={personForm.shopId} onChange={(e) => setPersonForm({ ...personForm, shopId: e.target.value })} /></label>
-                <button className="setup-primary" disabled={!!action}>{action === 'Provision identity' ? 'Provisioning…' : 'Bind existing identity'}</button>
+                <label>Shop account<input value={personForm.shopId} onChange={(e) => setPersonForm({ ...personForm, shopId: e.target.value })} /></label>
+                <button className="setup-primary" disabled={!!action}>{action === 'Add staff member' ? 'Adding…' : 'Link existing account'}</button>
               </form>
             </div>
           </section>

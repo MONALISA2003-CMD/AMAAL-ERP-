@@ -52,6 +52,6 @@ check('Durable reconciliation tables are defined', read('database/migrations/202
 check('Reconciliation API and service exist', exists('services/inventory/src/reconciliation.ts') && http.includes('/v1/inventory/reconciliations') && api.includes('createInventoryReconciliation'));
 check('Catalog lifecycle edit/archive endpoints exist', catalog.includes('updateBrand') && catalog.includes('archiveBrand') && catalog.includes('updateProduct') && catalog.includes('archiveProduct') && catalog.includes('updateVariant') && catalog.includes('archiveVariant'));
 check('Non-destructive catalog archival is enforced', catalog.includes("status='ARCHIVED'::public.record_status") && catalog.includes('PRODUCT_ARCHIVED'));
-check('Inventory movement history UI is wired', page.includes('IMEI TRACE') && page.includes('/v1/inventory/imeis/${item.imei_id}/movements'));
+check('Inventory movement history UI is wired', page.includes('DEVICE HISTORY') && page.includes('/v1/inventory/imeis/${item.imei_id}/movements'));
 
 console.log(`Phase 3 validation passed: ${checks.length} checks.`);

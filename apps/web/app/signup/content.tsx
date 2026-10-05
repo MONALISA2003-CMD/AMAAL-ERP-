@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { authClient } from '../../lib/auth';
 import { acceptOrganizationInvitation, getOrganizationInvitationPreview, getSetupStatus } from '../../lib/api';
 import { BrandLogo } from '../../components/brand-logo';
+import { roleLabel } from '../../lib/display';
 
 export default function SignupContent() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function SignupContent() {
           const preview = await getOrganizationInvitationPreview(inviteToken);
           setEmail(preview.email);
           setName(preview.displayName);
-          setInviteRole(preview.role.replaceAll('_', ' '));
+          setInviteRole(roleLabel(preview.role));
           return;
         }
         if (setup.stage === 'ACTIVATED') { router.replace('/login'); return; }
@@ -65,7 +66,7 @@ export default function SignupContent() {
       <section className="auth-panel">
         <BrandLogo variant="full" className="auth-logo" priority />
         <h1>{inviteToken ? 'Join Amaal' : 'Create secure CEO access'}</h1>
-        <p className="muted">{inviteToken ? `This invitation creates your ${inviteRole || 'Amaal'} access inside the authorized organization.` : 'Create the account that will be connected to the CEO identity defined during Amaal setup.'}</p>
+        <p className="muted">{inviteToken ? `This invitation gives you ${inviteRole || 'Amaal'} access for your company.` : 'Create the CEO sign-in for the company.'}</p>
         <form onSubmit={submit} className="auth-form">
           <label>
             Full name
@@ -82,7 +83,7 @@ export default function SignupContent() {
           {error ? <p className="error-text" role="alert">{error}</p> : null}
           <button type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create secure account'}</button>
         </form>
-        <p className="microcopy">{inviteToken ? 'Your invitation email must match the authenticated account email. Your organizational access is granted only after the invitation is accepted.' : 'Only the CEO email selected during organization setup can be connected to the first Amaal executive account.'}</p>
+        <p className="microcopy">{inviteToken ? 'Use the email address that received the invitation. Your Amaal access will be ready after the invitation is accepted.' : 'Only the CEO email chosen during company setup can be used for the first executive sign-in.'}</p>
         <button type="button" className="ghost-button auth-secondary" onClick={() => router.replace('/login')}>I already have an account</button>
       </section>
     </main>

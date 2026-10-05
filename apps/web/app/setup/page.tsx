@@ -282,7 +282,7 @@ export default function SetupPage() {
           <section className="setup-section">
             <p className="setup-kicker">Welcome</p>
             <h2>Start with the Amaal foundation</h2>
-            <p className="setup-lead">Amaal is a single-company operating system. This first step establishes the company root, four main regions, their regional warehouses and the first CEO definition.</p>
+            <p className="setup-lead">Amaal is built around one company. This step sets up the company, its four main regions, their regional warehouses and the first CEO access.</p>
             <div className="setup-cards">
               <div className="setup-card"><span>Company</span><strong>{status?.organization.name ?? 'Amaal'}</strong><p>Your company foundation is already present.</p></div>
               <div className="setup-card"><span>Master Warehouse</span><strong>{status?.masterWarehouse?.name ?? 'Master Warehouse'}</strong><p>Your central stock location is ready.</p></div>
@@ -343,7 +343,7 @@ export default function SetupPage() {
           <section className="setup-section">
             <p className="setup-kicker">Review</p>
             <h2>Ready to activate the Amaal foundation?</h2>
-            <p className="setup-lead">Review the organization details below. This step creates the Amaal operating foundation and records the pending CEO identity for secure activation.</p>
+            <p className="setup-lead">Review the company details below. This step prepares Amaal and gets the CEO access ready for secure activation.</p>
             <div className="setup-review-grid">
               <div><span>Company</span><strong>{status?.organization.name ?? 'Amaal'}</strong></div>
               <div><span>Master warehouse</span><strong>{status?.masterWarehouse?.name ?? 'Master Warehouse'}</strong></div>

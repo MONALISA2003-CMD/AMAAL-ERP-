@@ -6,20 +6,21 @@ import { join } from 'node:path';
 const root = process.cwd();
 const rootPkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const workerPkg = JSON.parse(readFileSync(join(root, 'services/outbox-worker/package.json'), 'utf8'));
-const vercel = JSON.parse(readFileSync(join(root, 'vercel.json'), 'utf8'));
+const vercel = JSON.parse(readFileSync(join(root, 'apps/web/vercel.json'), 'utf8'));
 const render = readFileSync(join(root, 'render.yaml'), 'utf8');
 const http = readFileSync(join(root, 'services/api/src/http.ts'), 'utf8');
 const api = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
 const proxy = readFileSync(join(root, 'apps/web/app/api/amaal/[...path]/route.ts'), 'utf8');
 const recoveryEngine = readFileSync(join(root, 'services/recovery/src/aging-engine.ts'), 'utf8');
 const aiTypeContract = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
-const zipSync = readFileSync(join(root, '.github/workflows/zip-sync.yml'), 'utf8');
+const ci = readFileSync(join(root, '.github/workflows/ci.yml'), 'utf8');
 
 test('deployment installers are npm-only and Vercel builds the standalone web package', () => {
   assert.equal(rootPkg.packageManager, undefined);
   assert.deepEqual(rootPkg.workspaces, ['apps/*','packages/*','services/*','workers/*']);
-  assert.match(vercel.installCommand, /cd apps\/web && npm install/);
-  assert.match(vercel.buildCommand, /cd apps\/web && npm run build/);
+  assert.match(vercel.installCommand, /npm install/);
+  assert.match(vercel.buildCommand, /npm run build/);
+  assert.equal(vercel.outputDirectory, '.next');
   assert.doesNotMatch(vercel.installCommand + vercel.buildCommand + render, /pnpm@|pnpm install/);
 });
 
@@ -79,8 +80,9 @@ test('internal workspace dependencies are local file links, not registry version
   }
 });
 
-test('ZIP synchronization shell command has real continuations, not literal \n text', () => {
-  assert.doesNotMatch(zipSync, /type d \\n/);
+test('CI is validation-only and does not rewrite the production branch', () => {
+  assert.match(ci, /Amaal CI and release gates/);
+  assert.doesNotMatch(ci, /git push origin|git commit/);
 });
 
 test('known runtime wiring regressions remain fixed in reporting and inventory', () => {
@@ -92,7 +94,7 @@ test('known runtime wiring regressions remain fixed in reporting and inventory',
 });
 
 test('required deployment files exist', () => {
-  for (const path of ['package.json','pnpm-workspace.yaml','vercel.json','render.yaml','.github/workflows/ci.yml','services/api/src/http.ts','services/outbox-worker/src/runner.ts','services/outbox-worker/package.json']) {
+  for (const path of ['package.json','pnpm-workspace.yaml','apps/web/vercel.json','render.yaml','.github/workflows/ci.yml','services/api/src/http.ts','services/outbox-worker/src/runner.ts','services/outbox-worker/package.json']) {
     assert.equal(existsSync(join(root,path)), true, path);
   }
 });

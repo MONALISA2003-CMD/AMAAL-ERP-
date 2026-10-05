@@ -69,3 +69,100 @@ test('password recovery failures stay understandable to employees', () => {
   assert.match(forgot, /Check your email for a 6-digit code/);
   assert.match(forgot, /spam or junk folder/);
 });
+
+
+test('finance page uses the existing loan provider API names', () => {
+  const finance = readFileSync('apps/web/app/finance/page.tsx', 'utf8');
+  assert.match(finance, /createLoanProviderApi/);
+  assert.match(finance, /listLoanProvidersApi/);
+  assert.doesNotMatch(finance, /createLoanPartnerApi/);
+  assert.doesNotMatch(finance, /listLoanPartnersApi/);
+});
+
+test('account access check uses business profile data and loaded roles', () => {
+  const http = readFileSync('services/api/src/http.ts', 'utf8');
+  assert.doesNotMatch(http, /neon_auth\.\"user\"/);
+  assert.match(http, /status::text as status/);
+  assert.match(http, /roles: readonly string\[\]/);
+  assert.doesNotMatch(http, /array_agg\(distinct ra\.role/);
+});
+
+test('login maps internal request failures to user-friendly language', () => {
+  const login = readFileSync('apps/web/app/login/page.tsx', 'utf8');
+  assert.match(login, /We could not finish signing you in right now/);
+});
+
+
+test('sales uses the real product variant field', () => {
+  const sales = readFileSync('apps/web/app/sales/page.tsx', 'utf8');
+  assert.match(sales, /productVariantId/);
+  assert.doesNotMatch(sales, /productProductId/);
+});
+
+test('the account access check uses business tables only', () => {
+  const http = readFileSync('services/api/src/http.ts', 'utf8');
+  assert.doesNotMatch(http, /neon_auth\."user"/);
+  assert.match(http, /status::text as status/);
+  assert.match(http, /roles: readonly string\[\]/);
+});
+
+test('reports keep internal scoring details out of the visible page', () => {
+  const reports = readFileSync('apps/web/app/reports/page.tsx', 'utf8');
+  assert.doesNotMatch(reports, />HHI</);
+  assert.doesNotMatch(reports, /ML Intelligence/);
+  assert.match(reports, /Planning insights/);
+});
+
+test('AI review rows use business labels instead of internal action names', () => {
+  const ai = readFileSync('apps/web/app/ai/page.tsx', 'utf8');
+  assert.match(ai, /function actionLabel/);
+  assert.match(ai, /Open recovery case/);
+  assert.doesNotMatch(ai, /<strong>\{item\.toolName\.replaceAll/);
+});
+
+
+test('sales keeps the product variant field', () => {
+  const sales = readFileSync('apps/web/app/sales/page.tsx', 'utf8');
+  assert.match(sales, /productVariantId/);
+  assert.doesNotMatch(sales, /productProductId/);
+});
+
+test('AI approval screens map internal action names to business language', () => {
+  const ai = readFileSync('apps/web/app/ai/page.tsx', 'utf8');
+  assert.match(ai, /function actionLabel/);
+  assert.match(ai, /Open recovery case/);
+  assert.doesNotMatch(ai, /item\.toolName\.replaceAll/);
+  assert.doesNotMatch(ai, /plan\.toolName\.replaceAll/);
+});
+
+
+test('intelligence page matches the API contract', () => {
+  const intelligence = readFileSync('apps/web/app/intelligence/page.tsx', 'utf8');
+  assert.match(intelligence, /AmaalIntelligencePrediction/);
+  assert.match(intelligence, /latestPredictionAt/);
+  assert.match(intelligence, /item\.confidence/);
+  assert.doesNotMatch(intelligence, /AmaalIntelligencePlanning/);
+  assert.doesNotMatch(intelligence, /latestPlanning/);
+});
+
+
+test('administrator profiles use business labels', () => {
+  const display = readFileSync('apps/web/lib/display.ts', 'utf8');
+  const organization = readFileSync('apps/web/app/organization/page.tsx', 'utf8');
+  assert.match(display, /System administrator/);
+  assert.match(organization, /adminProfileLabel/);
+  assert.doesNotMatch(organization, /roleLabel\(r\).*SYSTEM_ADMIN/);
+});
+
+
+test('API client converts infrastructure failures to friendly messages', () => {
+  const api = readFileSync('apps/web/lib/api.ts', 'utf8');
+  assert.match(api, /status >= 500/);
+  assert.match(api, /We could not complete that request right now/);
+  assert.match(api, /SQL\|API\|SDK/);
+});
+
+test('organization screen does not duplicate display imports', () => {
+  const organization = readFileSync('apps/web/app/organization/page.tsx', 'utf8');
+  assert.equal((organization.match(/lib\/display/g) ?? []).length, 1);
+});

@@ -40,7 +40,7 @@ has('services/api/src/reporting-export.ts', 'reports.export');
 has('services/api/src/reporting.ts', "reportVersion: '7.3'");
 has('apps/web/lib/api.ts', 'getOperationalReportApi');
 has('apps/web/app/reports/page.tsx', 'OPERATIONAL SIGNALS');
-has('apps/web/app/reports/page.tsx', 'REPORT METHODOLOGY');
+has('apps/web/app/reports/page.tsx', 'HOW THIS REPORT IS PREPARED');
 has('apps/web/app/reports/page.tsx', 'PAYMENT MIX • CASH VS LOAN');
 has('apps/web/app/reports/page.tsx', 'Export CSV');
 has('services/outbox-worker/src/projector.ts', 'projectProductDaily');

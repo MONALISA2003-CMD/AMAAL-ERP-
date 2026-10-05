@@ -11,7 +11,7 @@ test('production MLOps migration is derived-only',()=>{
 test('CI uses npm and keeps reproducible lock generation explicit',()=>{
   const ci=readFileSync('.github/workflows/ci.yml','utf8');
   const locks=readFileSync('.github/workflows/generate-lockfiles.yml','utf8');
-  assert.match(ci,/npm install --no-audit --no-fund/);
+  assert.match(ci,/npm install[\s\S]*--no-audit --no-fund/);
   assert.match(locks,/npm install --package-lock-only/);
   assert.match(locks,/git add package-lock.json/);
 });

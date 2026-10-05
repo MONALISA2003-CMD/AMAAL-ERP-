@@ -64,7 +64,7 @@ export default function MfaPage() {
       setQrCode(dataUrl);
       setMode('challenge');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'MFA enrollment failed.');
+      setError(e instanceof Error ? e.message : 'two-step sign-in setup failed.');
     } finally {
       setBusy(false);
     }
@@ -94,7 +94,7 @@ export default function MfaPage() {
     <main className="auth-shell">
       <section className="auth-panel">
         <BrandLogo variant="full" className="auth-logo" priority />
-        <h1>Secure your CEO access</h1>
+        <h1>Add an extra sign-in step</h1>
         <p className="muted">Use an authenticator app to protect privileged Amaal access.</p>
 
         {mode === 'enroll' ? (

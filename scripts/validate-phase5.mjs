@@ -65,8 +65,8 @@ has('services/outbox-worker/src/runner.ts', 'AgingRecoveryEngine');
 has('services/outbox-worker/src/runner.ts', 'lastAgingRecovery');
 has('apps/web/lib/api.ts', 'listAgingPoliciesApi');
 has('apps/web/lib/api.ts', 'createAgingPolicyApi');
-has('apps/web/app/recovery/page.tsx', 'CEO-controlled policy versions');
-has('apps/web/app/recovery/page.tsx', 'ACTIVE SUSPENSIONS');
+has('apps/web/app/recovery/page.tsx', 'Company aging rules');
+has('apps/web/app/recovery/page.tsx', 'PAUSED ACCESS');
 
 // Regression guard: user-mandated login authority must remain intact.
 const hierarchy = read('database/migrations/20261003_000025_phase3_reconciliation_and_hierarchy_exactness.sql');

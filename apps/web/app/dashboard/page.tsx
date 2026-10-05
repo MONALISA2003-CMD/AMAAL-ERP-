@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, publicReady } from '../../lib/api';
 import { authClient, clearMfaAssertion } from '../../lib/auth';
+import { roleLabel } from '../../lib/display';
 import { startAmaalRealtime, type ClientRealtimeEvent } from '../../lib/realtime';
 import { BrandLogo } from '../../components/brand-logo';
 
@@ -105,7 +106,7 @@ export default function DashboardPage() {
     const links = [
       ['/dashboard', 'Command Center'],
       ['/organization', 'People & Structure'],
-      ['/inventory', 'Inventory & IMEI'],
+      ['/inventory', 'Inventory & Devices'],
       ['/customers', 'Customers'],
       ['/sales', 'Sales & Receipts'],
       ['/finance', 'Finance'],
@@ -148,7 +149,7 @@ export default function DashboardPage() {
         <section className="content">
           <div className="content-header">
             <div>
-              <div className="eyebrow">{summary?.role ?? 'WORKSPACE'}</div>
+              <div className="eyebrow">{roleLabel(summary?.role)}</div>
               <h1>{summary ? `Welcome back, ${summary.displayName}.` : 'Your operation, at a glance.'}</h1>
               <p className="muted">{summary?.status === 'FOUNDATION_ONLY' ? 'Your workspace is ready. Business information will appear here as activity is recorded.' : 'Current performance for the part of Amaal you manage.'}</p>
             </div>
@@ -159,21 +160,21 @@ export default function DashboardPage() {
           {lastEvent ? <div className="event-banner"><strong>{eventLabel(lastEvent.eventType)}</strong><span>Updated just now</span></div> : null}
 
           <div className="metric-grid">
-            <Metric label="Sales today" value={summary?.visibility.sales ? `${summary?.kpis.sales.today.units ?? '—'} units` : '—'} sub={summary?.visibility.sales && summary ? money(summary.kpis.sales.today.revenue) : 'restricted'} />
-            <Metric label="Month revenue" value={summary?.visibility.sales && summary ? money(summary.kpis.sales.month.revenue) : '—'} sub={summary?.visibility.sales ? `${summary?.kpis.sales.month.units ?? '—'} units` : 'restricted'} />
-            <Metric label="Current stock" value={summary?.visibility.inventory ? (summary?.kpis.inventory.currentUnits ?? '—') : '—'} sub={summary?.visibility.inventory ? 'authorized scope' : 'restricted'} />
-            <Metric label="Aged stock" value={summary?.visibility.recovery ? (summary?.kpis.aging.agedUnits ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.aging.criticalUnits ?? '—'} critical` : 'restricted'} />
-            <Metric label="Open recovery" value={summary?.visibility.recovery ? (summary?.kpis.recovery.openCases ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.recovery.overdueCases ?? '—'} overdue` : 'restricted'} />
+            <Metric label="Sales today" value={summary?.visibility.sales ? `${summary?.kpis.sales.today.units ?? '—'} units` : '—'} sub={summary?.visibility.sales && summary ? money(summary.kpis.sales.today.revenue) : 'Not available'} />
+            <Metric label="Month revenue" value={summary?.visibility.sales && summary ? money(summary.kpis.sales.month.revenue) : '—'} sub={summary?.visibility.sales ? `${summary?.kpis.sales.month.units ?? '—'} units` : 'Not available'} />
+            <Metric label="Current stock" value={summary?.visibility.inventory ? (summary?.kpis.inventory.currentUnits ?? '—') : '—'} sub={summary?.visibility.inventory ? 'Your area' : 'Not available'} />
+            <Metric label="Aged stock" value={summary?.visibility.recovery ? (summary?.kpis.aging.agedUnits ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.aging.criticalUnits ?? '—'} critical` : 'Not available'} />
+            <Metric label="Open recovery" value={summary?.visibility.recovery ? (summary?.kpis.recovery.openCases ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.recovery.overdueCases ?? '—'} overdue` : 'Not available'} />
             <Metric label="Unread alerts" value={summary?.kpis.notifications.unread ?? '—'} sub="your inbox" />
-            <Metric label="Customers" value={summary?.visibility.customers ? (summary?.kpis.customers.total ?? '—') : '—'} sub={summary?.visibility.customers ? 'authorized scope' : 'restricted'} />
-            <Metric label="Commission this month" value={summary?.visibility.commission && summary ? money(summary.kpis.commission.month) : '—'} sub={summary?.visibility.commission ? 'authorized scope' : 'restricted'} />
+            <Metric label="Customers" value={summary?.visibility.customers ? (summary?.kpis.customers.total ?? '—') : '—'} sub={summary?.visibility.customers ? 'Your area' : 'Not available'} />
+            <Metric label="Commission this month" value={summary?.visibility.commission && summary ? money(summary.kpis.commission.month) : '—'} sub={summary?.visibility.commission ? 'Your area' : 'Not available'} />
           </div>
 
           <div className="grid two">
             <section className="card">
               <div className="card-label">YOUR ACCESS</div>
               <h2>{me?.user.email ?? 'Loading…'}</h2>
-              <div className="chip-row">{(me?.authorization.roles ?? []).map((role) => <span className="chip" key={role}>{role}</span>)}</div>
+              <div className="chip-row">{(me?.authorization.roles ?? []).map((role) => <span className="chip" key={role}>{roleLabel(role)}</span>)}</div>
               <div className="scope-grid">
                 <div><span>Regions</span><strong>{summary?.authorization.regionIds.length ?? '—'}</strong></div>
                 <div><span>Teams</span><strong>{summary?.authorization.teamIds.length ?? '—'}</strong></div>
@@ -188,9 +189,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid three">
-            <section className="card module"><div className="module-icon">SALES</div><h3>Performance</h3><p>Today, week and month sales for your exact organizational scope.</p><span>{summary?.visibility.sales ? `${summary.kpis.sales.today.units} units today` : 'Restricted'}</span></section>
-            <section className="card module"><div className="module-icon">STOCK</div><h3>Custody & aging</h3><p>Current stock custody, aged exposure and critical aging signals.</p><span>{summary?.visibility.recovery ? `${summary.kpis.aging.agedUnits} aged units` : 'Restricted'}</span></section>
-            <section className="card module"><div className="module-icon">RECOVERY</div><h3>Resolution queue</h3><p>Open, overdue and high-priority recovery work within your authority.</p><span>{summary?.visibility.recovery ? `${summary.kpis.recovery.openCases} open cases` : 'Restricted'}</span></section>
+            <section className="card module"><div className="module-icon">SALES</div><h3>Performance</h3><p>Today, week and month sales for the part of Amaal you manage.</p><span>{summary?.visibility.sales ? `${summary.kpis.sales.today.units} units today` : 'Not available'}</span></section>
+            <section className="card module"><div className="module-icon">STOCK</div><h3>Custody & aging</h3><p>Current stock, aging and important device alerts.</p><span>{summary?.visibility.recovery ? `${summary.kpis.aging.agedUnits} aged units` : 'Not available'}</span></section>
+            <section className="card module"><div className="module-icon">RECOVERY</div><h3>Resolution queue</h3><p>Open and overdue recovery work in your area.</p><span>{summary?.visibility.recovery ? `${summary.kpis.recovery.openCases} open cases` : 'Not available'}</span></section>
           </div>
 
           <section className="card roadmap-card">

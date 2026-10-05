@@ -746,23 +746,23 @@ export async function getOperationalReport(services: ApiServices, requestId: str
     const sellableUnits = inventory.sellableUnits;
     const sellThrough = soldUnits + sellableUnits === 0 ? null : (soldUnits / (soldUnits + sellableUnits)) * 100;
     const warnings: string[] = [];
-    if (!caps.salesDailyModel || !caps.productDailyModel || !caps.commissionDailyModel) warnings.push('Stage 7 daily reporting projections are not yet installed in this database; current report uses authoritative transactional tables for correctness.');
-    if (!caps.customerAssignments) warnings.push('Customer reassignment history table is not present in the inspected database; customer counts use current customer ownership/sales visibility only.');
-    if (!caps.bandConfigColumn) warnings.push('Aging policy band_config is not present in the inspected database; approved Amaal default/threshold-derived bands are used until the Stage 5 migration is applied.');
-    if (system.outboxPending > 0) warnings.push(`${system.outboxPending} outbox event(s) are pending publication.`);
-    if (system.incompleteSalesScope > 0) warnings.push(`${system.incompleteSalesScope} completed/reversed sale(s) are missing region/team scope and must be repaired before projection backfill.`);
-    if (!aging.policy?.bandSource?.includes('stored') && recoveryVisible) warnings.push('No stored custom aging band configuration is active; the report is using the approved Amaal default/threshold-derived aging bands.');
+    if (!caps.salesDailyModel || !caps.productDailyModel || !caps.commissionDailyModel) warnings.push('Some detailed daily summaries are not available yet, so this report is using the latest recorded business activity.');
+    if (!caps.customerAssignments) warnings.push('Customer totals are based on current customer ownership because older reassignment history is not available.');
+    if (!caps.bandConfigColumn) warnings.push('Aging is using the approved Amaal defaults because custom age bands are not available yet.');
+    if (system.outboxPending > 0) warnings.push(`${system.outboxPending} recent updates are waiting to appear in all report views.`);
+    if (system.incompleteSalesScope > 0) warnings.push(`${system.incompleteSalesScope} sale(s) are missing location details, so some comparisons may be incomplete.`);
+    if (!aging.policy?.bandSource?.includes('stored') && recoveryVisible) warnings.push('This view is using the approved Amaal aging defaults.');
     if (system.readModelSalesRows > 0 && system.readModelSalesUpdatedAt) {
       const ageMinutes = (Date.now() - new Date(system.readModelSalesUpdatedAt).getTime()) / 60000;
-      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Sales read model is ${ageMinutes.toFixed(0)} minutes old; treat projection-backed trend data as stale.`);
+      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Sales trend information is about ${ageMinutes.toFixed(0)} minutes old.`);
     }
     if (system.readModelProductRows > 0 && system.readModelProductUpdatedAt) {
       const ageMinutes = (Date.now() - new Date(system.readModelProductUpdatedAt).getTime()) / 60000;
-      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Product read model is ${ageMinutes.toFixed(0)} minutes old.`);
+      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Product information is about ${ageMinutes.toFixed(0)} minutes old.`);
     }
     if (system.readModelCommissionRows > 0 && system.readModelCommissionUpdatedAt) {
       const ageMinutes = (Date.now() - new Date(system.readModelCommissionUpdatedAt).getTime()) / 60000;
-      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Commission read model is ${ageMinutes.toFixed(0)} minutes old.`);
+      if (Number.isFinite(ageMinutes) && ageMinutes > 15) warnings.push(`Commission information is about ${ageMinutes.toFixed(0)} minutes old.`);
     }
     const insights = buildOperationalInsights({
       sales: { ...sales.current, revenueChangePct: percentChange(sales.current.revenue, sales.previous.revenue) },
@@ -799,14 +799,13 @@ export async function getOperationalReport(services: ApiServices, requestId: str
       system:{...system,warnings},
       insights,
       methodology:{
-        facts:['Sales transactions and revenue come from committed public.sales rows visible to the requesting scope.',
-          'Cash-versus-loan mix is derived from completed sales.payment_type and is descriptive for the selected period.','Unit counts come from committed public.sale_items rows, preventing a multi-IMEI sale from being counted as one unit.','Commission net is gross commission less non-destructive commission_adjustments.','Current inventory comes from authoritative public.imei_units state and holder/location fields, joined back to the organization product graph.','Recovery counts use recovery_cases and RECOVERED activities where available.'],
-        estimates:['Stock value is an estimate using the latest currently effective selling price policy for current inventory.','Historical recovery value is not claimed because price-at-recovery history is not guaranteed by the current reporting schema.'],
-        proxies:['Sell-through is a current-inventory proxy: period sold units / (period sold units + current sellable units). It is not a historical stock-flow reconstruction.','Stock concentration and HHI describe the current scoped inventory distribution, not historical distribution.','Recovery throughput rate is recovered cases / opened cases in the selected window.'],
-        aging:`Field age is derived from imei_units.field_age_started_at. Active policy bands use stored band_config when available; otherwise approved Amaal defaults/threshold-derived bands are used.`,
-        comparison:'Comparisons include active authorized hierarchy entities when their organizational records are present, including zero-activity entities, then attach sales, commission and current-stock measures.',
-        caching:'Personalized reports remain dynamic and uncached at the page/data boundary. Public/static catalog-like data can be cached separately; report authorization and user scope must not enter a shared cache.',
-        execution:'The report transaction is read-only and bounded by an 8-second PostgreSQL statement timeout so expensive reporting cannot hold an open transactional write context.',
+        facts:['Sales totals come from recorded Amaal sales available in your area.','Cash and loan sales are summarized from completed sales for the selected period.','Unit totals count each device sold.','Net commission reflects commissions after recorded adjustments.','Current stock comes from the latest device records and their locations.','Recovery totals use recorded recovery cases and completed recovery activity.'],
+        estimates:['Stock value is an estimate based on the latest selling prices.','A historical recovery value is not shown when the required price history is unavailable.'],
+        proxies:['Sales rate compares units sold with the units currently available.','Stock distribution shows how current devices are spread across teams and holders.','Recovery completion rate compares recovered cases with cases opened in the selected period.'],
+        aging:'Device age is based on when each device entered field use. The approved Amaal aging rules are used when a custom rule is not available.',
+        comparison:'Comparisons include the active people and teams available in your area, including those with no activity during the selected period.',
+        caching:'This report is personalized to the person viewing it. It is not shared with another person by mistake.',
+        execution:'The report is designed to return promptly without changing business records.',
         schemaCapabilities:caps,
       },
     };

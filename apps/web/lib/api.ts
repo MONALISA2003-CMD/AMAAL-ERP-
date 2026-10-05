@@ -8,6 +8,19 @@ function apiBase(): string {
   return '/api/amaal';
 }
 
+function friendlyResponseError(status: number, raw: string): string {
+  if (status === 401) return 'Your sign-in has expired. Please sign in again.';
+  if (status === 403) return 'You do not have permission to do that.';
+  if (status === 404) return 'We could not find what you were looking for.';
+  if (status === 409) return 'That information has changed. Please refresh and try again.';
+  if (status === 429) return 'There have been too many attempts. Please wait a moment and try again.';
+  if (status >= 500) return 'We could not complete that request right now. Please try again.';
+  if (!raw || /\b(?:SQL|API|SDK|endpoint|serverless|TypeScript|JavaScript|JSON|schema|query|uuid|ECONN|Neon Auth|internal server|request id)\b/i.test(raw)) {
+    return 'We could not complete that request. Please check the information and try again.';
+  }
+  return raw;
+}
+
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBase()}${path}`, {
     ...init,
@@ -17,8 +30,18 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(init.headers ?? {}),
     },
   });
-  const payload = (await response.json()) as T & { message?: string; error?: string };
-  if (!response.ok) throw new Error(payload.message || payload.error || `Request failed with ${response.status}.`);
+  const raw = await response.text();
+  let payload: (T & { message?: string; error?: string }) | null = null;
+  try {
+    payload = raw ? JSON.parse(raw) as T & { message?: string; error?: string } : null;
+  } catch {
+    payload = null;
+  }
+  if (!response.ok) {
+    const detail = payload?.message || payload?.error || '';
+    throw new Error(friendlyResponseError(response.status, detail));
+  }
+  if (!payload) throw new Error('We could not read that response. Please try again.');
   return payload;
 }
 

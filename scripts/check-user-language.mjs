@@ -1,54 +1,94 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve('apps/web/app');
+const roots = [path.resolve('apps/web/app'), path.resolve('apps/web/components')];
 const banned = [
-  'Neon Auth', 'HTTP 404', 'HTTP 500', 'TypeScript', 'JavaScript', 'SQL', 'serverless',
-  'SDK', 'TOTP', 'governance', 'autonomy', 'outbox',
-  'foundation mode', 'provider:', 'model:', 'execution guard', 'caching', 'technical'
+  'Neon Auth', 'TypeScript', 'JavaScript', 'SQL', 'serverless', 'SDK', 'TOTP',
+  'governance', 'autonomy', 'outbox', 'read model', 'foundation mode', 'execution guard',
+  'authorized scope', 'organization scope', 'HTTP 404', 'HTTP 500', 'Request could not be completed',
+  'PENDING_APPROVAL', 'PERCENT_OF_SALE', 'FIXED_AMOUNT', 'API', 'MFA', 'PHASE ', 'realtime', 'ML Intelligence', 'toolName', 'roleKey', 'statusCode'
 ];
 
 function walk(dir) {
   const result = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const file = path.join(dir, entry.name);
-    if (entry.isDirectory()) result.push(...walk(file));
-    else if (/\.tsx$/.test(entry.name)) result.push(file);
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) result.push(...walk(full));
+    else if (/\.tsx$/.test(entry.name)) result.push(full);
   }
   return result;
 }
 
-function visibleText(source) {
-  const chunks = [];
-  const stringPattern = /(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
-  let match;
-  while ((match = stringPattern.exec(source))) {
-    const value = match[2]
-      .replace(/\\[nrt]/g, ' ')
-      .replace(/\$\{[^}]*\}/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (value && /[A-Za-z]{3}/.test(value) && !value.startsWith('/') && !value.includes('className')) chunks.push(value);
-  }
-  const jsxTextPattern = />([^<>{]+)</g;
-  while ((match = jsxTextPattern.exec(source))) {
-    const value = match[1].replace(/\s+/g, ' ').trim();
-    if (value) chunks.push(value);
-  }
-  return chunks;
+function stripComments(source) {
+  return source.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
+function findMarkup(source) {
+  const cleaned = stripComments(source);
+  const match = cleaned.match(/\breturn\s*(?:\(|)(\s*<[\s\S]*)$/);
+  return match?.[1] ?? '';
+}
+
+function removeJsxExpressions(markup) {
+  let out = '';
+  let depth = 0;
+  let quote = null;
+  let escape = false;
+  for (let i = 0; i < markup.length; i += 1) {
+    const c = markup[i];
+    if (depth === 0 && c === '{') { depth = 1; continue; }
+    if (depth > 0) {
+      if (quote) {
+        if (escape) escape = false;
+        else if (c === '\\') escape = true;
+        else if (c === quote) quote = null;
+      } else if (c === '"' || c === "'" || c === '`') quote = c;
+      else if (c === '{') depth += 1;
+      else if (c === '}') depth -= 1;
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+function visibleFragments(source) {
+  const fragments = [];
+  const markup = findMarkup(source);
+  const staticMarkup = removeJsxExpressions(markup);
+
+  for (const match of staticMarkup.matchAll(/>([^<]+)</g)) {
+    const value = match[1].replace(/\s+/g, ' ').trim();
+    if (value && /[A-Za-z]{3}/.test(value)) fragments.push({ kind: 'text', value });
+  }
+
+  for (const match of markup.matchAll(/\b(?:placeholder|aria-label|title|alt)\s*=\s*(['"])(.*?)\1/g)) {
+    fragments.push({ kind: 'attribute', value: match[2] });
+  }
+
+  for (const match of stripComments(source).matchAll(/\b(?:setError|setMessage|setNotice|prompt)\s*\(\s*(['"`])([\s\S]*?)\1/g)) {
+    fragments.push({ kind: 'message', value: match[2].replace(/\$\{[^}]*\}/g, ' ') });
+  }
+
+  return fragments;
+}
+
+const files = roots.flatMap(walk);
 const problems = [];
-for (const file of walk(root)) {
-  const text = visibleText(fs.readFileSync(file, 'utf8')).join('\n');
-  for (const term of banned) {
-    if (text.toLowerCase().includes(term.toLowerCase())) problems.push(`${path.relative(process.cwd(), file)}: ${term}`);
+for (const file of files) {
+  for (const fragment of visibleFragments(fs.readFileSync(file, 'utf8'))) {
+    const lowered = fragment.value.toLowerCase();
+    for (const term of banned) {
+      if (lowered.includes(term.toLowerCase())) {
+        problems.push(`${path.relative(process.cwd(), file)}: ${term} in ${fragment.kind}: ${fragment.value}`);
+      }
+    }
   }
 }
 
 if (problems.length) {
-  console.error('User-facing language check found technical wording:');
+  console.error('User-facing language check found implementation wording:');
   for (const item of problems) console.error(`- ${item}`);
   process.exit(1);
 }
-console.log(`User-facing language check passed across ${walk(root).length} application pages.`);
+console.log(`User-facing language check passed across ${files.length} application source files.`);

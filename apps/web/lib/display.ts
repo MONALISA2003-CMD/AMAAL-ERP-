@@ -24,7 +24,7 @@ export function statusLabel(value: string | null | undefined): string {
     PENDING_APPROVAL: 'Waiting for approval', SUSPENDED: 'Paused',
     RECOVERY_PENDING: 'Recovery needed', RECOVERED: 'Recovered',
     DAMAGED: 'Damaged', LOST: 'Lost', QUARANTINE: 'Quarantined',
-    TRANSFER_PENDING: 'Transfer waiting', RECEIVED: 'Received',
+    TRANSFER_PENDING: 'Transfer waiting',
   };
   return labels[value] ?? 'Needs review';
 }

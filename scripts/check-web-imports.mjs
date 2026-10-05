@@ -2,10 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const root = path.join(repoRoot, 'apps', 'web', 'app');
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..');
+const appRoot = path.join(repoRoot, 'apps', 'web', 'app');
 const apiSource = fs.readFileSync(path.join(repoRoot, 'apps', 'web', 'lib', 'api.ts'), 'utf8');
-const exports = new Set([...apiSource.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g)].map((m) => m[1]));
+const exports = new Set([
+  ...apiSource.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g),
+].map((m) => m[1]));
 
 function walk(dir) {
   const result = [];
@@ -18,13 +21,14 @@ function walk(dir) {
 }
 
 const failures = [];
-for (const file of walk(root)) {
+for (const file of walk(appRoot)) {
   const lines = fs.readFileSync(file, 'utf8').split('\n');
   let importBlock = null;
   for (const line of lines) {
     const trimmed = line.trim();
     if (importBlock === null && /^import\s+\{/.test(trimmed)) importBlock = trimmed;
     else if (importBlock !== null) importBlock += `\n${trimmed}`;
+
     if (importBlock !== null) {
       const fromMatch = importBlock.match(/\}\s*from\s*['"]([^'"]+)['"]/);
       if (fromMatch) {
@@ -49,4 +53,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`Web import/export check passed across ${walk(root).length} source files.`);
+console.log(`Web import/export check passed across ${walk(appRoot).length} source files.`);

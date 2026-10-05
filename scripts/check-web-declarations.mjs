@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const root = path.join(repoRoot, 'apps', 'web');
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '..');
+const webRoot = path.join(repoRoot, 'apps', 'web');
 const files = [];
 
 function walk(dir) {
@@ -14,7 +15,7 @@ function walk(dir) {
   }
 }
 
-walk(root);
+walk(webRoot);
 const failures = [];
 
 for (const file of files) {

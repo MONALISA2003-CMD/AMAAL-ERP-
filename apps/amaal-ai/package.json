@@ -7,12 +7,12 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@amaal/business-rules": "0.0.0",
-    "@amaal/database": "0.0.0",
-    "@amaal/approvals": "0.0.0",
-    "@amaal/recovery": "0.0.0",
-    "@amaal/permissions": "0.0.0",
-    "@amaal/shared": "0.0.0"
+    "@amaal/business-rules": "file:../../packages/business-rules",
+    "@amaal/database": "file:../../packages/database",
+    "@amaal/approvals": "file:../../services/approvals",
+    "@amaal/recovery": "file:../../services/recovery",
+    "@amaal/permissions": "file:../../packages/permissions",
+    "@amaal/shared": "file:../../packages/shared"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

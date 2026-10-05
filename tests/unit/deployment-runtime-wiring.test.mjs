@@ -12,6 +12,8 @@ const http = readFileSync(join(root, 'services/api/src/http.ts'), 'utf8');
 const api = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
 const proxy = readFileSync(join(root, 'apps/web/app/api/amaal/[...path]/route.ts'), 'utf8');
 const recoveryEngine = readFileSync(join(root, 'services/recovery/src/aging-engine.ts'), 'utf8');
+const aiTypeContract = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
+const zipSync = readFileSync(join(root, '.github/workflows/zip-sync.yml'), 'utf8');
 
 test('deployment installers are npm-only and Vercel builds the standalone web package', () => {
   assert.equal(rootPkg.packageManager, undefined);
@@ -22,8 +24,8 @@ test('deployment installers are npm-only and Vercel builds the standalone web pa
 });
 
 test('outbox worker declares every runtime workspace package it imports', () => {
-  assert.equal(workerPkg.dependencies['@amaal/database'], '0.0.0');
-  assert.equal(workerPkg.dependencies['@amaal/recovery'], '0.0.0');
+  assert.equal(workerPkg.dependencies['@amaal/database'], 'file:../../packages/database');
+  assert.equal(workerPkg.dependencies['@amaal/recovery'], 'file:../recovery');
 });
 
 test('Render API entrypoint always autostarts when PORT is provided', () => {
@@ -59,6 +61,26 @@ test('recovery worker is schema-safe before Stage 5 migrations are applied', () 
   assert.match(recoveryEngine, /to_regclass\('public\.aging_asset_states'\)/);
   assert.match(recoveryEngine, /band_config/);
   assert.match(recoveryEngine, /scheduled evaluation is safely skipped/);
+});
+
+test('AI action-plan UI contract includes the expiration field returned by the server', () => {
+  assert.match(aiTypeContract, /export type AmaalAIActionPlan = [\s\S]*expiresAt: string \| null/);
+});
+
+test('internal workspace dependencies are local file links, not registry versions', () => {
+  const paths = [
+    ['services/api/package.json', ['@amaal/approvals','@amaal/ai','@amaal/database']],
+    ['apps/amaal-ai/package.json', ['@amaal/approvals','@amaal/database']],
+    ['packages/permissions/package.json', ['@amaal/database']],
+  ];
+  for (const [path, names] of paths) {
+    const pkg = JSON.parse(readFileSync(join(root, path), 'utf8'));
+    for (const name of names) assert.match(pkg.dependencies[name], /^file:/, `${path} -> ${name}`);
+  }
+});
+
+test('ZIP synchronization shell command has real continuations, not literal \n text', () => {
+  assert.doesNotMatch(zipSync, /type d \\n/);
 });
 
 test('known runtime wiring regressions remain fixed in reporting and inventory', () => {

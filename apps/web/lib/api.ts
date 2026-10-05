@@ -286,6 +286,7 @@ export type AmaalAIActionPlan = {
   executedTargetId: string | null;
   createdAt: string;
   updatedAt: string;
+  expiresAt: string | null;
 };
 
 export type AmaalAIAwaitingApproval = {

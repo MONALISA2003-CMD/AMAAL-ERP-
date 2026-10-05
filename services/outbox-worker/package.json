@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@amaal/database": "0.0.0",
+    "@amaal/database": "file:../../packages/database",
     "ioredis": "^5.7.0",
-    "@amaal/recovery": "0.0.0"
+    "@amaal/recovery": "file:../recovery"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

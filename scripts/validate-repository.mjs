@@ -33,14 +33,63 @@ const required = [
 ];
 
 const packageManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (packageManifest.packageManager !== 'pnpm@12.7.0') {
-  console.error(`Invalid packageManager: expected pnpm@12.7.0, found ${packageManifest.packageManager ?? 'missing'}`);
+if (packageManifest.packageManager !== 'pnpm@12.9.1') {
+  console.error(`Invalid packageManager: expected pnpm@12.9.1, found ${packageManifest.packageManager ?? 'missing'}`);
   process.exit(1);
 }
 if (packageManifest.devEngines?.packageManager) {
   console.error('devEngines.packageManager must not be declared because Render invokes pnpm through npm/npx.');
   process.exit(1);
 }
+
+
+// Every runtime workspace import must be declared by the importing package. This
+// catches Node ESM failures that TypeScript path resolution can otherwise hide
+// until Render/Vercel starts a workspace entry point.
+const workspaceManifests = new Map();
+for (const manifestFile of [
+  join(root, 'apps'), join(root, 'packages'), join(root, 'services'), join(root, 'workers'),
+].filter((dir) => existsSync(dir))) {
+  for (const entry of readdirSync(manifestFile, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const manifestPath = join(manifestFile, entry.name, 'package.json');
+    if (!existsSync(manifestPath)) continue;
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      if (manifest.name) workspaceManifests.set(manifest.name, { manifest, dir: join(manifestFile, entry.name) });
+    } catch {}
+  }
+}
+const runtimeDependencyFailures = [];
+const workspaceImportRe = /(?:from\s*|import\s*\()(['"])(@amaal\/[^'"]+)\1/g;
+for (const { manifest, dir } of workspaceManifests.values()) {
+  const declared = new Set([
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+    ...Object.keys(manifest.devDependencies ?? {}),
+  ]);
+  const sourceRoot = join(dir, 'src');
+  if (!existsSync(sourceRoot)) continue;
+  const stack = [sourceRoot];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) {
+        const source = readFileSync(full, 'utf8');
+        for (const match of source.matchAll(workspaceImportRe)) {
+          const dep = match[2];
+          if (dep !== manifest.name && !declared.has(dep)) {
+            runtimeDependencyFailures.push(`${relative(root, full)}: missing workspace dependency ${dep}`);
+          }
+        }
+      }
+    }
+  }
+}
+if (runtimeDependencyFailures.length) failures.push(...runtimeDependencyFailures);
 
 const missing = required.filter((p) => !existsSync(join(root, p)));
 if (missing.length) {

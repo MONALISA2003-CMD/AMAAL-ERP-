@@ -520,7 +520,9 @@ async function buildComparison(tx: DatabaseTransaction, context: AuthorizationCo
   if (regionId) {
     if (type === 'REGION' && regionId) baseSql += ` and id=${baseP.add(regionId)}`;
   }
-  if (teamId && type === 'TEAM') baseSql += ` and t.id=${baseP.add(teamId)}`;
+  if (teamId && type === 'TEAM') {
+    baseSql = baseSql.replace(/\s+group by t\.id,t\.team_name$/, ` and t.id=${baseP.add(teamId)} group by t.id,t.team_name`);
+  }
   const baseRows = await tx.query<BaseRow>(baseSql, baseP.values);
 
   const entityExpr = type === 'AGENT' ? 's.seller_user_id' : type === 'TEAM' ? 's.team_id' : type === 'MANAGER' ? 'coalesce(s.manager_user_id,t.manager_user_id)' : 's.region_id';
@@ -536,7 +538,7 @@ async function buildComparison(tx: DatabaseTransaction, context: AuthorizationCo
        coalesce(sum((select count(*) from public.sale_items si where si.sale_id=s.id and si.is_active=true)),0)::bigint::text as units,
        coalesce(sum((select coalesce(sum(c.amount-coalesce((select sum(a.amount) from public.commission_adjustments a where a.commission_id=c.id),0)),0) from public.commissions c where c.sale_id=s.id and c.status='ACTIVE')),0)::numeric::text as commission
      from public.sales s left join public.teams t on t.id=s.team_id
-     where s.organization_id=${salesP.add(organizationId)} and s.status='COMPLETED' and ${date} >= ${salesP.add(window.from)} and ${date} < ${salesP.add(window.to)} and ${scope}${comparisonSalesExtra}
+     where s.organization_id=${salesP.add(organizationId)} and s.status='COMPLETED' and ${date} >= ${salesP.add(window.from)} and ${date} < ${salesP.add(window.to)} and ${scope}${appendAnd(salesExtra)}
      group by ${entityExpr}`, salesP.values,
   );
 

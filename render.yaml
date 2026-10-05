@@ -5,8 +5,8 @@ services:
     region: frankfurt
     plan: starter
     autoDeploy: true
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
-    startCommand: node --experimental-transform-types services/api/src/http.ts
+    buildCommand: corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --no-frozen-lockfile
+    startCommand: AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts
     healthCheckPath: /ready
     envVars:
       - key: NODE_VERSION
@@ -17,8 +17,18 @@ services:
         sync: false
       - key: AMAAL_DATABASE_URL
         sync: false
+      - key: AMAAL_NEON_AUTH_URL
+        sync: false
+      - key: AMAAL_NEON_AUTH_JWKS_URL
+        sync: false
+      - key: AMAAL_NEON_AUTH_ISSUER
+        sync: false
+      - key: AMAAL_NEON_AUTH_AUDIENCE
+        sync: false
       - key: NEON_AUTH_COOKIE_SECRET
         sync: false
+      - key: AMAAL_API_AUTOSTART
+        value: 'true'
 
   - type: worker
     name: amaal-worker
@@ -26,7 +36,7 @@ services:
     region: frankfurt
     plan: starter
     autoDeploy: true
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    buildCommand: corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --no-frozen-lockfile
     startCommand: node --experimental-transform-types services/outbox-worker/src/runner.ts
     envVars:
       - key: NODE_VERSION

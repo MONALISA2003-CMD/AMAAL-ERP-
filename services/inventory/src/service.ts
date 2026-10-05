@@ -203,7 +203,7 @@ export class PostgresInventoryService {
     await tx.query(`update public.stock_allocations set status='APPROVED',approved_by=$1,approved_at=now() where id=$2`,[actorUserId,allocationId]);
     await tx.query(`update public.inventory_movements set approved_by=$1,approved_at=now() where allocation_id=$2 and approved_by is null`,[actorUserId,allocationId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,request_id) values ($1,'STOCK_ALLOCATION_APPROVED','STOCK_ALLOCATION',$2,$3::jsonb,current_setting('amaal.request_id', true))`,[actorUserId,allocationId,JSON.stringify({status:'APPROVED'})]);
-    await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,team_id,actor_user_id,payload) values ('STOCK_TRANSFER_APPROVED','STOCK_ALLOCATION',$1,$2,$3,$4,$5::jsonb)`,[allocationId,approvalScope.region_id,approvalScope.team_id,actorUserId,JSON.stringify({status:'APPROVED',allocation_id:allocationId})]);
+    await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,team_id,actor_user_id,payload) values ('STOCK_TRANSFER_APPROVED','STOCK_ALLOCATION',$1,$2,$3,$4,$5::jsonb)`,[allocationId,approvalScope.regionId,approvalScope.teamId,actorUserId,JSON.stringify({status:'APPROVED',allocation_id:allocationId})]);
   }
 
 
@@ -232,7 +232,7 @@ export class PostgresInventoryService {
     assertAllocationTransition(allocation.status as AllocationStatus, 'IN_TRANSIT');
     await tx.query(`update public.stock_allocations set status='IN_TRANSIT' where id=$1`, [allocationId]);
     await tx.query(`insert into public.audit_events(actor_user_id,action,target_type,target_id,new_state,request_id) values ($1,'STOCK_ALLOCATION_DISPATCHED','STOCK_ALLOCATION',$2,$3::jsonb,current_setting('amaal.request_id', true))`, [actorUserId,allocationId,JSON.stringify({status:'IN_TRANSIT'})]);
-    await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,team_id,actor_user_id,payload) values ('STOCK_TRANSFER_DISPATCHED','STOCK_ALLOCATION',$1,$2,$3,$4,$5::jsonb)`, [allocationId,dispatchScope.region_id,dispatchScope.team_id,actorUserId,JSON.stringify({status:'IN_TRANSIT',allocation_id:allocationId})]);
+    await tx.query(`insert into public.outbox_events(event_type,aggregate_type,aggregate_id,region_id,team_id,actor_user_id,payload) values ('STOCK_TRANSFER_DISPATCHED','STOCK_ALLOCATION',$1,$2,$3,$4,$5::jsonb)`, [allocationId,dispatchScope.regionId,dispatchScope.teamId,actorUserId,JSON.stringify({status:'IN_TRANSIT',allocation_id:allocationId})]);
   }
 
 

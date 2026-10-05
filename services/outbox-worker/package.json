@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "@amaal/database": "workspace:*",
-    "ioredis": "^5.7.0"
+    "ioredis": "^5.7.0",
+    "@amaal/recovery": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

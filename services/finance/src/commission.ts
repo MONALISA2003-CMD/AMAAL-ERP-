@@ -56,7 +56,7 @@ export async function createDirectSellerCommission(
      limit 25`,
     [input.organizationId, sellerRole, input.productVariantId],
   );
-  const policy = policies.find((candidate) => policyConditionsMatch({ conditions: candidate.conditions, saleAmount: input.saleAmount, paymentType: input.paymentType }));
+  const policy = policies.find((candidate) => policyConditionsMatch({ conditions: candidate.conditions, saleAmount: input.saleAmount, ...(input.paymentType ? { paymentType: input.paymentType } : {}) }));
   if (!policy) return null;
   const rule = parseRule(policy.rule_definition);
   let amount: number;

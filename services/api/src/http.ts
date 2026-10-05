@@ -486,10 +486,12 @@ export function createApiServer() {
         json(res,200,{requestId,items});
         return;
       }
+      const idempotencyKey = typeof req.headers['x-idempotency-key'] === 'string' ? req.headers['x-idempotency-key'].trim() || undefined : undefined;
+
       if (req.method === 'POST' && pathname === '/v1/ai/conversations') {
         const body = await readJson(req);
         const title = typeof body.title === 'string' ? body.title : undefined;
-        const conversation = await createAIConversation(services,requestId,user.id,{title});
+        const conversation = await createAIConversation(services,requestId,user.id,title === undefined ? {} : {title});
         json(res,201,{requestId,conversation});
         return;
       }
@@ -589,28 +591,28 @@ export function createApiServer() {
 
       if (req.method === 'POST' && pathname === '/v1/org/regions') {
         const body = await readJson(req);
-        const region = await createRegion(services,user.id,{code:requiredString(body,'code'),name:requiredString(body,'name'),description:typeof body.description==='string'?body.description:undefined});
+        const region = await createRegion(services,user.id,{code:requiredString(body,'code'),name:requiredString(body,'name'),...(typeof body.description==='string'?{description:body.description}:{})});
         json(res,201,{requestId,...region});
         return;
       }
 
       if (req.method === 'POST' && pathname === '/v1/org/subregions') {
         const body = await readJson(req);
-        const subregion = await createSubregion(services,user.id,{regionId:requiredString(body,'regionId'),code:requiredString(body,'code'),name:requiredString(body,'name'),description:typeof body.description==='string'?body.description:undefined});
+        const subregion = await createSubregion(services,user.id,{regionId:requiredString(body,'regionId'),code:requiredString(body,'code'),name:requiredString(body,'name'),...(typeof body.description==='string'?{description:body.description}:{})});
         json(res,201,{requestId,...subregion});
         return;
       }
 
       if (req.method === 'POST' && pathname === '/v1/org/teams') {
         const body = await readJson(req);
-        const team = await createTeam(services,user.id,{regionId:requiredString(body,'regionId'),managerUserId:requiredString(body,'managerUserId'),subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,teamCode:requiredString(body,'teamCode'),teamName:requiredString(body,'teamName')});
+        const team = await createTeam(services,user.id,{regionId:requiredString(body,'regionId'),managerUserId:requiredString(body,'managerUserId'),...(typeof body.subregionId==='string'?{subregionId:body.subregionId}:{}),teamCode:requiredString(body,'teamCode'),teamName:requiredString(body,'teamName')});
         json(res,201,{requestId,...team});
         return;
       }
 
       if (req.method === 'POST' && pathname === '/v1/org/shops') {
         const body = await readJson(req);
-        const shop = await createShop(services,user.id,{teamId:requiredString(body,'teamId'),shopCode:requiredString(body,'shopCode'),shopName:requiredString(body,'shopName'),location:typeof body.location==='string'?body.location:undefined});
+        const shop = await createShop(services,user.id,{teamId:requiredString(body,'teamId'),shopCode:requiredString(body,'shopCode'),shopName:requiredString(body,'shopName'),...(typeof body.location==='string'?{location:body.location}:{} )});
         json(res,201,{requestId,...shop});
         return;
       }
@@ -623,15 +625,15 @@ export function createApiServer() {
         const person = await provisionPerson(services,user.id,{
           userId:requiredString(body,'userId'),
           displayName:requiredString(body,'displayName'),
-          employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,
-          phone:typeof body.phone==='string'?body.phone:undefined,
           role:role as typeof roles[number],
-          regionId:typeof body.regionId==='string'?body.regionId:undefined,
-          regionalManagerUserId:typeof body.regionalManagerUserId==='string'?body.regionalManagerUserId:undefined,
-          subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,
-          managerUserId:typeof body.managerUserId==='string'?body.managerUserId:undefined,
-          teamId:typeof body.teamId==='string'?body.teamId:undefined,
-          shopId:typeof body.shopId==='string'?body.shopId:undefined,
+          ...(typeof body.employeeNumber==='string'?{employeeNumber:body.employeeNumber}:{}),
+          ...(typeof body.phone==='string'?{phone:body.phone}:{}),
+          ...(typeof body.regionId==='string'?{regionId:body.regionId}:{}),
+          ...(typeof body.regionalManagerUserId==='string'?{regionalManagerUserId:body.regionalManagerUserId}:{}),
+          ...(typeof body.subregionId==='string'?{subregionId:body.subregionId}:{}),
+          ...(typeof body.managerUserId==='string'?{managerUserId:body.managerUserId}:{}),
+          ...(typeof body.teamId==='string'?{teamId:body.teamId}:{}),
+          ...(typeof body.shopId==='string'?{shopId:body.shopId}:{}),
         });
         json(res,201,{requestId,...person});
         return;
@@ -639,7 +641,7 @@ export function createApiServer() {
 
       if (req.method === 'POST' && pathname === '/v1/org/admins') {
         const body = await readJson(req);
-        const admin = await provisionAdmin(services,user.id,{userId:requiredString(body,'userId'),displayName:requiredString(body,'displayName'),employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,phone:typeof body.phone==='string'?body.phone:undefined,profileKey:requiredString(body,'profileKey')});
+        const admin = await provisionAdmin(services,user.id,{userId:requiredString(body,'userId'),displayName:requiredString(body,'displayName'),profileKey:requiredString(body,'profileKey'),...(typeof body.employeeNumber==='string'?{employeeNumber:body.employeeNumber}:{}),...(typeof body.phone==='string'?{phone:body.phone}:{})});
         json(res,201,{requestId,...admin});
         return;
       }
@@ -648,10 +650,10 @@ export function createApiServer() {
         const body = await readJson(req);
         const invitation = await createAdminInvitation(services,user.id,{
           email:requiredString(body,'email'),displayName:requiredString(body,'displayName'),
-          employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,
-          phone:typeof body.phone==='string'?body.phone:undefined,
           profileKey:requiredString(body,'profileKey'),
-          expiresInHours:typeof body.expiresInHours==='number'?body.expiresInHours:undefined,
+          ...(typeof body.employeeNumber==='string'?{employeeNumber:body.employeeNumber}:{}),
+          ...(typeof body.phone==='string'?{phone:body.phone}:{}),
+          ...(typeof body.expiresInHours==='number'?{expiresInHours:body.expiresInHours}:{}),
         });
         json(res,201,{requestId,...invitation});
         return;
@@ -660,8 +662,16 @@ export function createApiServer() {
       if (req.method === 'POST' && pathname === '/v1/org/invitations') {
         const body = await readJson(req);
         const invitation = await createOrganizationInvitation(services,user.id,{
-          email:requiredString(body,'email'),displayName:requiredString(body,'displayName'),employeeNumber:typeof body.employeeNumber==='string'?body.employeeNumber:undefined,phone:typeof body.phone==='string'?body.phone:undefined,
-          role:requiredString(body,'role') as any,regionId:typeof body.regionId==='string'?body.regionId:undefined,regionalManagerUserId:typeof body.regionalManagerUserId==='string'?body.regionalManagerUserId:undefined,subregionId:typeof body.subregionId==='string'?body.subregionId:undefined,managerUserId:typeof body.managerUserId==='string'?body.managerUserId:undefined,teamId:typeof body.teamId==='string'?body.teamId:undefined,shopId:typeof body.shopId==='string'?body.shopId:undefined,expiresInHours:typeof body.expiresInHours==='number'?body.expiresInHours:undefined
+          email:requiredString(body,'email'),displayName:requiredString(body,'displayName'),role:requiredString(body,'role') as any,
+          ...(typeof body.employeeNumber==='string'?{employeeNumber:body.employeeNumber}:{}),
+          ...(typeof body.phone==='string'?{phone:body.phone}:{}),
+          ...(typeof body.regionId==='string'?{regionId:body.regionId}:{}),
+          ...(typeof body.regionalManagerUserId==='string'?{regionalManagerUserId:body.regionalManagerUserId}:{}),
+          ...(typeof body.subregionId==='string'?{subregionId:body.subregionId}:{}),
+          ...(typeof body.managerUserId==='string'?{managerUserId:body.managerUserId}:{}),
+          ...(typeof body.teamId==='string'?{teamId:body.teamId}:{}),
+          ...(typeof body.shopId==='string'?{shopId:body.shopId}:{}),
+          ...(typeof body.expiresInHours==='number'?{expiresInHours:body.expiresInHours}:{}),
         });
         json(res,201,{requestId,...invitation});
         return;
@@ -681,8 +691,6 @@ export function createApiServer() {
         json(res,200,{requestId,...result});
         return;
       }
-
-      const idempotencyKey = typeof req.headers['x-idempotency-key'] === 'string' ? req.headers['x-idempotency-key'].trim() || undefined : undefined;
 
       if(req.method==='POST'&&pathname==='/v1/catalog/brands'){
         const body=await readJson(req);
@@ -939,7 +947,8 @@ export function createApiServer() {
   return server;
 }
 
-if(process.env.AMAAL_API_AUTOSTART==='true'){
+const shouldAutostart = process.env.AMAAL_API_AUTOSTART === 'true' || (process.env.AMAAL_API_AUTOSTART !== 'false' && Boolean(process.env.PORT));
+if(shouldAutostart){
   const port=Number(process.env.PORT??3000);
   const server = createApiServer();
   const shutdown = () => server.close(() => process.exit(0));

@@ -15,7 +15,7 @@ walk(root);
 const violations = [];
 for (const file of manifests) {
   const pkg = JSON.parse(readFileSync(file,'utf8'));
-  const deps = {...(pkg.dependencies||{}), ...(pkg.devDependencies||()), ...(pkg.optionalDependencies||{})};
+  const deps = {...(pkg.dependencies||{}), ...(pkg.devDependencies||{}), ...(pkg.optionalDependencies||{})};
   for (const [name,range] of Object.entries(deps)) {
     if (String(range).includes('latest') || String(range).includes('workspace:*') === false && /^(\^|~|>|<|\*|x|X)/.test(String(range))) {
       // workspace:* is intentionally exact to the workspace package; external ranges are allowed in source,

@@ -124,7 +124,7 @@ async function suspendUser(tx: DatabaseTransaction, userId:string, organizationI
 }
 
 export class AgingRecoveryEngine {
-  async evaluate(tx: DatabaseTransaction): Promise<{ organizations:number; evaluated:number; warnings:number; overdue:number; critical:number; casesOpened:number; assignments:number; suspended:number; }> {
+  async evaluate(tx: DatabaseTransaction): Promise<{ organizations:number; evaluated:number; warnings:number; overdue:number; critical:number; casesOpened:number; assignments:number; escalations:number; suspended:number; }> {
     const orgPolicies = await tx.query<PolicyRow>(
       `select distinct on (organization_id) id,organization_id,maximum_days,warning_days,critical_overdue_days,band_config,suspension_config,auto_recovery_enabled
        from public.aging_policies

@@ -41,6 +41,19 @@ function money(value: number): string {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
 }
 
+
+function eventLabel(value: string): string {
+  const labels: Record<string, string> = {
+    SALE_COMMITTED: 'Sale recorded',
+    PAYMENT_POSTED: 'Payment recorded',
+    INVENTORY_MOVED: 'Stock moved',
+    RECOVERY_CASE_CREATED: 'Recovery case opened',
+    RECOVERY_CASE_CLOSED: 'Recovery case closed',
+    CUSTOMER_CREATED: 'Customer added',
+  };
+  return labels[value] ?? value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
@@ -136,14 +149,14 @@ export default function DashboardPage() {
           <div className="content-header">
             <div>
               <div className="eyebrow">{summary?.role ?? 'WORKSPACE'}</div>
-              <h1>{summary ? `Welcome back, ${summary.displayName}.` : 'Operational truth, at a glance.'}</h1>
-              <p className="muted">{summary?.status === 'FOUNDATION_ONLY' ? 'Your workspace is live and permission-aware. Business data will populate as transactions begin.' : 'Current operational performance for your authorized Amaal scope.'}</p>
+              <h1>{summary ? `Welcome back, ${summary.displayName}.` : 'Your operation, at a glance.'}</h1>
+              <p className="muted">{summary?.status === 'FOUNDATION_ONLY' ? 'Your workspace is ready. Business information will appear here as activity is recorded.' : 'Current performance for the part of Amaal you manage.'}</p>
             </div>
             <div className={`status-pill ${api}`}>{api === 'ready' ? (summary?.status === 'OPERATIONAL' ? 'Live operational data' : 'Foundation ready') : api === 'degraded' ? 'Needs attention' : 'Loading'}</div>
           </div>
 
           {error ? <div className="alert-card">{error}</div> : null}
-          {lastEvent ? <div className="event-banner"><strong>{lastEvent.eventType.replaceAll('_', ' ')}</strong><span>Sequence {lastEvent.sequence}</span></div> : null}
+          {lastEvent ? <div className="event-banner"><strong>{eventLabel(lastEvent.eventType)}</strong><span>Updated just now</span></div> : null}
 
           <div className="metric-grid">
             <Metric label="Sales today" value={summary?.visibility.sales ? `${summary?.kpis.sales.today.units ?? '—'} units` : '—'} sub={summary?.visibility.sales && summary ? money(summary.kpis.sales.today.revenue) : 'restricted'} />
@@ -168,9 +181,9 @@ export default function DashboardPage() {
               </div>
             </section>
             <section className="card emphasis">
-              <div className="card-label">AMAAL CONTROL PLANE</div>
+              <div className="card-label">AMAAL WORKSPACE</div>
               <blockquote>{summary?.label ?? 'Role workspace'}</blockquote>
-              <p className="muted">One authorized workspace, backed by Neon truth, Render services and durable event replay.</p>
+              <p className="muted">One workspace for your team, keeping business information consistent and up to date.</p>
             </section>
           </div>
 
@@ -181,7 +194,7 @@ export default function DashboardPage() {
           </div>
 
           <section className="card roadmap-card">
-            <div className="card-label">ROLE WORKSPACE</div>
+            <div className="card-label">YOUR WORK</div>
             <div className="module-pills">{(summary?.modules ?? []).map((module) => {
               const route = moduleHref(module);
               return route ? <a key={module} href={route}>{module}</a> : <span key={module}>{module}</span>;

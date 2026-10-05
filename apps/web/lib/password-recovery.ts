@@ -21,10 +21,10 @@ export function validateNewPassword(password: string, confirmation: string): voi
 export async function requestPasswordReset(value: string): Promise<{ method: PasswordResetMethod; email: string }> {
   const email = normalizeEmail(value);
 
-  // Current Neon Auth / Better Auth Email OTP password-reset endpoint.
+  // Current email-code password recovery method.
   const emailOtp = authClient.emailOtp;
   if (!emailOtp?.requestPasswordReset) {
-    throw new Error('Email OTP password recovery is not enabled on the current Neon Auth configuration.');
+    throw new Error('We couldn’t send a recovery code right now. Please try again in a moment.');
   }
 
   const result = await emailOtp.requestPasswordReset({ email });
@@ -54,7 +54,7 @@ export async function resetPasswordWithOtp(
 
   const emailOtp = authClient.emailOtp;
   if (!emailOtp?.resetPassword) {
-    throw new Error('Email OTP password recovery is not enabled on the current Neon Auth configuration.');
+    throw new Error('We couldn’t send a recovery code right now. Please try again in a moment.');
   }
 
   const result = await emailOtp.resetPassword({

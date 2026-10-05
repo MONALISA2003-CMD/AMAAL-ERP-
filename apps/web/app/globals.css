@@ -39,6 +39,8 @@ button { cursor: pointer; }
 .auth-form input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,169,90,.16); }
 .auth-form button { border: 0; border-radius: 12px; padding: 14px; background: var(--navy); color: white; font-weight: 800; }
 .auth-form button:disabled { opacity: .55; cursor: wait; }
+.link-button { border: 0 !important; padding: 0 !important; background: transparent !important; color: var(--navy) !important; font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; display: inline; }
+.link-button:disabled { opacity: .55; cursor: default; }
 .error-text { color: var(--danger); font-size: 13px; }
 .microcopy { margin-top: 24px; font-size: 11px; color: var(--muted); line-height: 1.6; }
 

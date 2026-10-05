@@ -42,7 +42,8 @@
     "sbom": "node scripts/generate-sbom.mjs",
     "preflight:production": "node scripts/preflight-production.mjs",
     "audit:deployment": "node scripts/forensic-deployment-audit.mjs",
-    "validate:deployment-architecture": "node scripts/validate-deployment-architecture.mjs"
+    "validate:deployment-architecture": "node scripts/validate-deployment-architecture.mjs",
+    "check:user-language": "node scripts/check-user-language.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

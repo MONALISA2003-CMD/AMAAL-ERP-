@@ -50,3 +50,22 @@ test('successful token recovery clears passwords held in React state', () => {
 test('legacy password-reset URL is a compatibility alias', () => {
   assert.match(passwordReset, /redirect\('\/forgot-password'\)/);
 });
+
+test('recovery pages do not expose implementation details', () => {
+  assert.doesNotMatch(forgot, /Neon Auth/);
+  assert.doesNotMatch(forgot, /HTTP/);
+  assert.doesNotMatch(forgot, /API/);
+});
+
+
+test('current Email OTP endpoint contract is explicit', () => {
+  assert.match(helper, /requestPasswordReset\(\{ email \}/);
+  assert.match(helper, /resetPassword\(\{[\s\S]*email,[\s\S]*otp,[\s\S]*password,/);
+  assert.doesNotMatch(helper, /forget-password\/email-otp/);
+});
+
+test('password recovery failures stay understandable to employees', () => {
+  assert.match(helper, /couldn’t send a recovery code right now/);
+  assert.match(forgot, /Check your email for a 6-digit code/);
+  assert.match(forgot, /spam or junk folder/);
+});

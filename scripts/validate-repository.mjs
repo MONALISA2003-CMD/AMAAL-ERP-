@@ -3,7 +3,8 @@ import { join, relative } from 'node:path';
 
 const root = process.cwd();
 const required = [
-  '.github/workflows/zip-sync.yml',
+  '.github/workflows/ci.yml',
+  'scripts/check-user-language.mjs',
   'docs/source-specifications/AMAAL_MASTER_SYSTEM_SPECIFICATION-1.md',
   'docs/source-specifications/AMAAL_DATABASE_AND_AUTHORIZATION_BLUEPRINT-1.md',
   'docs/source-specifications/AMAAL_LLM_HANDOFF_MASTER.md',
@@ -93,7 +94,11 @@ for (const { manifest, dir } of workspaceManifests.values()) {
     }
   }
 }
-if (runtimeDependencyFailures.length) failures.push(...runtimeDependencyFailures);
+if (runtimeDependencyFailures.length) {
+  console.error('Workspace dependency validation failed:');
+  for (const failure of runtimeDependencyFailures) console.error(`- ${failure}`);
+  process.exit(1);
+}
 
 const missing = required.filter((p) => !existsSync(join(root, p)));
 if (missing.length) {

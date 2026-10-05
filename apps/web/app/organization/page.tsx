@@ -236,20 +236,20 @@ export default function OrganizationPage() {
             ))}
           </section>
           <section className="card">
-            <div className="card-label">2B CONTROL PLANE</div>
-            <p className="muted">Structure changes, recruitment and Admin profiles are governed by Render authorization. CEO creates Admins; Admins recruit subordinate operating roles. API and database rules remain authoritative.</p>
+            <div className="card-label">ACCESS MANAGEMENT</div>
+            <p className="muted">Organization changes and new staff access follow Amaal’s approval rules. The CEO creates Administrators, and Administrators can add the roles assigned to them.</p>
             {actionError ? <div className="alert-card">{actionError}</div> : null}
             {inviteLink ? <div className="card emphasis"><div className="card-label">SECURE INVITATION LINK</div><code>{inviteLink}</code><p className="muted">Share this link through your approved Amaal communication channel. The token is stored only as a digest on the server.</p></div> : null}
 
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitRegion}>
-                <div><strong>Main region</strong><p className="muted">CEO/Admin structure action.</p></div>
+                <div><strong>Main region</strong><p className="muted">Manage the main region.</p></div>
                 <label>Code<input value={regionForm.code} onChange={(e) => setRegionForm({ ...regionForm, code: e.target.value })} required placeholder="WEST" /></label>
                 <label>Name<input value={regionForm.name} onChange={(e) => setRegionForm({ ...regionForm, name: e.target.value })} required placeholder="Western Uganda" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create region' ? 'Creating…' : 'Create region'}</button>
               </form>
               <form className="setup-form-grid" onSubmit={submitSubregion}>
-                <div><strong>Sub-region</strong><p className="muted">CEO/Admin can add named operating sub-regions.</p></div>
+                <div><strong>Sub-region</strong><p className="muted">Add a named area within a region.</p></div>
                 <label>Region<select value={subregionForm.regionId} onChange={(e) => setSubregionForm({ ...subregionForm, regionId: e.target.value })} required><option value="">Select</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
                 <label>Code<input value={subregionForm.code} onChange={(e) => setSubregionForm({ ...subregionForm, code: e.target.value })} required placeholder="N-W1" /></label>
                 <label>Name<input value={subregionForm.name} onChange={(e) => setSubregionForm({ ...subregionForm, name: e.target.value })} required placeholder="Northern Zone 1" /></label>
@@ -259,7 +259,7 @@ export default function OrganizationPage() {
 
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitTeam}>
-                <div><strong>Team</strong><p className="muted">Manager-scoped team creation.</p></div>
+                <div><strong>Team</strong><p className="muted">Create a team for a manager.</p></div>
                 <label>Region<select value={teamForm.regionId} onChange={(e) => setTeamForm({ ...teamForm, regionId: e.target.value })} required><option value="">Select</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
                 <label>Manager<select value={teamForm.managerUserId} onChange={(e) => setTeamForm({ ...teamForm, managerUserId: e.target.value })} required><option value="">Select</option>{managers.map((m) => <option key={m.userId} value={m.userId}>{m.displayName}</option>)}</select></label>
                 <label>Sub-region<select value={teamForm.subregionId} onChange={(e) => setTeamForm({ ...teamForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code} — {r.name}</option>)}</select></label>
@@ -268,7 +268,7 @@ export default function OrganizationPage() {
                 <button className="setup-primary" disabled={!!action}>{action === 'Create team' ? 'Creating…' : 'Create team'}</button>
               </form>
               <form className="setup-form-grid" onSubmit={submitShop}>
-                <div><strong>Shop Owner location</strong><p className="muted">Create a shop scope inside an authorized team.</p></div>
+                <div><strong>Shop Owner location</strong><p className="muted">Create a shop within the selected team.</p></div>
                 <label>Team<select value={shopForm.teamId} onChange={(e) => setShopForm({ ...shopForm, teamId: e.target.value })} required><option value="">Select</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
                 <label>Shop code<input value={shopForm.shopCode} onChange={(e) => setShopForm({ ...shopForm, shopCode: e.target.value })} required placeholder="KLA-001" /></label>
                 <label>Shop name<input value={shopForm.shopName} onChange={(e) => setShopForm({ ...shopForm, shopName: e.target.value })} required placeholder="Amaal Partner Shop" /></label>
@@ -293,14 +293,14 @@ export default function OrganizationPage() {
               </form> : <div className="card"><div className="card-label">RECRUITMENT</div><h3>No recruitment roles available</h3><p className="muted">Your current role does not have authority to create organizational logins from this workspace.</p></div>}
               {isCeo ? <form className="setup-form-grid" onSubmit={submitAdmin}>
                 <div><strong>Provision Admin</strong><p className="muted">CEO-only. Admin authority is profile-based, not automatically CEO-level.</p></div>
-                <label>Neon Auth user ID<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
+                <label>Account reference<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={adminForm.displayName} onChange={(e) => setAdminForm({ ...adminForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminForm.employeeNumber} onChange={(e) => setAdminForm({ ...adminForm, employeeNumber: e.target.value })} /></label>
                 <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Provision admin' ? 'Provisioning…' : 'Provision Admin'}</button>
               </form> : null}
               {isCeo ? <form className="setup-form-grid" onSubmit={submitAdminInvitation}>
-                <div><strong>Recruit Admin</strong><p className="muted">CEO-only controlled recruitment. The Admin creates their own Neon Auth account from the secure invitation.</p></div>
+                <div><strong>Recruit Admin</strong><p className="muted">CEO-only controlled recruitment. The person creates their Amaal account from the secure invitation.</p></div>
                 <label>Email<input type="email" value={adminInviteForm.email} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, email: e.target.value })} required /></label>
                 <label>Display name<input value={adminInviteForm.displayName} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminInviteForm.employeeNumber} onChange={(e) => setAdminInviteForm({ ...adminInviteForm, employeeNumber: e.target.value })} /></label>
@@ -311,8 +311,8 @@ export default function OrganizationPage() {
 
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitPerson}>
-                <div><strong>Existing identity binding</strong><p className="muted">For already-created Neon Auth identities when a controlled invite cannot be used.</p></div>
-                <label>Neon Auth user ID<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
+                <div><strong>Existing identity binding</strong><p className="muted">For an account that already exists when a normal invitation cannot be used.</p></div>
+                <label>Account reference<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
                 <label>Display name<input value={personForm.displayName} onChange={(e) => setPersonForm({ ...personForm, displayName: e.target.value })} required /></label>
                 <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{r.replaceAll('_',' ')}</option>)}</select></label>
                 <label>Region<select value={personForm.regionId} onChange={(e) => setPersonForm({ ...personForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
@@ -325,7 +325,7 @@ export default function OrganizationPage() {
               </form>
             </div>
           </section>
-          <section className="card emphasis"><div className="card-label">2B CONTROL PLANE</div><blockquote>No identity gets a role without an organizational scope.</blockquote><p className="muted">Managers inherit their teams, Team Leaders inherit their team, and seller access is restricted to the team/shop records assigned to them.</p></section>
+          <section className="card emphasis"><div className="card-label">ACCESS MANAGEMENT</div><blockquote>Every person must have a clear role and place in the organization.</blockquote><p className="muted">Managers inherit their teams, Team Leaders inherit their team, and seller access is restricted to the team/shop records assigned to them.</p></section>
         </section>
       </div>
     </main>

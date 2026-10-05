@@ -13,9 +13,9 @@ export default function AccessPendingContent() {
       <section className="auth-panel">
         <BrandLogo variant="full" className="auth-logo" priority />
         <h1>{suspended ? 'Amaal access is suspended' : 'Amaal access is being prepared'}</h1>
-        <p className="muted">{suspended ? 'Your identity is authenticated, but Amaal business access is currently suspended. Only the authorized Amaal administration flow can restore it.' : 'Your Neon Auth identity is valid, but it has not yet been assigned an active Amaal role and organizational scope.'}</p>
-        <div className="card emphasis"><div className="card-label">SECURITY BOUNDARY</div><p className="muted">Authentication proves who you are. Amaal organizational authorization determines what you can see and do.</p></div>
-        <button type="button" className="setup-primary" onClick={async()=>{ await authClient.signOut(); router.replace('/login'); }}>Sign out</button>
+        <p className="muted">{suspended ? 'Your Amaal access is currently paused. An administrator needs to restore your access before you can continue.' : 'Your account is recognized, but your Amaal access has not been set up yet. An administrator needs to finish your access before you can continue.'}</p>
+        <div className="card emphasis"><div className="card-label">YOUR ACCESS</div><p className="muted">Your sign-in confirms your account. Your Amaal role controls the areas and information available to you.</p></div>
+        <button type="button" className="setup-primary" onClick={async()=>{ await authClient.signOut(); router.replace('/login'); }}>Return to sign in</button>
       </section>
     </main>
   );

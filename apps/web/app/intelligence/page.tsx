@@ -17,7 +17,11 @@ function valueText(value: unknown): string {
 }
 
 function confidenceText(value: number | null): string {
-  return value == null ? 'Not calibrated' : `${(value * 100).toFixed(1)}%`;
+  return value == null ? 'Confidence not available' : `${(value * 100).toFixed(1)}% confidence`;
+}
+
+function displayStatus(value: string): string {
+  return value === 'PREDICTED' ? 'Ready to review' : value === 'SHADOW' ? 'For review' : value.replaceAll('_', ' ');
 }
 
 export default function IntelligencePage() {
@@ -56,7 +60,7 @@ export default function IntelligencePage() {
 
   return <main className="app-shell">
     <header className="topbar">
-      <div className="topbar-brand"><BrandLogo variant="full" className="topbar-full-logo" priority /><div className="topbar-subtitle">Python + ML Intelligence</div></div>
+      <div className="topbar-brand"><BrandLogo variant="full" className="topbar-full-logo" priority /><div className="topbar-subtitle">Business intelligence</div></div>
       <a className="ghost-button" href="/dashboard">Back to command center</a>
     </header>
     <div className="workspace">
@@ -80,41 +84,41 @@ export default function IntelligencePage() {
       <section className="content ai-content">
         <div className="content-header">
           <div>
-            <div className="eyebrow">STAGE 9 • PYTHON + ML</div>
+            <div className="eyebrow">BUSINESS INTELLIGENCE</div>
             <h1>Predictive signals without changing ERP truth.</h1>
-            <p className="muted">Forecasts, risk signals and optimization recommendations are derived intelligence. They never mutate stock, sales, recovery, finance or authorization state.</p>
+            <p className="muted">Forecasts, risk signals and recommendations help you plan ahead. They do not change your business records.</p>
           </div>
-          {summary ? <div className="ai-status-pill">{summary.mode} • schema {summary.featureSchemaVersion}</div> : null}
+          {summary ? <div className="ai-status-pill">For planning and review</div> : null}
         </div>
 
         {error ? <div className="alert-card">{error}</div> : null}
-        {busy && !summary ? <section className="card"><div className="loading-row">Loading governed intelligence…</div></section> : null}
+        {busy && !summary ? <section className="card"><div className="loading-row">Loading business insights…</div></section> : null}
 
         {summary ? <>
           <div className="grid four kpi-grid">
-            <section className="card report-kpi"><span>Predictions</span><strong>{summary.totals.predictions}</strong><small>Persisted derived outputs visible to your current scope.</small></section>
-            <section className="card report-kpi"><span>Shadow</span><strong>{summary.totals.shadow}</strong><small>Signals deliberately not promoted to autonomous authority.</small></section>
-            <section className="card report-kpi"><span>Model-ready outputs</span><strong>{summary.totals.predicted}</strong><small>Prediction records marked PREDICTED.</small></section>
+            <section className="card report-kpi"><span>Predictions</span><strong>{summary.totals.predictions}</strong><small>Insights available to you.</small></section>
+            <section className="card report-kpi"><span>For review</span><strong>{summary.totals.shadow}</strong><small>Suggestions that still need human review.</small></section>
+            <section className="card report-kpi"><span>Ready predictions</span><strong>{summary.totals.predicted}</strong><small>Predictions prepared from available business history.</small></section>
             <section className="card report-kpi"><span>Latest refresh</span><strong>{summary.latestPredictionAt ? new Date(summary.latestPredictionAt).toLocaleTimeString() : '—'}</strong><small>{summary.activation}</small></section>
           </div>
 
           {groups.map(([kind, items]) => <section className="card intelligence-ml-section" key={kind}>
-            <div className="section-head"><div><div className="card-label">MODEL FAMILY</div><h2>{title(kind)}</h2></div><span className="chip">{items.length} visible</span></div>
-            {!items.length ? <div className="ai-side-note">No current predictions are available in this authorized scope. That is expected while the Stage 9 history/label gates are unmet.</div> : <div className="ml-prediction-list">
+            <div className="section-head"><div><div className="card-label">INSIGHT TYPE</div><h2>{title(kind)}</h2></div><span className="chip">{items.length} visible</span></div>
+            {!items.length ? <div className="ai-side-note">No new insights are available yet. More business history may be needed.</div> : <div className="ml-prediction-list">
               {items.map((item) => <div className="ml-prediction" key={item.id}>
                 <div><div className="card-label">{item.entity_type} • {item.as_of_date}</div><strong>{valueText(item.value)}</strong><p>{Array.isArray(item.explanation) ? (item.explanation as unknown[]).join(' ') : valueText(item.explanation)}</p></div>
-                <div className="ml-prediction-meta"><span>{item.status}</span><span>{confidenceText(item.confidence)}</span><small>{item.model_key} v{item.model_version}</small></div>
+                <div className="ml-prediction-meta"><span>{displayStatus(item.status)}</span><span>{confidenceText(item.confidence)}</span><small>{displayStatus(item.status)}</small></div>
               </div>)}
             </div>}
           </section>)}
 
           <section className="card system-card">
-            <div className="section-head"><div><div className="card-label">GOVERNANCE</div><h2>How Stage 9 is controlled</h2></div></div>
+            <div className="section-head"><div><div className="card-label">REVIEW & SAFETY</div><h2>How these insights are used</h2></div></div>
             <div className="method-grid">
-              <div><span>Source</span><p>Neon derived reporting models and point-in-time feature snapshots. Transactional ERP records remain authoritative.</p></div>
-              <div><span>Training gate</span><p>Temporal history and label sufficiency are checked before candidate training. The system does not invent missing history.</p></div>
-              <div><span>Validation</span><p>Time-aware validation is used for temporal models; probability models require calibration checks before production consideration.</p></div>
-              <div><span>Activation</span><p>Models remain shadow/recommendation outputs until governance and Stage 10 production gates are completed.</p></div>
+              <div><span>Source</span><p>Insights are based on recorded Amaal activity. Your business records remain the source of truth.</p></div>
+              <div><span>Training gate</span><p>Enough past activity is checked before a new prediction is prepared. Missing information is not guessed.</p></div>
+              <div><span>Validation</span><p>Predictions are checked against past results before they are relied upon.</p></div>
+              <div><span>Activation</span><p>New predictions remain recommendations until they have been reviewed and approved for wider use.</p></div>
             </div>
           </section>
         </> : null}

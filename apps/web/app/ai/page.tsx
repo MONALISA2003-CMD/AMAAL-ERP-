@@ -133,7 +133,7 @@ export default function AmaalAIPage() {
   return <main className="app-shell">
     <header className="topbar">
       <div className="topbar-brand"><BrandLogo variant="full" className="topbar-full-logo" priority /><div className="topbar-subtitle">Amaal AI • Governed Operations</div></div>
-      <div className="topbar-actions"><span className={`live-dot ${status?.enabled ? 'connected' : 'reconnecting'}`}>{status?.enabled ? 'AI live' : 'Foundation mode'}</span><a className="ghost-button" href="/dashboard">Command center</a></div>
+      <div className="topbar-actions"><span className={`live-dot ${status?.enabled ? 'connected' : 'reconnecting'}`}>{status?.enabled ? 'AI live' : 'Basic assistance'}</span><a className="ghost-button" href="/dashboard">Command center</a></div>
     </header>
 
     <div className="workspace">
@@ -150,48 +150,48 @@ export default function AmaalAIPage() {
           <a className="nav-item active" href="/ai">Amaal AI</a>
           <a className="nav-item" href="/organization">People & Structure</a>
         </nav>
-        <div className="section-label lower">GOVERNANCE</div>
-        <div className="ai-side-note">The model never receives unrestricted SQL or authority beyond the signed-in Amaal user.</div>
+        <div className="section-label lower">REVIEW & SAFETY</div>
+        <div className="ai-side-note">Amaal AI only works with information you are allowed to use.</div>
       </aside>
 
       <section className="content ai-content">
         <div className="content-header">
           <div>
-            <div className="eyebrow">STAGE 8 • AI OPERATIONS</div>
-            <h1>Amaal AI works inside the ERP boundary.</h1>
-            <p className="muted">Ask operational questions, inspect governed evidence, and prepare high-impact work without bypassing Amaal authorization.</p>
+            <div className="eyebrow">AI OPERATIONS</div>
+            <h1>Amaal AI helps you work with the information already available to you.</h1>
+            <p className="muted">Ask business questions, review the information behind an answer, and prepare important work without changing company records without approval.</p>
           </div>
-          <div className="ai-status-pill">{status ? `${status.governedTools} governed tools • ${status.maxToolRounds} max rounds • Gov ${status.governanceVersion} • Tools ${status.toolPolicyVersion}` : 'Loading AI policy…'}</div>
+          <div className="ai-status-pill">{status ? `Guided assistance ` : 'Loading AI policy…'}</div>
         </div>
 
         {error ? <div className="alert-card">{error}</div> : null}
 
         <div className="ai-policy-grid">
-          <section className="card ai-mode-card"><div className="card-label">CURRENT MODE</div><strong>{status?.enabled ? 'LIVE GOVERNED AI' : 'FOUNDATION MODE'}</strong><p>{status?.enabled ? `Provider: ${status.provider}. Model: ${status.model ?? 'configured by environment'}.` : 'The page and governance layer are installed, but model execution is intentionally disabled until the provider environment is configured and enabled.'}</p></section>
-          <section className="card ai-mode-card"><div className="card-label">AUTONOMY BOUNDARY</div><strong>READ → RECOMMEND → PREPARE</strong><p>High-risk requests become action plans. Supported mutations require the normal Amaal service and human approval.</p></section>
-          <section className="card ai-mode-card"><div className="card-label">WORK QUEUE</div><strong>{pendingCount} pending • {draftCount} drafts</strong><p>Your latest AI action plans remain visible and auditable. High-risk plans expire after 24 hours and are rechecked before submission, approval and execution.</p></section>
+          <section className="card ai-mode-card"><div className="card-label">ASSISTANT STATUS</div><strong>{status?.enabled ? 'READY TO HELP' : 'BASIC ASSISTANCE'}</strong><p>{status?.enabled ? `Amaal AI is ready to answer questions and help prepare work.` : 'Amaal AI is available for guided assistance. Some advanced tasks may require administrator setup.'}</p></section>
+          <section className="card ai-mode-card"><div className="card-label">WHAT IT CAN DO</div><strong>EXPLAIN → RECOMMEND → PREPARE</strong><p>Important actions are prepared for review before they can change company records.</p></section>
+          <section className="card ai-mode-card"><div className="card-label">WORK TO REVIEW</div><strong>{pendingCount} pending • {draftCount} drafts</strong><p>Your latest requests stay visible for review. Important requests expire after 24 hours and are checked again before they are carried out.</p></section>
         </div>
 
         <section className="card ai-chat-card">
-          <div className="section-head"><div><div className="card-label">Amaal AI</div><h2>Ask the operation.</h2></div><span className="muted">Facts come from governed tools.</span></div>
+          <div className="section-head"><div><div className="card-label">Amaal AI</div><h2>Ask the operation.</h2></div><span className="muted">Answers are based on the information available in Amaal.</span></div>
           <div className="ai-suggestion-row">{suggestions.map((suggestion) => <button key={suggestion} className="chip ai-suggestion" onClick={() => void sendMessage(suggestion)}>{suggestion}</button>)}</div>
           <div className="ai-thread">
-            {!turns.length ? <div className="ai-empty"><div className="ai-empty-mark">AI</div><strong>Start with a real operational question.</strong><p>Examples include aging exposure, sales movement, stock risk, recovery bottlenecks, commission explanations and approved company procedures.</p></div> : turns.map((turn) => <div className={`ai-bubble ${turn.role.toLowerCase()}`} key={turn.id}><div className="ai-role">{turn.role === 'USER' ? 'YOU' : 'AMAAL AI'}</div><div className="ai-bubble-content">{turn.content.split('\n').map((line, index) => <div key={`${turn.id}-${index}`}>{line || '\u00a0'}</div>)}</div>{turn.result ? <div className="ai-evidence-row"><span className="chip">{turn.result.route.agent}</span><span className="chip">{riskText(turn.result.route.risk)}</span>{turn.result.evidence.map((item) => <span className="chip" key={`${turn.id}-${item.tool}`}>{item.tool} • {item.classification ?? 'governed'}</span>)}</div> : null}</div>)}
+            {!turns.length ? <div className="ai-empty"><div className="ai-empty-mark">AI</div><strong>Start with a business question.</strong><p>Examples include aging exposure, sales movement, stock risk, recovery bottlenecks, commission explanations and approved company procedures.</p></div> : turns.map((turn) => <div className={`ai-bubble ${turn.role.toLowerCase()}`} key={turn.id}><div className="ai-role">{turn.role === 'USER' ? 'YOU' : 'AMAAL AI'}</div><div className="ai-bubble-content">{turn.content.split('\n').map((line, index) => <div key={`${turn.id}-${index}`}>{line || '\u00a0'}</div>)}</div>{turn.result ? <div className="ai-evidence-row"><span className="chip">{riskText(turn.result.route.risk)}</span><span className="chip">Amaal information</span></div> : null}</div>)}
           </div>
           <div className="ai-composer"><textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); void sendMessage(); } }} placeholder="Ask Amaal AI about your authorized operation…" rows={3} /><button className="setup-primary" disabled={busy || !input.trim()} onClick={() => void sendMessage()}>{busy ? 'Working…' : 'Ask Amaal AI'}</button></div>
-          <div className="ai-composer-note">Ctrl/Cmd + Enter to send. Amaal AI cannot approve, bypass permissions, or directly issue SQL.</div>
+          <div className="ai-composer-note">Press Ctrl/Cmd + Enter to send. Important changes always need your approval.</div>
         </section>
 
-        {approvals.length ? <section className="card ai-plans-card"><div className="section-head"><div><div className="card-label">APPROVAL INBOX</div><h2>Human governance queue</h2></div><span className="muted">AI cannot approve its own work.</span></div><div className="ai-plan-list">{approvals.map((item) => <div className="ai-plan" key={item.approvalId}><div className="ai-plan-main"><div className="chip-row"><span className="chip">{item.riskLevel}</span><span className="chip">AI_ACTION</span></div><strong>{item.toolName.replaceAll('_',' ')}</strong><p>{item.summary}</p><small>Requested by {item.requestedBy.slice(0,8)} • {new Date(item.createdAt).toLocaleString()} • {item.reason}</small></div><div className="ai-plan-actions"><button className="setup-secondary" disabled={planBusy===item.planId} onClick={() => void decideApproval(item,'REJECTED')}>{planBusy===item.planId ? 'Working…' : 'Reject'}</button><button className="setup-primary" disabled={planBusy===item.planId} onClick={() => void decideApproval(item,'APPROVED')}>{planBusy===item.planId ? 'Working…' : 'Approve'}</button></div></div>)}</div></section> : null}
+        {approvals.length ? <section className="card ai-plans-card"><div className="section-head"><div><div className="card-label">APPROVAL INBOX</div><h2>REVIEW QUEUE</h2></div><span className="muted">Important actions always require human approval.</span></div><div className="ai-plan-list">{approvals.map((item) => <div className="ai-plan" key={item.approvalId}><div className="ai-plan-main"><div className="chip-row"><span className="chip">{displayRisk(item.riskLevel)}</span><span className="chip">Planned action</span></div><strong>{item.toolName.replaceAll('_',' ')}</strong><p>{item.summary}</p><small>Requested {new Date(item.createdAt).toLocaleString()} • {item.reason}</small></div><div className="ai-plan-actions"><button className="setup-secondary" disabled={planBusy===item.planId} onClick={() => void decideApproval(item,'REJECTED')}>{planBusy===item.planId ? 'Working…' : 'Reject'}</button><button className="setup-primary" disabled={planBusy===item.planId} onClick={() => void decideApproval(item,'APPROVED')}>{planBusy===item.planId ? 'Working…' : 'Approve'}</button></div></div>)}</div></section> : null}
 
         <section className="card ai-plans-card">
-          <div className="section-head"><div><div className="card-label">ACTION PLANS</div><h2>Governed operational work</h2></div><span className="muted">Human approval remains outside the model.</span></div>
-          {!plans.length ? <p className="muted">No AI action plans yet. High-risk requests will appear here as drafts.</p> : <div className="ai-plan-list">{plans.map((plan) => <div className="ai-plan" key={plan.id}><div className="ai-plan-main"><div className="chip-row"><span className="chip">{plan.riskLevel}</span><span className="chip">Autonomy {plan.autonomyLevel}</span><span className="chip">{plan.status}</span></div><strong>{plan.toolName.replaceAll('_',' ')}</strong><p>{plan.summary}</p><small>Created {new Date(plan.createdAt).toLocaleString()} {plan.expiresAt ? `• Expires ${new Date(plan.expiresAt).toLocaleString()}` : ''} {plan.approvalId ? `• Approval ${plan.approvalId.slice(0,8)}` : ''} {plan.executedTargetId ? `• Target ${plan.executedTargetId.slice(0,8)}` : ''}</small></div><div className="ai-plan-actions">{plan.status === 'DRAFT' ? <button className="setup-secondary" disabled={planBusy===plan.id} onClick={() => void submitPlan(plan)}>{planBusy===plan.id ? 'Submitting…' : 'Submit for approval'}</button> : null}{plan.status === 'PENDING_APPROVAL' ? <span className="ai-pending-label">Awaiting approval</span> : null}{plan.status === 'APPROVED' && plan.toolName === 'create_recovery_case' ? <button className="setup-primary" disabled={planBusy===plan.id} onClick={() => void executePlan(plan)}>{planBusy===plan.id ? 'Executing…' : 'Execute approved recovery'}</button> : null}</div></div>)}</div>}
+          <div className="section-head"><div><div className="card-label">REQUESTS</div><h2>Prepared work</h2></div><span className="muted">Important work always stays under human control.</span></div>
+          {!plans.length ? <p className="muted">No AI action plans yet. High-risk requests will appear here as drafts.</p> : <div className="ai-plan-list">{plans.map((plan) => <div className="ai-plan" key={plan.id}><div className="ai-plan-main"><div className="chip-row"><span className="chip">{displayRisk(plan.riskLevel)}</span><span className="chip">{displayPlanStatus(plan.status)}</span></div><strong>{displayAction(plan.toolName)}</strong><p>{plan.summary}</p><small>Created {new Date(plan.createdAt).toLocaleString()} {plan.expiresAt ? `• Expires ${new Date(plan.expiresAt).toLocaleString()}` : ''}</small></div><div className="ai-plan-actions">{plan.status === 'DRAFT' ? <button className="setup-secondary" disabled={planBusy===plan.id} onClick={() => void submitPlan(plan)}>{planBusy===plan.id ? 'Submitting…' : 'Submit for approval'}</button> : null}{plan.status === 'PENDING_APPROVAL' ? <span className="ai-pending-label">Awaiting approval</span> : null}{plan.status === 'APPROVED' && plan.toolName === 'create_recovery_case' ? <button className="setup-primary" disabled={planBusy===plan.id} onClick={() => void executePlan(plan)}>{planBusy===plan.id ? 'Executing…' : 'Execute approved recovery'}</button> : null}</div></div>)}</div>}
         </section>
 
         <section className="grid two">
-          <section className="card"><div className="card-label">SECURITY CONTRACT</div><h2>Complete mediation</h2><p className="muted">The model sees only tools selected for the current request and authorized user. Each call is checked again at the Amaal tool boundary.</p></section>
-          <section className="card"><div className="card-label">EVIDENCE CONTRACT</div><h2>Fact vs inference</h2><p className="muted">Operational facts are labeled from ERP tool results. Recommendations and unknowns are kept distinct, reducing the risk of confident but unsupported claims.</p></section>
+          <section className="card"><div className="card-label">SAFETY</div><h2>Built-in safeguards</h2><p className="muted">Amaal AI only uses information and actions available to your account. Important changes are checked again before they are carried out.</p></section>
+          <section className="card"><div className="card-label">ANSWER QUALITY</div><h2>Facts and suggestions</h2><p className="muted">Business facts are kept separate from suggestions so you can see what is known and what is recommended.</p></section>
         </section>
       </section>
     </div>

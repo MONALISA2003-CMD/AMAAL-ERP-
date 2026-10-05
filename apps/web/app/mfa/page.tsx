@@ -107,8 +107,8 @@ export default function MfaPage() {
         {qrCode ? (
           <div className="qr-box">
             <Image src={qrCode} alt="Amaal authenticator QR code" width={240} height={240} unoptimized />
-            <p className="muted">Scan this code with Google Authenticator, Microsoft Authenticator, 1Password, or another TOTP app.</p>
-            <div className="setup-secret"><span>Manual key</span><code>{secret}</code></div>
+            <p className="muted">Scan this code with your authenticator app, such as Google Authenticator or Microsoft Authenticator.</p>
+            <div className="setup-secret"><span>Setup key</span><code>{secret}</code></div>
           </div>
         ) : null}
 
@@ -125,7 +125,7 @@ export default function MfaPage() {
 
         {error && mode === 'enroll' ? <p className="error-text" role="alert">{error}</p> : null}
         <button type="button" className="ghost-button auth-secondary" onClick={() => void authClient.signOut().then(() => router.replace('/login'))}>Use another account</button>
-        <p className="microcopy">Your authenticator secret is protected by Amaal and is never shown again after setup.</p>
+        <p className="microcopy">Your security key is protected by Amaal and is only shown during setup.</p>
       </section>
     </main>
   );

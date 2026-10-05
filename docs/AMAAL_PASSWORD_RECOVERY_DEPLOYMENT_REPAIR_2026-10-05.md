@@ -1,41 +1,29 @@
 # Amaal Password Recovery + Deployment Repair — 2026-10-05
 
-## Canonical password recovery
+## Canonical flow
 
-The recovery request now uses the current Neon Auth / Better Auth Email OTP API:
+- `/forgot-password` starts Email OTP recovery.
+- `/password-reset` redirects to `/forgot-password` for compatibility.
+- `/reset-password` handles link/token recovery when the identity provider supplies a token.
+
+## SDK contract
+
+The web app calls the current Neon Auth / Better Auth Email OTP API directly:
 
 `authClient.emailOtp.requestPasswordReset({ email })`
 
-The reset operation is:
-
 `authClient.emailOtp.resetPassword({ email, otp, password })`
 
-The deprecated `forgetPassword` API is deliberately not used.
+The deprecated `forgetPassword` endpoint is not used. The recovery helper does not manufacture its own SDK result type; it narrows the SDK result using the `in` operator so TypeScript validates the real package types.
 
-## Routes
-
-- `/forgot-password` starts Email OTP recovery.
-- `/reset-password` completes token-based recovery when the auth provider supplies a reset token.
-- `/password-reset` is a backwards-compatible alias that redirects to `/forgot-password`.
-
-## Deployment contract
-
-- GitHub `main` is the source of truth.
-- Vercel remains directly linked to GitHub.
-- Vercel Root Directory is `apps/web`.
-- No custom Ignore Build Step is required.
-- No workflow may rewrite `main` from uploaded ZIP files.
-- ZIP files are release artifacts only, never deployment triggers.
-
-## Required production test
+## Production verification
 
 1. Open `/forgot-password`.
 2. Submit the real work email.
-3. Confirm Vercel runtime logs show the current Email OTP password-reset request rather than `/api/auth/forget-password`.
+3. Check Vercel logs for the request to the Email OTP recovery endpoint; the old `/api/auth/forget-password` must not appear.
 4. Enter the six-digit code.
 5. Set a new password of 10–128 characters.
-6. Sign out.
-7. Verify the new password logs in successfully.
-8. Verify the previous password no longer works.
+6. Sign out and sign in using the new password.
+7. Confirm the previous password no longer works.
 
-The password is managed by Neon Auth. Do not update password hashes directly in application SQL.
+Passwords remain managed by Neon Auth; application SQL must never update password hashes directly.

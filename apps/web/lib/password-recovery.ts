@@ -2,11 +2,6 @@
 
 import { authClient } from './auth';
 
-type AuthResult = {
-  data?: unknown;
-  error?: { message?: string; code?: string } | null;
-};
-
 export type PasswordResetMethod = 'OTP' | 'LINK';
 
 function normalizeEmail(value: string): string {
@@ -23,29 +18,21 @@ export function validateNewPassword(password: string, confirmation: string): voi
   if (password !== confirmation) throw new Error('The new passwords do not match.');
 }
 
-function throwAuthError(result: AuthResult, fallback: string): void {
-  if (result.error) throw new Error(result.error.message || fallback);
-}
-
-function throwGenericRequestError(result: AuthResult): void {
-  // Keep recovery account-enumeration resistant.
-  if (result.error) {
-    throw new Error('If an account exists for that email, recovery instructions have been sent.');
-  }
-}
-
 export async function requestPasswordReset(value: string): Promise<{ method: PasswordResetMethod; email: string }> {
   const email = normalizeEmail(value);
 
   // Current Neon Auth / Better Auth Email OTP password-reset endpoint.
-  // The legacy password-recovery endpoint must never be used here.
-  const requestPasswordReset = authClient.emailOtp?.requestPasswordReset;
-  if (!requestPasswordReset) {
+  const emailOtp = authClient.emailOtp;
+  if (!emailOtp?.requestPasswordReset) {
     throw new Error('Email OTP password recovery is not enabled on the current Neon Auth configuration.');
   }
 
-  const result = await requestPasswordReset({ email });
-  throwGenericRequestError(result);
+  const result = await emailOtp.requestPasswordReset({ email });
+
+  if ('error' in result && result.error) {
+    // Do not disclose whether an address is registered.
+    throw new Error('If an account exists for that email, recovery instructions have been sent.');
+  }
 
   return { method: 'OTP', email };
 }
@@ -65,18 +52,20 @@ export async function resetPasswordWithOtp(
 
   validateNewPassword(password, confirmation);
 
-  const resetPassword = authClient.emailOtp?.resetPassword;
-  if (!resetPassword) {
+  const emailOtp = authClient.emailOtp;
+  if (!emailOtp?.resetPassword) {
     throw new Error('Email OTP password recovery is not enabled on the current Neon Auth configuration.');
   }
 
-  const result = await resetPassword({
+  const result = await emailOtp.resetPassword({
     email,
     otp,
     password,
   });
 
-  throwAuthError(result, 'Unable to reset the password. The code may be expired or invalid.');
+  if ('error' in result && result.error) {
+    throw new Error(result.error.message ?? 'Unable to reset the password. The code may be expired or invalid.');
+  }
 }
 
 export async function resetPasswordWithToken(
@@ -92,15 +81,12 @@ export async function resetPasswordWithToken(
 
   validateNewPassword(password, confirmation);
 
-  const resetPassword = authClient.resetPassword;
-  if (!resetPassword) {
-    throw new Error('Link-based password recovery is not enabled on the current Neon Auth configuration.');
-  }
-
-  const result = await resetPassword({
+  const result = await authClient.resetPassword({
     token: normalizedToken,
     newPassword: password,
   });
 
-  throwAuthError(result, 'Unable to reset the password. The link may be expired or invalid.');
+  if ('error' in result && result.error) {
+    throw new Error(result.error.message ?? 'Unable to reset the password. The link may be expired or invalid.');
+  }
 }

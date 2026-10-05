@@ -9,15 +9,20 @@ const passwordReset = readFileSync('apps/web/app/password-reset/page.tsx', 'utf8
 const login = readFileSync('apps/web/app/login/page.tsx', 'utf8');
 
 test('login exposes the canonical password recovery route', () => {
-  assert.match(login, /href=\"\/forgot-password\"/);
+  assert.match(login, /href="\/forgot-password"/);
 });
 
 test('recovery uses the current Neon Auth Email OTP API', () => {
-  assert.match(helper, /authClient\.emailOtp\?\.requestPasswordReset/);
-  assert.match(helper, /authClient\.emailOtp\?\.resetPassword/);
+  assert.match(helper, /emailOtp\?\.requestPasswordReset/);
+  assert.match(helper, /emailOtp\?\.resetPassword/);
   assert.doesNotMatch(helper, /forgetPassword/);
   assert.doesNotMatch(helper, /fetch\s*\(/);
   assert.doesNotMatch(helper, /\b(password_hash|update\s+.*password|insert\s+.*password)/i);
+});
+
+test('recovery uses native SDK result narrowing without a fake AuthResult type', () => {
+  assert.doesNotMatch(helper, /type\s+AuthResult/);
+  assert.match(helper, /'error'\s+in\s+result/);
 });
 
 test('new password policy is bounded and confirmation-matched', () => {
@@ -44,8 +49,4 @@ test('successful token recovery clears passwords held in React state', () => {
 
 test('legacy password-reset URL is a compatibility alias', () => {
   assert.match(passwordReset, /redirect\('\/forgot-password'\)/);
-});
-
-test('legacy recovery API is absent from the recovery helper', () => {
-  assert.doesNotMatch(helper, /client\.forgetPassword/);
 });

@@ -55,12 +55,41 @@ if (JSON.stringify(rootPkg.workspaces) !== JSON.stringify(['apps/*','packages/*'
 const vercel = readJson(join(root, 'vercel.json'));
 const render = readFileSync(join(root, 'render.yaml'), 'utf8');
 const zipSync = readFileSync(join(root, '.github/workflows/zip-sync.yml'), 'utf8');
+const pnpmWorkspace = readFileSync(join(root, 'pnpm-workspace.yaml'), 'utf8');
 if (/pnpm/i.test(`${vercel.installCommand} ${vercel.buildCommand}`)) fail('active Vercel commands still reference pnpm');
-if (!/cd apps\/web && npm install/.test(vercel.installCommand)) fail('Vercel install must remain standalone apps/web npm install');
+if (!(vercel.installCommand ?? '').includes('cd apps/web && if [ -f package-lock.json ]; then npm ci')) fail('Vercel install must use the apps/web lockfile when present');
 if (!/cd apps\/web && npm run build/.test(vercel.buildCommand)) fail('Vercel build must remain standalone apps/web npm build');
+if (!/ignoreCommand/.test(JSON.stringify(vercel))) fail('Vercel vercel.json must define an ignoreCommand to skip ZIP-only/intermediate commits');
+if (!/git diff HEAD\^ HEAD --quiet -- apps\/web packages/.test(vercel.ignoreCommand ?? '')) fail('Vercel ignoreCommand must include the web app and shared packages');
 if (/pnpm install|pnpm@/i.test(render)) fail('render.yaml contains an active pnpm deployment command');
 if (/type d \\n/.test(zipSync) || /-type d .*\\n/.test(zipSync)) fail('zip-sync workflow contains a literal backslash-n inside a shell command');
-if (!/buildCommand:\s*npm install --no-audit --no-fund --package-lock=false/.test(render)) fail('Render blueprint must use npm install --no-audit --no-fund --package-lock=false');
+if (!render.includes('buildCommand: if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi')) fail('Render blueprint must use npm with a lockfile-first install strategy');
+if (!/autoDeployTrigger:\s*checksPass/.test(render)) fail('Render services must wait for passing CI checks before automatic deployment');
+if (!/buildFilter:\s*\n\s+paths:/.test(render)) fail('Render blueprint must define build filters');
+if (!/ignoredPaths:\s*\n\s+- ['\"]\*\*\/\*\.zip['\"]/.test(render)) fail('Render build filters must explicitly ignore uploaded ZIP artifacts');
+if (!/allowBuilds:\s*\n\s+core-js:\s+true/.test(pnpmWorkspace)) fail('pnpm fallback configuration must explicitly allow core-js build scripts for pnpm 11+');
+for (const workflow of ['ci.yml', 'generate-lockfiles.yml']) {
+  if (!existsSync(join(root, '.github/workflows', workflow))) fail(`approved workflow missing: ${workflow}`);
+}
+if (!/APPROVED_WORKFLOWS/.test(zipSync) || !/ci\.yml/.test(zipSync) || !/generate-lockfiles\.yml/.test(zipSync)) fail('ZIP sync workflow must use the reviewed workflow allow-list');
+if (!/git diff --cached --name-only \| grep -Ei '\\.zip\$'/.test(zipSync)) fail('ZIP sync workflow must reject staged ZIP artifacts');
+
+const zipArtifacts = [];
+function collectZipFiles(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === '.git') continue;
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) collectZipFiles(path);
+    else if (/\.zip$/i.test(entry.name)) zipArtifacts.push(relative(root, path));
+  }
+}
+collectZipFiles(root);
+if (zipArtifacts.length) fail(`repository tree must not contain ZIP deployment artifacts: ${zipArtifacts.join(', ')}`);
+
+const resetPage = readFileSync(join(root, 'apps/web/app/reset-password/page.tsx'), 'utf8');
+const resetContent = readFileSync(join(root, 'apps/web/app/reset-password/content.tsx'), 'utf8');
+if (!/Suspense/.test(resetPage) || !/ResetPasswordContent/.test(resetPage)) fail('reset-password page must place its search-param consumer behind Suspense');
+if (!/useSearchParams/.test(resetContent)) fail('reset-password content component is missing useSearchParams');
 
 const webApi = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
 const webPage = readFileSync(join(root, 'apps/web/app/ai/page.tsx'), 'utf8');

@@ -4,9 +4,22 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    autoDeploy: true
-    buildCommand: npm install --no-audit --no-fund --package-lock=false
+    autoDeployTrigger: checksPass
+    buildCommand: if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi
     startCommand: AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts
+    buildFilter:
+      paths:
+        - services/api/**
+        - packages/**
+        - package.json
+        - package-lock.json
+        - turbo.json
+        - tsconfig.base.json
+        - tsconfig.json
+        - .npmrc
+        - .nvmrc
+      ignoredPaths:
+        - '**/*.zip'
     healthCheckPath: /ready
     envVars:
       - key: NODE_VERSION
@@ -35,8 +48,21 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    autoDeploy: true
-    buildCommand: npm install --no-audit --no-fund --package-lock=false
+    autoDeployTrigger: checksPass
+    buildCommand: if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi
+    buildFilter:
+      paths:
+        - services/outbox-worker/**
+        - packages/**
+        - package.json
+        - package-lock.json
+        - turbo.json
+        - tsconfig.base.json
+        - tsconfig.json
+        - .npmrc
+        - .nvmrc
+      ignoredPaths:
+        - '**/*.zip'
     healthCheckPath: /health
     startCommand: node --experimental-transform-types -e "const {spawn}=require('node:child_process');const http=require('node:http');const p=spawn(process.execPath,['--experimental-transform-types','services/outbox-worker/src/runner.ts'],{stdio:'inherit',env:process.env});http.createServer((req,res)=>{if(req.url==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,service:'amaal-worker'}));return;}res.writeHead(404);res.end();}).listen(Number(process.env.PORT||10000),'0.0.0.0');p.on('exit',(code)=>{if(code!==null&&code!==0)process.exit(code)});const stop=()=>p.kill('SIGTERM');process.on('SIGTERM',()=>{stop();setTimeout(()=>process.exit(0),5000)});process.on('SIGINT',()=>{stop();setTimeout(()=>process.exit(0),5000)});"
     envVars:
@@ -54,6 +80,12 @@ services:
     plan: starter
     dockerfilePath: ./services/intelligence/Dockerfile
     dockerContext: .
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - services/intelligence/**
+      ignoredPaths:
+        - '**/*.zip'
     envVars:
       - key: AMAAL_INTELLIGENCE_DATABASE_URL
         sync: false

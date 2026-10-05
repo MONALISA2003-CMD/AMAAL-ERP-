@@ -4,5 +4,8 @@ packages:
   - services/*
   - workers/*
 
-# Local pnpm workspace metadata retained for development.
-# Vercel and Render production deployment installers use npm.
+# Local pnpm workspace metadata retained for development only.
+# Production deployments use npm and never invoke pnpm.
+# pnpm 11+ blocks dependency lifecycle scripts unless explicitly allowed.
+allowBuilds:
+  core-js: true

@@ -35,6 +35,19 @@ const WORKSPACE_LABELS: Record<WorkspaceView, string> = {
   RECOVERY_OFFICER: 'Recovery Operations',
 };
 
+const APP_NAVIGATION = [
+  { key: 'command-center', label: 'Command Center', href: '/dashboard', description: 'See the health and performance of the business.' },
+  { key: 'people', label: 'People & Structure', href: '/organization', description: 'Manage people, teams, regions and shops.', permission: 'users.view' },
+  { key: 'inventory', label: 'Inventory & Devices', href: '/inventory', description: 'Control stock, devices, custody and transfers.', permission: 'inventory.view' },
+  { key: 'customers', label: 'Customers', href: '/customers', description: 'Manage customer records and ownership.', permission: 'customers.view' },
+  { key: 'sales', label: 'Sales & Receipts', href: '/sales', description: 'Record sales, payments and receipts.', permission: 'sales.view' },
+  { key: 'finance', label: 'Finance', href: '/finance', description: 'Review commissions, rewards, payments and finance rules.', permission: 'finance.view' },
+  { key: 'recovery', label: 'Recovery', href: '/recovery', description: 'Manage overdue stock and recovery work.', permission: 'recovery.view' },
+  { key: 'reports', label: 'Reports', href: '/reports', description: 'Review operational performance and comparisons.', permission: 'reports.view' },
+  { key: 'intelligence', label: 'Planning Insights', href: '/intelligence', description: 'Review forecasts, risks and planning signals.', permission: 'ai.intelligence.view' },
+  { key: 'ai', label: 'Amaal AI', href: '/ai', description: 'Ask Amaal for governed business assistance.', permission: 'ai.use' },
+] as const;
+
 const DEFAULT_MODULES: Record<WorkspaceView, readonly string[]> = {
   AGENT: ['Sell', 'Customers', 'My Stock', 'Aged Stock', 'Recovery', 'Sales', 'Commission', 'Allocation History'],
   TEAM_LEADER: ['Team Sales', 'Agents', 'Customers', 'Team Stock', 'Aged Stock', 'Recovery', 'Commission', 'Agent Comparison'],
@@ -298,6 +311,7 @@ export async function getWorkspaceSummary(
       role,
       label: definition.label,
       displayName: profile.display_name,
+      navigation: APP_NAVIGATION.filter((item) => context.roles.includes('CEO') || !item.permission || context.permissions.includes(item.permission)),
       modules: context.roles.includes('ADMIN') && !context.roles.includes('CEO')
         ? definition.modules.filter((module) => {
             const map: Record<string, string> = { 'Inventory & IMEI': 'inventory.view', 'Shop Stock': 'inventory.view', 'Team Stock': 'inventory.view', 'Stock Across Teams': 'inventory.view', 'Master Warehouse': 'inventory.view', 'Sales & Receipts': 'sales.view', 'Team Sales': 'sales.view', 'Performance': 'reports.view', 'Regional Performance': 'reports.view', 'Recovery': 'recovery.view', 'Aged Stock': 'aging.view', 'Commission': 'commissions.view' };

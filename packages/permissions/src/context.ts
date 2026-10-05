@@ -11,6 +11,24 @@ export async function loadAuthorizationContext(
   );
   const roleKeys = roles.map((row) => row.role);
 
+  // CEO is company-wide. Do not make the CEO bootstrap depend on the
+  // narrower region/team/shop graph used by operational roles.
+  if (roleKeys.includes('CEO')) {
+    const permissions = await tx.query<{ permission_key: PermissionKey }>(
+      `select distinct permission_key from public.role_permissions where role='CEO'`,
+      [],
+    );
+    return {
+      userId,
+      roles: roleKeys,
+      permissions: permissions.map((row) => row.permission_key),
+      regionIds: [],
+      subregionIds: [],
+      teamIds: [],
+      shopIds: [],
+    };
+  }
+
   const [rolePermissions, adminProfile, adminProfilePermissions, regions, directSubregions, directTeams] = await Promise.all([
     tx.query<{ permission_key: PermissionKey }>(
       `select distinct rp.permission_key

@@ -45,11 +45,28 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   return payload;
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const tokenResponse = await authClient.token();
-  const token = tokenResponse.data?.token ?? null;
-  if (!token) throw new Error('A secure session is required.');
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
+async function getSessionTokenWithRetry(): Promise<string> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const tokenResponse = await authClient.token();
+      const token = tokenResponse.data?.token ?? null;
+      if (token) return token;
+      lastError = new Error('A secure session is required.');
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('A secure session is required.');
+    }
+    if (attempt < 2) await wait(150 * (attempt + 1));
+  }
+  throw lastError ?? new Error('A secure session is required.');
+}
+
+export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = await getSessionTokenWithRetry();
   const mfaAssertion = getMfaAssertion();
   return fetchJson<T>(path, {
     ...init,
@@ -59,6 +76,44 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       ...(init.headers ?? {}),
     },
   });
+}
+
+export type AmaalAuthorization = {
+  roles: string[]; permissions: string[]; regionIds: string[]; subregionIds: string[]; teamIds: string[]; shopIds: string[];
+};
+
+export type AmaalBootstrap = {
+  user: { id: string; email: string | null };
+  accessState: 'ACTIVE' | 'PENDING_ASSIGNMENT' | 'SUSPENDED';
+  authorization: AmaalAuthorization;
+  mfaRequired: boolean;
+  mfaVerified: boolean;
+  workspace: {
+    role: string;
+    label: string;
+    displayName: string;
+    modules: string[];
+    navigation: Array<{ key: string; label: string; href: string; description: string; permission?: string }>;
+    visibility: { sales: boolean; inventory: boolean; recovery: boolean; customers: boolean; commission: boolean };
+    authorization: AmaalAuthorization;
+    status: 'OPERATIONAL' | 'FOUNDATION_ONLY';
+    kpis: {
+      sales: { today: { units: number; revenue: number }; week: { units: number; revenue: number }; month: { units: number; revenue: number } };
+      inventory: { currentUnits: number };
+      aging: { agedUnits: number; criticalUnits: number };
+      recovery: { openCases: number; overdueCases: number; highPriorityCases: number };
+      customers: { total: number };
+      commission: { today: number; month: number };
+      notifications: { unread: number };
+    };
+    hierarchy: { regions: string; managers: string; teams: string; agents: string; shops: string };
+    system: { outboxPending: number; realtimeEvents: number; latestSequence: number };
+    generatedAt: string;
+  };
+};
+
+export async function getAmaalBootstrap(): Promise<AmaalBootstrap> {
+  return apiFetch<AmaalBootstrap>('/v1/bootstrap');
 }
 
 export type AmaalSetupStatus = {

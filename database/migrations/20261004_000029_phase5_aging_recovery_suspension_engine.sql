@@ -32,7 +32,6 @@ join public.permissions p on p.key='recovery.close'
 on conflict do nothing;
 insert into public.role_permissions(role,permission_key)
 values ('CEO'::public.role_key,'aging.view'),('CEO'::public.role_key,'aging.manage'),('CEO'::public.role_key,'recovery.reinstate')
-where not exists (select 1 from public.role_permissions where role='CEO'::public.role_key and permission_key='recovery.reinstate')
 on conflict do nothing;
 insert into public.admin_profile_permissions(profile_key,permission_key)
 select v.profile_key,p.key

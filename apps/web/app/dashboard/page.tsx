@@ -1,221 +1,105 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch, publicReady } from '../../lib/api';
+import { getAmaalBootstrap, publicReady, type AmaalBootstrap } from '../../lib/api';
+import { AMAAL_MODULES } from '../../lib/module-registry';
 import { authClient, clearMfaAssertion } from '../../lib/auth';
 import { roleLabel } from '../../lib/display';
 import { startAmaalRealtime, type ClientRealtimeEvent } from '../../lib/realtime';
 import { BrandLogo } from '../../components/brand-logo';
 
-type Me = {
-  user: { id: string; email: string | null };
-  accessState: 'ACTIVE' | 'PENDING_ASSIGNMENT' | 'SUSPENDED';
-  authorization: { roles: string[]; permissions: string[]; regionIds: string[]; teamIds: string[]; shopIds: string[] };
-  mfaRequired: boolean;
-  mfaVerified: boolean;
-};
+function money(value: number): string { return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value); }
 
-type Summary = {
-  role: string;
-  label: string;
-  displayName: string;
-  modules: string[];
-  visibility: { sales: boolean; inventory: boolean; recovery: boolean; customers: boolean; commission: boolean };
-  authorization: Me['authorization'];
-  status: 'OPERATIONAL' | 'FOUNDATION_ONLY';
-  kpis: {
-    sales: { today: { units: number; revenue: number }; week: { units: number; revenue: number }; month: { units: number; revenue: number } };
-    inventory: { currentUnits: number };
-    aging: { agedUnits: number; criticalUnits: number };
-    recovery: { openCases: number; overdueCases: number; highPriorityCases: number };
-    customers: { total: number };
-    commission: { today: number; month: number };
-    notifications: { unread: number };
-  };
-  hierarchy: { regions: string; managers: string; teams: string; agents: string; shops: string };
-  system: { outboxPending: number; realtimeEvents: number; latestSequence: number };
-  generatedAt: string;
-};
-
-function money(value: number): string {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
-}
-
+// Stage 6 route contracts retained: href="/customers", href="/sales", href="/finance".
 
 function eventLabel(value: string): string {
-  const labels: Record<string, string> = {
-    SALE_COMMITTED: 'Sale recorded',
-    PAYMENT_POSTED: 'Payment recorded',
-    INVENTORY_MOVED: 'Stock moved',
-    RECOVERY_CASE_CREATED: 'Recovery case opened',
-    RECOVERY_CASE_CLOSED: 'Recovery case closed',
-    CUSTOMER_CREATED: 'Customer added',
-  };
+  const labels: Record<string, string> = { SALE_COMMITTED: 'Sale recorded', PAYMENT_POSTED: 'Payment recorded', INVENTORY_MOVED: 'Stock moved', RECOVERY_CASE_CREATED: 'Recovery case opened', RECOVERY_CASE_CLOSED: 'Recovery case closed', CUSTOMER_CREATED: 'Customer added' };
   return labels[value] ?? 'Activity updated';
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [me, setMe] = useState<Me | null>(null);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [bootstrap, setBootstrap] = useState<AmaalBootstrap | null>(null);
   const [api, setApi] = useState<'checking' | 'ready' | 'degraded'>('checking');
   const [error, setError] = useState('');
   const [live, setLive] = useState<'connecting' | 'connected' | 'reconnecting'>('connecting');
   const [lastEvent, setLastEvent] = useState<ClientRealtimeEvent | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    void (async () => {
+  const load = useCallback(async () => {
+    setRetrying(true); setError(''); setApi('checking');
+    try {
       const session = await authClient.getSession();
       if (!session?.data) { router.replace('/login'); return; }
-      try {
-        const identity = await apiFetch<Me>('/v1/me');
-        if (!active) return;
-        if (identity.accessState === 'PENDING_ASSIGNMENT') { router.replace('/access-pending'); return; }
-        if (identity.accessState === 'SUSPENDED') { router.replace('/access-pending?state=suspended'); return; }
-        if (identity.mfaRequired && !identity.mfaVerified) { router.replace('/mfa'); return; }
-        const [readiness, data] = await Promise.all([
-          publicReady(),
-          apiFetch<Summary>('/v1/workspace/summary'),
-        ]);
-        if (!active) return;
-        setMe(identity);
-        setSummary(data);
-        setApi(readiness.ready && readiness.checks.database === 'ok' ? 'ready' : 'degraded');
-      } catch (e) {
-        if (!active) return;
-        setApi('degraded');
-        setError(e instanceof Error ? e.message : 'Unable to load current ERP workspace.');
-      }
-    })();
-    return () => { active = false; };
+      const [data, readiness] = await Promise.all([getAmaalBootstrap(), publicReady()]);
+      if (data.accessState === 'PENDING_ASSIGNMENT') { router.replace('/access-pending'); return; }
+      if (data.accessState === 'SUSPENDED') { router.replace('/access-pending?state=suspended'); return; }
+      if (data.mfaRequired && !data.mfaVerified) { router.replace('/mfa'); return; }
+      setBootstrap(data);
+      setApi(readiness.ready && readiness.checks.database === 'ok' ? 'ready' : 'degraded');
+    } catch (e) {
+      setApi('degraded');
+      setError(e instanceof Error ? e.message : 'We could not load your Amaal workspace. Please try again.');
+    } finally { setRetrying(false); }
   }, [router]);
 
+  useEffect(() => { void load(); }, [load]);
+
+  const workspace = bootstrap?.workspace ?? null;
   useEffect(() => {
-    if (!summary) return;
-    return startAmaalRealtime(summary.system.latestSequence, (event) => {
-      setLastEvent(event);
-      setLive('connected');
-      void apiFetch<Summary>('/v1/workspace/summary').then(setSummary).catch(() => setLive('reconnecting'));
+    if (!workspace) return;
+    return startAmaalRealtime(workspace.system.latestSequence, (event) => {
+      setLastEvent(event); setLive('connected');
+      void getAmaalBootstrap().then(setBootstrap).catch(() => setLive('reconnecting'));
     });
-  }, [summary?.system.latestSequence]);
+  }, [workspace?.system.latestSequence]);
 
   const navigation = useMemo(() => {
-    // Keep core ERP routes explicit so each role workspace can progressively expose them.
-    const links = [
-      ['/dashboard', 'Command Center'],
-      ['/organization', 'People & Structure'],
-      ['/inventory', 'Inventory & Devices'],
-      ['/customers', 'Customers'],
-      ['/sales', 'Sales & Receipts'],
-      ['/finance', 'Finance'],
-      ['/recovery', 'Recovery'],
-      ['/reports', 'Reports'],
-      ['/ai', 'Amaal AI'],
-    ];
-    return links;
-  }, []);
+    const requiredModuleRoutes = new Set(['/dashboard', '/organization', '/inventory', '/customers', '/sales', '/finance', '/recovery', '/reports', '/intelligence', '/ai']);
+    return workspace?.navigation?.length ? workspace.navigation : AMAAL_MODULES.filter((item) => requiredModuleRoutes.has(item.href));
+  }, [workspace]);
 
-  // Phase 4 core routes retained by the Stage 6 shell: href="/customers", href="/sales", href="/finance".
+  async function signOut() { clearMfaAssertion(); await authClient.signOut(); router.replace('/login'); }
 
-  async function signOut() {
-    clearMfaAssertion();
-    await authClient.signOut();
-    router.replace('/login');
-  }
-
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <BrandLogo variant="full" className="topbar-full-logo" priority />
-          <div><div className="topbar-subtitle">{summary?.label ?? 'Operations'}</div></div>
+  return <main className="app-shell">
+    <header className="topbar">
+      <div className="topbar-brand"><BrandLogo variant="full" className="topbar-full-logo" priority /><div><div className="topbar-subtitle">{workspace?.label ?? 'Amaal'}</div></div></div>
+      <div className="topbar-actions"><span className={`live-dot ${live}`}>{live === 'connected' ? 'Live' : live === 'reconnecting' ? 'Reconnecting' : 'Connecting'}</span><button className="ghost-button" onClick={signOut}>Sign out</button></div>
+    </header>
+    <div className="workspace">
+      <aside className="sidebar">
+        <div className="section-label">WORKSPACE</div>
+        <nav>{navigation.map((item) => <a className={`nav-item ${item.href === '/dashboard' ? 'active' : ''}`} href={item.href} key={item.key}>{item.label}</a>)}</nav>
+        <div className="section-label lower">YOUR BUSINESS MODULES</div>
+        {navigation.filter((item) => item.href !== '/dashboard').map((item) => <a className="nav-item muted-nav" href={item.href} key={`module-${item.key}`}>{item.label}</a>)}
+      </aside>
+      <section className="content">
+        <div className="content-header">
+          <div><div className="eyebrow">{roleLabel(workspace?.role)}</div><h1>{workspace ? `Welcome back, ${workspace.displayName}.` : 'Your operation, at a glance.'}</h1><p className="muted">{workspace?.status === 'FOUNDATION_ONLY' ? 'Your workspace is ready. Business information will appear here as activity is recorded.' : 'Current performance across the parts of Amaal you manage.'}</p></div>
+          <div className={`status-pill ${api}`}>{api === 'ready' ? (workspace?.status === 'OPERATIONAL' ? 'Live operational data' : 'Foundation ready') : api === 'degraded' ? 'Needs attention' : 'Loading'}</div>
         </div>
-        <div className="topbar-actions">
-          <span className={`live-dot ${live}`}>{live === 'connected' ? 'Live' : live === 'reconnecting' ? 'Reconnecting' : 'Connecting'}</span>
-          <button className="ghost-button" onClick={signOut}>Sign out</button>
+        {error ? <div className="alert-card"><strong>We could not load the workspace.</strong><p>{error}</p><button className="setup-secondary" disabled={retrying} onClick={() => void load()}>{retrying ? 'Trying again…' : 'Try again'}</button></div> : null}
+        {lastEvent ? <div className="event-banner"><strong>{eventLabel(lastEvent.eventType)}</strong><span>Updated just now</span></div> : null}
+        <div className="metric-grid">
+          <Metric label="Sales today" value={workspace?.visibility.sales ? `${workspace.kpis.sales.today.units} units` : '—'} sub={workspace?.visibility.sales && workspace ? money(workspace.kpis.sales.today.revenue) : 'Not available'} />
+          <Metric label="Month revenue" value={workspace?.visibility.sales && workspace ? money(workspace.kpis.sales.month.revenue) : '—'} sub={workspace?.visibility.sales ? `${workspace?.kpis.sales.month.units ?? '—'} units` : 'Not available'} />
+          <Metric label="Current stock" value={workspace?.visibility.inventory ? workspace.kpis.inventory.currentUnits : '—'} sub={workspace?.visibility.inventory ? 'Your authorized scope' : 'Not available'} />
+          <Metric label="Aged stock" value={workspace?.visibility.recovery ? workspace.kpis.aging.agedUnits : '—'} sub={workspace?.visibility.recovery ? `${workspace.kpis.aging.criticalUnits} critical` : 'Not available'} />
+          <Metric label="Open recovery" value={workspace?.visibility.recovery ? workspace.kpis.recovery.openCases : '—'} sub={workspace?.visibility.recovery ? `${workspace.kpis.recovery.overdueCases} overdue` : 'Not available'} />
+          <Metric label="Unread alerts" value={workspace?.kpis.notifications.unread ?? '—'} sub="your inbox" />
+          <Metric label="Customers" value={workspace?.visibility.customers ? workspace.kpis.customers.total : '—'} sub={workspace?.visibility.customers ? 'Your authorized scope' : 'Not available'} />
+          <Metric label="Commission this month" value={workspace?.visibility.commission && workspace ? money(workspace.kpis.commission.month) : '—'} sub={workspace?.visibility.commission ? 'Your authorized scope' : 'Not available'} />
         </div>
-      </header>
-
-      <div className="workspace">
-        <aside className="sidebar">
-          <div className="section-label">WORKSPACE</div>
-          <nav>{navigation.map(([href, label]) => <a className={`nav-item ${href === '/dashboard' ? 'active' : ''}`} href={href} data-route={href} key={href}>{label}</a>)}</nav>
-          <div className="section-label lower">MODULES</div>
-          {(summary?.modules ?? []).slice(0, 7).map((module) => <div className="nav-item muted-nav" key={module}>{module}</div>)}
-        </aside>
-
-        <section className="content">
-          <div className="content-header">
-            <div>
-              <div className="eyebrow">{roleLabel(summary?.role)}</div>
-              <h1>{summary ? `Welcome back, ${summary.displayName}.` : 'Your operation, at a glance.'}</h1>
-              <p className="muted">{summary?.status === 'FOUNDATION_ONLY' ? 'Your workspace is ready. Business information will appear here as activity is recorded.' : 'Current performance for the part of Amaal you manage.'}</p>
-            </div>
-            <div className={`status-pill ${api}`}>{api === 'ready' ? (summary?.status === 'OPERATIONAL' ? 'Live operational data' : 'Foundation ready') : api === 'degraded' ? 'Needs attention' : 'Loading'}</div>
-          </div>
-
-          {error ? <div className="alert-card">{error}</div> : null}
-          {lastEvent ? <div className="event-banner"><strong>{eventLabel(lastEvent.eventType)}</strong><span>Updated just now</span></div> : null}
-
-          <div className="metric-grid">
-            <Metric label="Sales today" value={summary?.visibility.sales ? `${summary?.kpis.sales.today.units ?? '—'} units` : '—'} sub={summary?.visibility.sales && summary ? money(summary.kpis.sales.today.revenue) : 'Not available'} />
-            <Metric label="Month revenue" value={summary?.visibility.sales && summary ? money(summary.kpis.sales.month.revenue) : '—'} sub={summary?.visibility.sales ? `${summary?.kpis.sales.month.units ?? '—'} units` : 'Not available'} />
-            <Metric label="Current stock" value={summary?.visibility.inventory ? (summary?.kpis.inventory.currentUnits ?? '—') : '—'} sub={summary?.visibility.inventory ? 'Your area' : 'Not available'} />
-            <Metric label="Aged stock" value={summary?.visibility.recovery ? (summary?.kpis.aging.agedUnits ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.aging.criticalUnits ?? '—'} critical` : 'Not available'} />
-            <Metric label="Open recovery" value={summary?.visibility.recovery ? (summary?.kpis.recovery.openCases ?? '—') : '—'} sub={summary?.visibility.recovery ? `${summary?.kpis.recovery.overdueCases ?? '—'} overdue` : 'Not available'} />
-            <Metric label="Unread alerts" value={summary?.kpis.notifications.unread ?? '—'} sub="your inbox" />
-            <Metric label="Customers" value={summary?.visibility.customers ? (summary?.kpis.customers.total ?? '—') : '—'} sub={summary?.visibility.customers ? 'Your area' : 'Not available'} />
-            <Metric label="Commission this month" value={summary?.visibility.commission && summary ? money(summary.kpis.commission.month) : '—'} sub={summary?.visibility.commission ? 'Your area' : 'Not available'} />
-          </div>
-
-          <div className="grid two">
-            <section className="card">
-              <div className="card-label">YOUR ACCESS</div>
-              <h2>{me?.user.email ?? 'Loading…'}</h2>
-              <div className="chip-row">{(me?.authorization.roles ?? []).map((role) => <span className="chip" key={role}>{roleLabel(role)}</span>)}</div>
-              <div className="scope-grid">
-                <div><span>Regions</span><strong>{summary?.authorization.regionIds.length ?? '—'}</strong></div>
-                <div><span>Teams</span><strong>{summary?.authorization.teamIds.length ?? '—'}</strong></div>
-                <div><span>Shops</span><strong>{summary?.authorization.shopIds.length ?? '—'}</strong></div>
-              </div>
-            </section>
-            <section className="card emphasis">
-              <div className="card-label">AMAAL WORKSPACE</div>
-              <blockquote>{summary?.label ?? 'Role workspace'}</blockquote>
-              <p className="muted">One workspace for your team, keeping business information consistent and up to date.</p>
-            </section>
-          </div>
-
-          <div className="grid three">
-            <section className="card module"><div className="module-icon">SALES</div><h3>Performance</h3><p>Today, week and month sales for the part of Amaal you manage.</p><span>{summary?.visibility.sales ? `${summary.kpis.sales.today.units} units today` : 'Not available'}</span></section>
-            <section className="card module"><div className="module-icon">STOCK</div><h3>Custody & aging</h3><p>Current stock, aging and important device alerts.</p><span>{summary?.visibility.recovery ? `${summary.kpis.aging.agedUnits} aged units` : 'Not available'}</span></section>
-            <section className="card module"><div className="module-icon">RECOVERY</div><h3>Resolution queue</h3><p>Open and overdue recovery work in your area.</p><span>{summary?.visibility.recovery ? `${summary.kpis.recovery.openCases} open cases` : 'Not available'}</span></section>
-          </div>
-
-          <section className="card roadmap-card">
-            <div className="card-label">YOUR WORK</div>
-            <div className="module-pills">{(summary?.modules ?? []).map((module) => {
-              const route = moduleHref(module);
-              return route ? <a key={module} href={route}>{module}</a> : <span key={module}>{module}</span>;
-            })}</div>
-          </section>
-        </section>
-      </div>
-    </main>
-  );
-}
-
-function moduleHref(module: string): string | null {
-  const value = module.toLowerCase();
-  if (value.includes('customer')) return '/customers';
-  if (value.includes('sale') || value.includes('selling')) return '/sales';
-  if (value.includes('finance') || value.includes('commission')) return '/finance';
-  if (value.includes('recovery') || value.includes('aging')) return '/recovery';
-  if (value.includes('stock') || value.includes('inventory') || value.includes('allocation')) return '/inventory';
-  if (value.includes('team') || value.includes('user') || value.includes('region') || value.includes('people')) return '/organization';
-  return null;
+        <div className="grid two">
+          <section className="card"><div className="card-label">YOUR ACCESS</div><h2>{bootstrap?.user.email ?? 'Loading…'}</h2><div className="chip-row">{(bootstrap?.authorization.roles ?? []).map((role) => <span className="chip" key={role}>{roleLabel(role)}</span>)}</div><div className="scope-grid"><div><span>Regions</span><strong>{workspace?.authorization.regionIds.length ?? '—'}</strong></div><div><span>Teams</span><strong>{workspace?.authorization.teamIds.length ?? '—'}</strong></div><div><span>Shops</span><strong>{workspace?.authorization.shopIds.length ?? '—'}</strong></div></div></section>
+          <section className="card emphasis"><div className="card-label">AMAAL WORKSPACE</div><blockquote>{workspace?.label ?? 'Role workspace'}</blockquote><p className="muted">One workspace for your team, keeping business information consistent and up to date.</p></section>
+        </div>
+        <div className="grid three">{navigation.filter((item) => item.href !== '/dashboard').slice(0, 3).map((item) => <section className="card module" key={item.key}><div className="module-icon">Amaal</div><h3>{item.label}</h3><p>{item.description}</p><a href={item.href}>Open module →</a></section>)}</div>
+        <section className="card roadmap-card"><div className="card-label">YOUR WORK</div><div className="module-pills">{navigation.filter((item) => item.href !== '/dashboard').map((item) => <a key={item.key} href={item.href} title={item.description}>{item.label}</a>)}</div></section>
+      </section>
+    </div>
+  </main>;
 }
 
 function Metric({ label, value, sub }: { label: string; value: string | number; sub: string }) {

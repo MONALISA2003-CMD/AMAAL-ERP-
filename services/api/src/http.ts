@@ -7,6 +7,7 @@ import { loadAuthorizationContext } from '@amaal/permissions';
 import type { ApprovalType } from '@amaal/approvals';
 import { SetupError, activateAmaalCeo } from './setup.ts';
 import { getWorkspaceSummary } from './workspace.ts';
+import { ensureRuntimeSchema } from './runtime-schema.ts';
 import { getIntelligenceStatus, getIntelligenceSummary, listIntelligencePredictions } from './intelligence.ts';
 import { installRealtimeServer, listRealtimeEvents } from './realtime.ts';
 import { MfaError, confirmMfaEnrollment, getMfaStatus, startMfaEnrollment, verifyMfaCode, verifyMfaAssertion } from './mfa.ts';
@@ -205,7 +206,7 @@ function requestPath(req: IncomingMessage): string {
 
 function isPotentialApiRoute(method: string | undefined, pathname: string): boolean {
   if (!pathname.startsWith('/v1/')) return false;
-  if (method === 'GET' && (pathname === '/v1/workspace/summary' || pathname === '/v1/realtime/events' || pathname === '/v1/reports/operational' || pathname === '/v1/reports/operational.csv' || pathname === '/v1/ai/status' || pathname === '/v1/ai/action-plans' || pathname === '/v1/ai/approvals' || pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory' || pathname === '/v1/org/invitations/preview' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/inventory/warehouses' || pathname === '/v1/inventory/summary' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/imeis' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/customers' || pathname === '/v1/sales' || pathname === '/v1/finance/commissions' || pathname === '/v1/finance/bonuses' || pathname === '/v1/finance/receipts' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/aging/policies' || pathname === '/v1/aging/queue' || pathname === '/v1/recovery/cases' || pathname === '/v1/recovery/suspensions' || /^\/v1\/(customers|sales)\/[^/]+$/.test(pathname) || /^\/v1\/recovery\/cases\/[^/]+$/.test(pathname) || /^\/v1\/sales\/[^/]+\/payments$/.test(pathname) || /^\/v1\/finance\/receipts\/[^/]+$/.test(pathname))) return true;
+  if (method === 'GET' && (pathname === '/v1/workspace/summary' || pathname === '/v1/realtime/events' || pathname === '/v1/reports/operational' || pathname === '/v1/reports/operational.csv' || pathname === '/v1/ai/status' || pathname === '/v1/ai/action-plans' || pathname === '/v1/ai/approvals' || pathname === '/v1/auth/config' || pathname === '/v1/setup/status' || pathname === '/v1/me' || pathname === '/v1/me/scope' || pathname === '/v1/bootstrap' || pathname === '/v1/mfa/status' || pathname === '/v1/org/directory' || pathname === '/v1/org/invitations/preview' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/inventory/warehouses' || pathname === '/v1/inventory/summary' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/imeis' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/customers' || pathname === '/v1/sales' || pathname === '/v1/finance/commissions' || pathname === '/v1/finance/bonuses' || pathname === '/v1/finance/receipts' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/aging/policies' || pathname === '/v1/aging/queue' || pathname === '/v1/recovery/cases' || pathname === '/v1/recovery/suspensions' || /^\/v1\/(customers|sales)\/[^/]+$/.test(pathname) || /^\/v1\/recovery\/cases\/[^/]+$/.test(pathname) || /^\/v1\/sales\/[^/]+\/payments$/.test(pathname) || /^\/v1\/finance\/receipts\/[^/]+$/.test(pathname))) return true;
   if (method === 'GET' && /^\/v1\/inventory\/imeis\/[^/]+\/movements$/.test(pathname)) return true;
   if (method === 'POST' && (pathname === '/v1/aging/policies' || pathname === '/v1/setup/initialize' || pathname === '/v1/setup/activate-ceo' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify' || pathname === '/v1/sales' || pathname === '/v1/sales/cash' || pathname === '/v1/inventory/allocations' || pathname === '/v1/inventory/returns' || pathname === '/v1/inventory/corrections' || pathname === '/v1/inventory/receipts' || pathname === '/v1/recovery/cases' || pathname === '/v1/ai/chat' || pathname === '/v1/ai/conversations' || pathname === '/v1/approvals' || pathname === '/v1/org/regions' || pathname === '/v1/org/subregions' || pathname === '/v1/org/teams' || pathname === '/v1/org/shops' || pathname === '/v1/org/people' || pathname === '/v1/org/admins' || pathname === '/v1/org/admin-invitations' || pathname === '/v1/org/invitations' || pathname === '/v1/org/invitations/accept' || pathname === '/v1/catalog/brands' || pathname === '/v1/catalog/products' || pathname === '/v1/catalog/variants' || pathname === '/v1/catalog/price-policies' || pathname === '/v1/customers' || pathname === '/v1/customers/assign' || pathname === '/v1/finance/commission-policies' || pathname === '/v1/finance/bonus-policies' || pathname === '/v1/finance/payment-adjustments' || pathname === '/v1/finance/loan-providers' || pathname === '/v1/inventory/reconciliations' || pathname === '/v1/recovery/cases' || /^\/v1\/(customers|sales)\/[^/]+\/(update|reverse)$/.test(pathname) || /^\/v1\/inventory\/reconciliations\/[^/]+\/(scan|finalize)$/.test(pathname) || /^\/v1\/finance\/loan-providers\/[^/]+\/archive$/.test(pathname))) return true;
   if (method !== 'POST') return false;
@@ -223,11 +224,16 @@ function isMfaEnforced(): boolean {
 async function getAmaalAccessState(services: ReturnType<typeof createApiServices>, userId: string, bannedClaim: boolean | null, roles: readonly string[]): Promise<'ACTIVE'|'PENDING_ASSIGNMENT'|'SUSPENDED'> {
   if (bannedClaim === true) return 'SUSPENDED';
 
-  const suspended = await services.pool.query<{ user_id: string }>({
-    text: `select user_id from public.business_access_suspensions where user_id=$1 and status='ACTIVE' limit 1`,
-    values: [userId],
-  } as any);
-  if (suspended.length) return 'SUSPENDED';
+  runtimeSchemaReady ??= ensureRuntimeSchema(services.pool);
+  await runtimeSchemaReady;
+  const relation = await services.pool.query<{ exists: boolean }>(`select to_regclass('public.business_access_suspensions') is not null as exists`);
+  if (relation[0]?.exists) {
+    const suspended = await services.pool.query<{ user_id: string }>({
+      text: `select user_id from public.business_access_suspensions where user_id=$1 and status='ACTIVE' limit 1`,
+      values: [userId],
+    } as any);
+    if (suspended.length) return 'SUSPENDED';
+  }
 
   const profileRows = await services.pool.query<{ status: string | null }>({
     text: `select status::text as status from public.profiles where user_id=$1 limit 1`,
@@ -237,6 +243,32 @@ async function getAmaalAccessState(services: ReturnType<typeof createApiServices
   if (profileStatus === 'SUSPENDED') return 'SUSPENDED';
   if (profileStatus !== 'ACTIVE' || roles.length === 0) return 'PENDING_ASSIGNMENT';
   return 'ACTIVE';
+}
+
+async function getProtectedContext(
+  services: ReturnType<typeof createApiServices>,
+  requestId: string,
+  user: { id: string; banned?: boolean | null; sessionId?: string | null },
+  mfaAssertion: string | undefined,
+) {
+  const context = await services.transactions.withTransaction({ requestId, actorUserId: user.id }, (tx) => loadAuthorizationContext(tx, user.id));
+  const accessState = await getAmaalAccessState(services, user.id, typeof user.banned === 'boolean' ? user.banned : null, context.roles);
+  const privileged = context.roles.includes('CEO') || context.roles.includes('ADMIN');
+  const mfaRequired = privileged && mfaEnforced;
+  const mfaVerified = !mfaRequired || verifyMfaAssertion(mfaAssertion, user.id, user.sessionId);
+  return { context, accessState, privileged, mfaRequired, mfaVerified };
+}
+
+function rejectProtectedAccess(res: ServerResponse, requestId: string, state: Awaited<ReturnType<typeof getProtectedContext>>): boolean {
+  if (state.accessState !== 'ACTIVE') {
+    json(res, 403, { error: state.accessState === 'SUSPENDED' ? 'ACCOUNT_SUSPENDED' : 'ACCESS_PENDING', message: state.accessState === 'SUSPENDED' ? 'Your Amaal account is suspended.' : 'Your account is recognized, but your Amaal access is not ready yet. Please contact an administrator.', requestId });
+    return true;
+  }
+  if (mfaEnforced && state.privileged && !state.mfaVerified) {
+    json(res, 403, { error: 'MFA_REQUIRED', message: 'Please complete the extra sign-in step before continuing.', requestId, mfaRequired: true });
+    return true;
+  }
+  return false;
 }
 
 export function createApiServer() {
@@ -419,11 +451,6 @@ export function createApiServer() {
 
       const mfaAssertion = typeof req.headers['x-amaal-mfa-assertion'] === 'string' ? req.headers['x-amaal-mfa-assertion'] : undefined;
 
-      if (req.method === 'GET' && pathname === '/v1/workspace/summary') {
-        const summary = await getWorkspaceSummary(services, requestId, user.id);
-        json(res, 200, { requestId, ...summary as Record<string, unknown> });
-        return;
-      }
       if (req.method === 'GET' && pathname === '/v1/reports/operational') {
         const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
         const report = await getOperationalReport(services, requestId, user.id, {
@@ -541,19 +568,31 @@ export function createApiServer() {
         return;
       }
 
+      const protectedState = await getProtectedContext(services, requestId, user, mfaAssertion);
+
       if(req.method==='GET'&&(pathname==='/v1/me'||pathname==='/v1/me/scope')){
-        const scope = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
-        const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null,scope.roles);
-        const privileged = scope.roles.includes('CEO') || scope.roles.includes('ADMIN');
-        const mfaRequired = privileged && mfaEnforced;
-        const mfaVerified = !mfaRequired || verifyMfaAssertion(mfaAssertion, user.id, user.sessionId);
-        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,accessState,mfaRequired,mfaVerified}); return; }
-        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,accessState,mfaRequired,mfaVerified}); return;
+        const scope = protectedState.context;
+        if(pathname==='/v1/me/scope'){ json(res,200,{requestId,authorization:scope,accessState:protectedState.accessState,mfaRequired:protectedState.mfaRequired,mfaVerified:protectedState.mfaVerified}); return; }
+        json(res,200,{requestId,user:{id:user.id,email:user.email},authorization:scope,accessState:protectedState.accessState,mfaRequired:protectedState.mfaRequired,mfaVerified:protectedState.mfaVerified}); return;
       }
 
-      const context = await services.transactions.withTransaction({requestId,actorUserId:user.id}, async (tx) => loadAuthorizationContext(tx,user.id));
-      const accessState = await getAmaalAccessState(services,user.id,typeof user.banned==='boolean'?user.banned:null,context.roles);
-      const privileged = context.roles.includes('CEO') || context.roles.includes('ADMIN');
+      if (req.method === 'GET' && pathname === '/v1/bootstrap') {
+        if (rejectProtectedAccess(res, requestId, protectedState)) return;
+        const workspace = await getWorkspaceSummary(services, requestId, user.id);
+        json(res, 200, { requestId, user: { id: user.id, email: user.email }, accessState: protectedState.accessState, authorization: protectedState.context, mfaRequired: protectedState.mfaRequired, mfaVerified: protectedState.mfaVerified, workspace });
+        return;
+      }
+
+      const context = protectedState.context;
+      const accessState = protectedState.accessState;
+      const privileged = protectedState.privileged;
+
+      if (req.method === 'GET' && pathname === '/v1/workspace/summary') {
+        if (rejectProtectedAccess(res, requestId, protectedState)) return;
+        const summary = await getWorkspaceSummary(services, requestId, user.id);
+        json(res, 200, { requestId, ...summary as Record<string, unknown> });
+        return;
+      }
       const onboardingAllowed = pathname === '/v1/org/invitations/accept' || pathname === '/v1/mfa/status' || pathname === '/v1/mfa/enroll/start' || pathname === '/v1/mfa/enroll/confirm' || pathname === '/v1/mfa/verify';
       if (accessState !== 'ACTIVE' && !onboardingAllowed) {
         json(res,403,{error:accessState==='SUSPENDED'?'ACCOUNT_SUSPENDED':'ACCESS_PENDING',message:accessState==='SUSPENDED'?'Your Amaal account is suspended.':'Your account is recognized, but your Amaal access is not ready yet. Please contact an administrator.',requestId});

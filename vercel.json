@@ -4,5 +4,5 @@
   "installCommand": "cd apps/web && if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi",
   "buildCommand": "cd apps/web && npm run build",
   "outputDirectory": "apps/web/.next",
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet -- apps/web packages package.json package-lock.json turbo.json tsconfig.base.json tsconfig.json vercel.json .nvmrc"
+  "ignoreCommand": "bash scripts/vercel-ignore-build.sh"
 }

@@ -36,3 +36,7 @@ The Vercel project settings were updated directly for Node 24, lockfile-first np
 Render's repository Blueprint is corrected here. Existing Render services retain their stored dashboard configuration until the Blueprint is synced/applied; no Render live configuration change is claimed in this release archive.
 
 A full dependency build could not be completed inside this packaging environment because registry resolution timed out. The previous Vercel provider build had already demonstrated dependency installation and compilation succeeded through TypeScript; the remaining blocker was the `/reset-password` prerender failure, which this release fixes and statically validates. The authoritative full Node 24 build remains the CI/provider gate after the normalized ZIP-sync commit.
+
+## ZIP-upload deployment race hardening
+
+The GitHub ZIP upload is an intermediate repository state. The Vercel ignored-build step now refuses to build any checkout that still contains a ZIP deployment artifact. ZIP-sync extracts, validates, removes the ZIP, and creates the normalized `[deploy-ready]` commit. The normalized commit contains no ZIP artifact, so Vercel proceeds normally. This prevents a successful deployment of an incomplete pre-sync snapshot.

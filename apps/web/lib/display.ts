@@ -37,7 +37,7 @@ export function inventoryStateLabel(value: string | null | undefined): string {
     ALLOCATED_TO_SHOP: 'At shop', SOLD: 'Sold', RETURNED: 'Returned', RECOVERY_PENDING: 'Recovery needed',
     RECOVERED: 'Recovered', DAMAGED: 'Damaged', LOST: 'Lost', QUARANTINE: 'Quarantined', TRANSFER_PENDING: 'Transfer waiting',
   };
-  return labels[value] ?? statusLabel(value);
+  return labels[value] ?? 'Needs review';
 }
 
 export function paymentTypeLabel(value: string | null | undefined): string {

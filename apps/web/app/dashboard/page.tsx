@@ -52,7 +52,7 @@ function eventLabel(value: string): string {
     RECOVERY_CASE_CLOSED: 'Recovery case closed',
     CUSTOMER_CREATED: 'Customer added',
   };
-  return labels[value] ?? value.replaceAll('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return labels[value] ?? 'Activity updated';
 }
 
 export default function DashboardPage() {

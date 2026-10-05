@@ -166,3 +166,12 @@ test('organization screen does not duplicate display imports', () => {
   const organization = readFileSync('apps/web/app/organization/page.tsx', 'utf8');
   assert.equal((organization.match(/lib\/display/g) ?? []).length, 1);
 });
+
+
+test('recovery page has one definition of each local helper', () => {
+  const recovery = readFileSync('apps/web/app/recovery/page.tsx', 'utf8');
+  for (const name of ['bandClass', 'agingLabel', 'activityLabel']) {
+    const count = (recovery.match(new RegExp('\\bfunction\\s+' + name + '\\s*\\(', 'g')) ?? []).length;
+    assert.equal(count, 1, `${name} should be defined exactly once`);
+  }
+});

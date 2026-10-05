@@ -46,7 +46,8 @@
     "check:user-language": "node scripts/check-user-language.mjs",
     "check:web-imports": "node scripts/check-web-imports.mjs",
     "validate:repair": "node scripts/validate-repair.mjs",
-    "check:ts-syntax": "node scripts/check-typescript-syntax.mjs"
+    "check:ts-syntax": "node scripts/check-typescript-syntax.mjs",
+    "check:web-declarations": "node scripts/check-web-declarations.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

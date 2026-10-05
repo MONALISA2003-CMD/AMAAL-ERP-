@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authClient } from '../../lib/auth';
-import { addRecoveryActivityApi, closeRecoveryCaseApi, getRecoveryCaseApi, listAgingPoliciesApi, createAgingPolicyApi, listAgingQueueApi, listRecoveryQueueApi, listRecoverySuspensionsApi, reinstateSuspendedUserApi } from '../../lib/api';
-import { apiFetch } from '../../lib/api';
+import { addRecoveryActivityApi, closeRecoveryCaseApi, getRecoveryCaseApi, listAgingPoliciesApi, createAgingPolicyApi, listAgingQueueApi, listRecoveryQueueApi, listRecoverySuspensionsApi, reinstateSuspendedUserApi, apiFetch } from '../../lib/api';
 import { BrandLogo } from '../../components/brand-logo';
 import { inventoryStateLabel, roleLabel, statusLabel } from '../../lib/display';
 
@@ -12,8 +11,6 @@ type Me={authorization:{roles:string[];permissions:string[]}};
 function bandClass(status:string){ return `chip ${status.toLowerCase()}`; }
 function agingLabel(status:string){ return status === 'GREEN' ? 'On track' : status === 'ORANGE' ? 'Watch' : status === 'RED' ? 'Overdue' : status === 'PURPLE' ? 'Critical' : statusLabel(status); }
 function activityLabel(value:string){ const labels:Record<string,string>={CONTACTED:'Contacted',VISITED:'Visit recorded',PROMISE_TO_RETURN:'Promise to return',FAILED_ATTEMPT:'Attempt unsuccessful',RECOVERED:'Recovered',ESCALATED:'Escalated'}; return labels[value]??statusLabel(value); }
-function agingLabel(status:string){ return status === 'GREEN' ? 'On track' : status === 'ORANGE' ? 'Watch' : status === 'RED' ? 'Overdue' : status === 'PURPLE' ? 'Critical' : statusLabel(status); }
-function activityLabel(value:string){ return statusLabel(value === 'CONTACTED' ? 'CONTACTED' : value === 'VISITED' ? 'VISITED' : value === 'PROMISE_TO_RETURN' ? 'PROMISE_TO_RETURN' : value === 'FAILED_ATTEMPT' ? 'FAILED_ATTEMPT' : value === 'RECOVERED' ? 'RECOVERED' : value === 'ESCALATED' ? 'ESCALATED' : value); }
 
 export default function RecoveryPage(){
   const router=useRouter();

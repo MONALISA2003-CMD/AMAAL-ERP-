@@ -17,8 +17,9 @@ export default function ResetPasswordContent() {
 
   useEffect(() => {
     const nextToken = searchParams.get('token') ?? '';
+    const recoveryError = searchParams.get('error');
     setToken(nextToken);
-    if (!nextToken) setError('This recovery link is missing or invalid. Start a new recovery request.');
+    if (recoveryError || !nextToken) setError('This recovery link is missing, invalid, or expired. Start a new recovery request.');
   }, [searchParams]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

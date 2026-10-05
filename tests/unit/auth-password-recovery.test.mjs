@@ -4,18 +4,18 @@ import { readFileSync } from 'node:fs';
 
 const helper = readFileSync('apps/web/lib/password-recovery.ts', 'utf8');
 const forgot = readFileSync('apps/web/app/forgot-password/page.tsx', 'utf8');
-const reset = readFileSync('apps/web/app/reset-password/page.tsx', 'utf8');
+const reset = readFileSync('apps/web/app/reset-password/content.tsx', 'utf8');
+const passwordReset = readFileSync('apps/web/app/password-reset/page.tsx', 'utf8');
 const login = readFileSync('apps/web/app/login/page.tsx', 'utf8');
 
-test('login exposes a password recovery route', () => {
+test('login exposes the canonical password recovery route', () => {
   assert.match(login, /href=\"\/forgot-password\"/);
 });
 
-test('recovery uses Neon Auth SDK methods rather than custom password SQL or fetch endpoints', () => {
-  assert.match(helper, /authClient/);
-  assert.match(helper, /forgetPassword/);
-  assert.match(helper, /emailOtp/);
-  assert.match(helper, /resetPassword/);
+test('recovery uses the current Neon Auth Email OTP API', () => {
+  assert.match(helper, /authClient\.emailOtp\?\.requestPasswordReset/);
+  assert.match(helper, /authClient\.emailOtp\?\.resetPassword/);
+  assert.doesNotMatch(helper, /forgetPassword/);
   assert.doesNotMatch(helper, /fetch\s*\(/);
   assert.doesNotMatch(helper, /\b(password_hash|update\s+.*password|insert\s+.*password)/i);
 });
@@ -39,4 +39,13 @@ test('successful OTP recovery clears secrets held in React state', () => {
 test('successful token recovery clears passwords held in React state', () => {
   assert.match(reset, /setPassword\(''\)/);
   assert.match(reset, /setConfirmation\(''\)/);
+  assert.match(reset, /searchParams\.get\('error'\)/);
+});
+
+test('legacy password-reset URL is a compatibility alias', () => {
+  assert.match(passwordReset, /redirect\('\/forgot-password'\)/);
+});
+
+test('legacy recovery API is absent from the recovery helper', () => {
+  assert.doesNotMatch(helper, /client\.forgetPassword/);
 });

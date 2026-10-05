@@ -7,6 +7,7 @@ const required = [
   'apps/web/package.json',
   'apps/web/vercel.json',
   'apps/web/next.config.ts',
+  'apps/web/app/password-reset/page.tsx',
   '.github/workflows/ci.yml',
 ];
 

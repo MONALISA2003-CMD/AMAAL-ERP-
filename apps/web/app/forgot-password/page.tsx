@@ -11,7 +11,7 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [step, setStep] = useState<'REQUEST' | 'RESET' | 'LINK_SENT' | 'DONE'>('REQUEST');
+  const [step, setStep] = useState<'REQUEST' | 'RESET' | 'DONE'>('REQUEST');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -27,9 +27,6 @@ export default function ForgotPasswordPage() {
       if (result.method === 'OTP') {
         setStep('RESET');
         setMessage('A 6-digit password reset code has been sent to your email.');
-      } else {
-        setStep('LINK_SENT');
-        setMessage('A password reset link has been sent. Open it from your email to choose a new password.');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unable to start password recovery.');
@@ -83,14 +80,6 @@ export default function ForgotPasswordPage() {
             <button type="submit" disabled={busy}>{busy ? 'Resetting securely…' : 'Reset password'}</button>
             <button type="button" className="setup-secondary" disabled={busy} onClick={() => router.replace('/login')}>Back to login</button>
           </form>
-        ) : null}
-
-        {step === 'LINK_SENT' ? (
-          <div className="auth-form">
-            <p className="microcopy" role="status">{message}</p>
-            <button type="button" onClick={() => router.replace('/login')}>Back to login</button>
-            <button type="button" className="setup-secondary" onClick={() => { setStep('REQUEST'); setMessage(''); setError(''); }}>Use another email</button>
-          </div>
         ) : null}
 
         {step === 'DONE' ? (

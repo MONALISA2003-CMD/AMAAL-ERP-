@@ -40,7 +40,7 @@ Phase 2A Neon Auth end-to-end is now live-verified. The transactional core, read
 
 ## Vercel build correction — 1 October 2026
 
-The first Vercel deployment blocker (workspace/package-manager discovery) was corrected. The following deployment then failed inside pnpm while fetching npm registry metadata with `ERR_INVALID_THIS` / `URLSearchParams`. The web client is now configured for a standalone npm install/build at `apps/web`; this is isolated to the presentation deployment and does not alter Render, Neon or the root pnpm/Turborepo architecture.
+The first Vercel deployment blocker (workspace/package-manager discovery) was corrected. The following deployment then failed inside pnpm while fetching npm registry metadata with `ERR_INVALID_THIS` / `URLSearchParams`. The web client is now configured for a standalone npm install/build at `apps/web`. Render and the root monorepo are also now aligned to npm workspaces, eliminating pnpm from the production deployment path.
 
 ## Infrastructure gate
 

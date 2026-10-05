@@ -53,7 +53,7 @@ pass('Knowledge search is permission-aware', knowledge.includes("ai.knowledge.vi
 pass('Knowledge RLS carries role/region/team scope', migration.includes('allowed_roles') && migration.includes('private.user_can_access_region') && migration.includes('private.user_can_access_team'));
 pass('AI approval type is additive', migration.includes("add value if not exists 'AI_ACTION'"));
 pass('AI action plans cannot self-approve', contracts.includes('prepare_approval_request') && contracts.includes('The AI cannot approve the request'));
-pass('API depends on @amaal/ai workspace', apiPackage.dependencies?.['@amaal/ai'] === 'workspace:*');
+pass('API depends on @amaal/ai workspace', apiPackage.dependencies?.['@amaal/ai'] === '0.0.0');
 pass('Amaal AI environment defaults to disabled', env.includes('AMAAL_AI_ENABLED=false'));
 pass('Governance and tool-policy versions are explicit', orchestrator.includes('AI_GOVERNANCE_VERSION') && orchestrator.includes('AI_TOOL_POLICY_VERSION') && read('database/migrations/20261004_000033_phase8_ai_tool_policy_versioning.sql').includes('tool_policy_version'));
 pass('Provider model must be explicit when enabled', orchestrator.includes('AMAAL_AI_MODEL is required when Amaal AI is enabled.'));

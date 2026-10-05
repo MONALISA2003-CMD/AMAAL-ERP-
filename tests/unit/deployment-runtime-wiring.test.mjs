@@ -11,16 +11,19 @@ const render = readFileSync(join(root, 'render.yaml'), 'utf8');
 const http = readFileSync(join(root, 'services/api/src/http.ts'), 'utf8');
 const api = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
 const proxy = readFileSync(join(root, 'apps/web/app/api/amaal/[...path]/route.ts'), 'utf8');
+const recoveryEngine = readFileSync(join(root, 'services/recovery/src/aging-engine.ts'), 'utf8');
 
-test('repository pins one pnpm version across deployment configuration', () => {
-  assert.equal(rootPkg.packageManager, 'pnpm@11.28.0');
-  assert.match(vercel.installCommand, /pnpm@11\.28\.0/);
-  assert.match(render, /pnpm@11\.28\.0/);
+test('deployment installers are npm-only and Vercel builds the standalone web package', () => {
+  assert.equal(rootPkg.packageManager, undefined);
+  assert.deepEqual(rootPkg.workspaces, ['apps/*','packages/*','services/*','workers/*']);
+  assert.match(vercel.installCommand, /cd apps\/web && npm install/);
+  assert.match(vercel.buildCommand, /cd apps\/web && npm run build/);
+  assert.doesNotMatch(vercel.installCommand + vercel.buildCommand + render, /pnpm@|pnpm install/);
 });
 
 test('outbox worker declares every runtime workspace package it imports', () => {
-  assert.equal(workerPkg.dependencies['@amaal/database'], 'workspace:*');
-  assert.equal(workerPkg.dependencies['@amaal/recovery'], 'workspace:*');
+  assert.equal(workerPkg.dependencies['@amaal/database'], '0.0.0');
+  assert.equal(workerPkg.dependencies['@amaal/recovery'], '0.0.0');
 });
 
 test('Render API entrypoint always autostarts when PORT is provided', () => {
@@ -46,6 +49,16 @@ test('Render blueprint carries the server-side Neon Auth bridge and worker runti
     assert.match(render, new RegExp(`key: ${key}`));
   }
   assert.match(render, /AMAAL_API_AUTOSTART/);
+  assert.match(render, /name: amaal-worker/);
+  assert.match(render, /healthCheckPath: \/health/);
+  assert.match(render, /services\/outbox-worker\/src\/runner\.ts/);
+});
+
+test('recovery worker is schema-safe before Stage 5 migrations are applied', () => {
+  assert.match(recoveryEngine, /checkStage5Schema/);
+  assert.match(recoveryEngine, /to_regclass\('public\.aging_asset_states'\)/);
+  assert.match(recoveryEngine, /band_config/);
+  assert.match(recoveryEngine, /scheduled evaluation is safely skipped/);
 });
 
 test('known runtime wiring regressions remain fixed in reporting and inventory', () => {

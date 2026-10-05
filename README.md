@@ -31,7 +31,7 @@ The system is database-first, authorization-first and transaction-first. Do not 
 
 - Neon production is the authoritative transactional database.
 - Neon Auth / Better Auth is provisioned on the production branch; the production frontend auth route now responds successfully.
-- Render `amaal-api` and `amaal-worker` are deployed from `main`; API `/health` and `/ready` are healthy, with `/ready` confirming the database.
+- Render deployment is being re-hardened: the existing API service retains a stale pnpm build command in its dashboard configuration, while the worker is live but exposed a missing Stage 5 `aging_policies.band_config` schema at runtime. The new release package moves both Render build paths to npm and makes the aging engine schema-safe until the approved migration is applied.
 - Render Valkey/Redis remains non-authoritative and is reserved for transient coordination, queues, cache and realtime fan-out.
 - Amaal AI is the active product term for the governed AI layer. Historical documentation that uses the former assistant name is preserved.
 - Development MFA remains disabled until the Phase 2 security gate is complete.
@@ -39,7 +39,7 @@ The system is database-first, authorization-first and transaction-first. Do not 
 
 ## Vercel deployment correction — 1 October 2026
 
-The Next.js frontend is deployed independently from the pnpm/Turborepo workspace install. Vercel installs and builds from `apps/web` with npm so a pnpm registry/client failure cannot block the web build. Render and the root monorepo continue to use pnpm/Turborepo.
+Vercel now installs and builds only `apps/web` with npm, completely bypassing the pnpm registry/client path that produced the observed `ERR_INVALID_THIS` failure. Render now installs the full monorepo with npm workspaces; Turborepo remains the task runner for repository scripts.
 
 ## Phase 0 — Foundation & Architecture Freeze
 

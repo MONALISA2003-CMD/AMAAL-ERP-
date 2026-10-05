@@ -8,7 +8,10 @@ test('production MLOps migration is derived-only',()=>{
   assert.doesNotMatch(sql,/drop\s+table\s+public\.(products|imei_units|sales)/i);
 });
 
-test('CI refuses dependency drift in release workflow by requiring frozen installation',()=>{
-  const yaml=readFileSync('.github/workflows/ci.yml','utf8');
-  assert.match(yaml,/--frozen-lockfile/);
+test('CI uses npm and keeps reproducible lock generation explicit',()=>{
+  const ci=readFileSync('.github/workflows/ci.yml','utf8');
+  const locks=readFileSync('.github/workflows/generate-lockfiles.yml','utf8');
+  assert.match(ci,/npm install --no-audit --no-fund/);
+  assert.match(locks,/npm install --package-lock-only/);
+  assert.match(locks,/git add package-lock.json/);
 });

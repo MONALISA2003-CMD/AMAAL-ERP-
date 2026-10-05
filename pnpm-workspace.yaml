@@ -4,6 +4,5 @@ packages:
   - services/*
   - workers/*
 
-# pnpm v12 build-script policy: explicitly allow the one install script required by the workspace.
-allowBuilds:
-  core-js: true
+# Local pnpm workspace metadata retained for development.
+# Vercel and Render production deployment installers use npm.

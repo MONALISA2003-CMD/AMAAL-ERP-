@@ -33,12 +33,16 @@ const required = [
 ];
 
 const packageManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (packageManifest.packageManager !== 'pnpm@11.28.0') {
-  console.error(`Invalid packageManager: expected pnpm@11.28.0, found ${packageManifest.packageManager ?? 'missing'}`);
+if (packageManifest.packageManager) {
+  console.error('packageManager must not pin pnpm; Vercel and Render use npm for deployment installs.');
+  process.exit(1);
+}
+if (!Array.isArray(packageManifest.workspaces) || packageManifest.workspaces.length === 0) {
+  console.error('npm workspaces are required for the monorepo deployment install.');
   process.exit(1);
 }
 if (packageManifest.devEngines?.packageManager) {
-  console.error('devEngines.packageManager must not be declared because Render invokes pnpm through npm/npx.');
+  console.error('devEngines.packageManager must not be declared because deployment uses npm directly.');
   process.exit(1);
 }
 

@@ -1,3 +1,5 @@
+> **Superseded on 5 October 2026:** See `docs/AMAAL_NPM_DEPLOYMENT_HARDENING_2026-10-05.md` for the current npm-only Vercel/Render deployment path and recovery-schema safety gate.
+
 # Amaal E2E Release Audit — 2026-10-04
 
 ## Deployment failures addressed

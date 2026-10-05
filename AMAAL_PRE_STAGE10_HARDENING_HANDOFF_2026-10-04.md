@@ -25,7 +25,7 @@ This pass implements the production-hardening items identified by the full Stage
 - Deterministic CycloneDX SBOM generator
 - GitHub Actions CI with Node 24, frozen-lockfile gate, audit/build/typecheck/lint/test hooks
 - Manual lockfile generation workflow
-- Vercel configuration switched to pnpm/frozen-lockfile target
+- Vercel configuration switched to standalone npm install/build from `apps/web`
 - Current Render/Vercel infrastructure documentation corrected
 - Python runtime bounded concurrency and constant-time service-token validation
 - ML cache/bytecode hygiene
@@ -59,13 +59,13 @@ Latest local audit:
 
 ## Remaining external-release blocker
 
-A real `pnpm-lock.yaml` and `services/intelligence/uv.lock` could not be generated in this execution container because external package registries were unreachable. The project deliberately does not fabricate lockfiles.
+A real `package-lock.json` and `services/intelligence/uv.lock` could not be generated in this execution container because external package registries were unreachable. The project deliberately does not fabricate lockfiles.
 
 Instead, the release system now fails closed:
 
-- CI requires `pnpm-lock.yaml`.
-- CI installs with `pnpm install --frozen-lockfile`.
-- A manual `Generate reproducible dependency locks` workflow is provided to generate and commit `pnpm-lock.yaml` and `uv.lock` in a network-capable GitHub runner.
+- CI requires `package-lock.json`.
+- CI installs with `npm ci`.
+- A manual `Generate reproducible dependency locks` workflow is provided to generate and commit `package-lock.json` and `uv.lock` in a network-capable GitHub runner.
 - `requirements.lock` contains exact top-level Python versions verified from current PyPI metadata: psycopg 3.3.6, numpy 2.5.3, scikit-learn 1.9.1. 
 
 ## Live infrastructure audit

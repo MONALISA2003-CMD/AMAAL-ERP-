@@ -123,8 +123,49 @@ async function suspendUser(tx: DatabaseTransaction, userId:string, organizationI
   await notify(tx,userId,'ACCOUNT_SUSPENDED','CRITICAL','Amaal access suspended',`Business access was suspended by the aging policy: ${reason}`,'USER',userId);
 }
 
+type Stage5SchemaCapability = {
+  aging_asset_states: boolean;
+  aging_state_events: boolean;
+  aging_alerts: boolean;
+  recovery_case_assignments: boolean;
+  recovery_escalations: boolean;
+  business_access_suspensions: boolean;
+  band_config: boolean;
+  suspension_config: boolean;
+  auto_recovery_enabled: boolean;
+};
+
+let stage5SchemaWarningEmitted = false;
+
+async function checkStage5Schema(tx: DatabaseTransaction): Promise<boolean> {
+  const rows = await tx.query<Stage5SchemaCapability>(`
+    select
+      to_regclass('public.aging_asset_states') is not null as aging_asset_states,
+      to_regclass('public.aging_state_events') is not null as aging_state_events,
+      to_regclass('public.aging_alerts') is not null as aging_alerts,
+      to_regclass('public.recovery_case_assignments') is not null as recovery_case_assignments,
+      to_regclass('public.recovery_escalations') is not null as recovery_escalations,
+      to_regclass('public.business_access_suspensions') is not null as business_access_suspensions,
+      exists (select 1 from information_schema.columns where table_schema='public' and table_name='aging_policies' and column_name='band_config') as band_config,
+      exists (select 1 from information_schema.columns where table_schema='public' and table_name='aging_policies' and column_name='suspension_config') as suspension_config,
+      exists (select 1 from information_schema.columns where table_schema='public' and table_name='aging_policies' and column_name='auto_recovery_enabled') as auto_recovery_enabled
+  `);
+  const capability = rows[0];
+  if (!capability) return false;
+  const ready = Object.values(capability).every(Boolean);
+  if (!ready && !stage5SchemaWarningEmitted) {
+    stage5SchemaWarningEmitted = true;
+    console.warn('[amaal-recovery] Stage 5 aging/recovery schema is not applied; scheduled evaluation is safely skipped until migrations are applied.');
+  }
+  return ready;
+}
+
 export class AgingRecoveryEngine {
   async evaluate(tx: DatabaseTransaction): Promise<{ organizations:number; evaluated:number; warnings:number; overdue:number; critical:number; casesOpened:number; assignments:number; escalations:number; suspended:number; }> {
+    if (!(await checkStage5Schema(tx))) {
+      return { organizations:0, evaluated:0, warnings:0, overdue:0, critical:0, casesOpened:0, assignments:0, escalations:0, suspended:0 };
+    }
+
     const orgPolicies = await tx.query<PolicyRow>(
       `select distinct on (organization_id) id,organization_id,maximum_days,warning_days,critical_overdue_days,band_config,suspension_config,auto_recovery_enabled
        from public.aging_policies

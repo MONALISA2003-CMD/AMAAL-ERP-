@@ -1,3 +1,5 @@
+> **Superseded on 5 October 2026:** See `docs/AMAAL_NPM_DEPLOYMENT_HARDENING_2026-10-05.md` for the current npm-only Vercel/Render deployment path and recovery-schema safety gate.
+
 # Amaal Stage 9.5 — Production MLOps Hardening
 
 This is a pre-Stage-10 hardening layer. It does not create a new business phase and it does not change the authoritative transaction model.

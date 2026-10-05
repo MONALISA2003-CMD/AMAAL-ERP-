@@ -41,7 +41,7 @@ The API also accepts the canonical production Vercel alias `https://amaal-erp.ve
 For the existing `amaal-api` and `amaal-worker` services use:
 
 ```text
-npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
+npm install --global npm workspaces && npm install --no-audit --no-fund
 ```
 
 The repository root remains pinned to pnpm 12.9.1 for monorepo development/CI. The Render command is an infrastructure-specific compatibility override.

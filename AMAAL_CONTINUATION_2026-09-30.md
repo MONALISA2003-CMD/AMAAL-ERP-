@@ -1,5 +1,10 @@
 # AMAAL ERP — CONTINUATION
 
+# Current deployment correction — 5 October 2026
+
+The historical continuation details below are preserved for handoff context. The current deployment configuration is superseded by `docs/AMAAL_NPM_DEPLOYMENT_HARDENING_2026-10-05.md`: Vercel uses a standalone npm install/build from `apps/web`; Render API and worker use npm workspace installation; the repository no longer pins pnpm; and the aging worker safely skips Stage 5 evaluation until the required database migration is actually applied.
+
+
 > **Current correction checkpoint — 30 September 2026:** Render's latest GitHub deployment failed because commit `44ca63b` is a documentation-only repository shape and does not contain the required API/worker source files. The underlying provider migration is not the cause of this failure. A full repository recovery package has been prepared from the last known-good source snapshot, and the ZIP-sync workflow has been hardened so incomplete ZIPs are rejected before repository replacement.
 
 **Date:** 30 September 2026  

@@ -22,7 +22,7 @@ const workspaceReady=await import('node:fs').then(({existsSync})=>existsSync(joi
 if (workspaceReady) {
   if (run(process.execPath,['--experimental-transform-types','--test',...tsFiles])!==0) process.exit(1);
 } else {
-  console.warn('TypeScript workspace tests skipped locally because node_modules is absent. CI release gate installs with --frozen-lockfile and runs the complete suite.');
+  console.warn('TypeScript workspace tests skipped locally because node_modules is absent. CI release gate installs the npm workspace dependencies and runs the complete suite.');
 }
 if (run(process.execPath,['--experimental-strip-types','--test',...jsFiles])!==0) process.exit(1);
 if (process.argv.includes('--all')) {

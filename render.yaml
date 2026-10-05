@@ -3,14 +3,14 @@ services:
     name: amaal-api
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     autoDeploy: true
-    buildCommand: npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
+    buildCommand: npm install --no-audit --no-fund --package-lock=false
     startCommand: AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts
     healthCheckPath: /ready
     envVars:
       - key: NODE_VERSION
-        value: 24.0.0
+        value: 24
       - key: AMAAL_VALKEY_URL
         sync: false
       - key: AMAAL_WEB_ORIGIN
@@ -30,17 +30,18 @@ services:
       - key: AMAAL_API_AUTOSTART
         value: 'true'
 
-  - type: worker
+  - type: web
     name: amaal-worker
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     autoDeploy: true
-    buildCommand: npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
-    startCommand: node --experimental-transform-types services/outbox-worker/src/runner.ts
+    buildCommand: npm install --no-audit --no-fund --package-lock=false
+    healthCheckPath: /health
+    startCommand: node --experimental-transform-types -e "const {spawn}=require('node:child_process');const http=require('node:http');const p=spawn(process.execPath,['--experimental-transform-types','services/outbox-worker/src/runner.ts'],{stdio:'inherit',env:process.env});http.createServer((req,res)=>{if(req.url==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,service:'amaal-worker'}));return;}res.writeHead(404);res.end();}).listen(Number(process.env.PORT||10000),'0.0.0.0');p.on('exit',(code)=>{if(code!==null&&code!==0)process.exit(code)});const stop=()=>p.kill('SIGTERM');process.on('SIGTERM',()=>{stop();setTimeout(()=>process.exit(0),5000)});process.on('SIGINT',()=>{stop();setTimeout(()=>process.exit(0),5000)});"
     envVars:
       - key: NODE_VERSION
-        value: 24.0.0
+        value: 24
       - key: AMAAL_VALKEY_URL
         sync: false
       - key: AMAAL_DATABASE_URL

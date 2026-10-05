@@ -3,9 +3,9 @@
 ## Current architecture
 
 - `amaal-api`: public HTTP API; **Neon PostgreSQL is authoritative**.
-- `amaal-worker`: background/outbox/read-model worker; also connected to Neon.
-- `amaal-valkey`: Render Valkey for transient coordination/cache/queue work.
-- Supabase Auth: identity/session/MFA assurance only on the current production path.
+- `amaal-worker`: outbox/read-model/recovery worker; the current deployed Render service is a web service with an HTTP health wrapper so Render can probe it while the worker loop runs continuously.
+- Render Valkey: transient coordination/cache/queue/realtime fan-out only.
+- Neon Auth / Better Auth: current production identity/session boundary.
 
 ## API service
 
@@ -13,17 +13,19 @@
 - Region: Frankfurt
 - Runtime: Node 24
 - Root directory: repository root
-- Build: `npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile`
-- Start: `node --experimental-transform-types services/api/src/http.ts`
+- Build: `npm install --no-audit --no-fund --package-lock=false`
+- Start: `AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts`
+- Health: `/ready`
 
 ## Worker service
 
 - Name: `amaal-worker`
 - Region: Frankfurt
 - Runtime: Node 24
-- Build: `npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile`
+- Build: `npm install --no-audit --no-fund --package-lock=false`
 - Runner: `services/outbox-worker/src/runner.ts`
-- Current deployment uses a small HTTP wrapper so Render can expose `/health` while the worker loop remains continuous.
+- Health: `/health`
+- Start: the repository HTTP wrapper in `render.yaml`, which spawns the worker and exposes `/health` on Render's port.
 
 ## Database connection
 
@@ -33,11 +35,11 @@ Set only the server-side authoritative database variable:
 AMAAL_DATABASE_URL=<Neon production connection string>
 ```
 
-The same secret is used by the API and worker. Do not point these services back to Supabase PostgreSQL. Do not expose the connection string to browser code.
+The same secret is used by API and worker. Do not point these services back to Supabase PostgreSQL. Do not expose the connection string to browser code.
 
 ## Identity
 
-Neon Auth / Better Auth is the current production identity provider. The API validates the bearer token and derives the Amaal user identity/assurance level before loading authorization context.
+Neon Auth / Better Auth is the current production identity provider. The API validates the bearer token and derives the Amaal identity/assurance level before loading authorization context.
 
 ## Probes
 
@@ -45,4 +47,4 @@ Neon Auth / Better Auth is the current production identity provider. The API val
 - `GET /ready`: PostgreSQL readiness. A `200` means the authoritative database query succeeds.
 - `GET /api/health`: compatibility alias.
 
-The web dashboard now uses `/ready` rather than `/health` when determining whether the ERP is operational.
+The web dashboard uses `/ready` when determining whether the ERP is operational.

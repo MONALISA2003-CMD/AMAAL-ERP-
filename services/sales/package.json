@@ -7,11 +7,11 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@amaal/business-rules": "workspace:*",
-    "@amaal/database": "workspace:*",
-    "@amaal/permissions": "workspace:*",
-    "@amaal/shared": "workspace:*",
-    "@amaal/finance": "workspace:*"
+    "@amaal/business-rules": "0.0.0",
+    "@amaal/database": "0.0.0",
+    "@amaal/permissions": "0.0.0",
+    "@amaal/shared": "0.0.0",
+    "@amaal/finance": "0.0.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

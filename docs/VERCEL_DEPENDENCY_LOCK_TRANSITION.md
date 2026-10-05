@@ -1,24 +1,24 @@
-# Vercel dependency-lock transition
+# Vercel dependency-install hardening
 
-## Current state
-The repository does not yet contain a real `pnpm-lock.yaml`. Vercel therefore cannot use `pnpm install --frozen-lockfile` without failing before the application build starts.
+## Current release behavior
 
-## Immediate release behavior
-The repository-level Vercel configuration temporarily uses:
+The Vercel deployment no longer invokes pnpm. The root Vercel configuration deliberately isolates installation and compilation to the standalone Next.js package:
 
 ```text
-pnpm install --no-frozen-lockfile
+cd apps/web && npm install --no-audit --no-fund --package-lock=false
+cd apps/web && npm run build
 ```
 
-The GitHub CI workflow remains fail-closed on `pnpm-lock.yaml` and uses:
+The deployment output remains:
 
 ```text
-pnpm install --frozen-lockfile
+apps/web/.next
 ```
 
-This separation prevents an unavailable package registry in the development container from forcing a fabricated lockfile.
+This avoids the pnpm registry/client error observed in production (`ERR_INVALID_THIS` / `URLSearchParams`) before Next.js compilation begins.
 
-## Required lockfile release gate
-Run `.github/workflows/generate-lockfiles.yml` from a network-capable GitHub runner. Once `pnpm-lock.yaml` and `services/intelligence/uv.lock` are real committed artifacts, change both Vercel configurations back to the frozen install command and retain the CI frozen-lockfile gate.
+## Reproducibility gate
 
-No dependency lockfile should ever be hand-written or synthesized without package-manager resolution.
+`.github/workflows/generate-lockfiles.yml` generates a real `package-lock.json` plus the Python `uv.lock` on a network-capable runner. The lockfile is not synthesized locally because package-manager resolution is unavailable in the offline engineering container.
+
+After a real npm lockfile is committed, the final Stage 10 policy may move CI from `npm install` to `npm ci`. The Vercel standalone package may continue to use its current isolated install command if that remains the most reliable provider path.

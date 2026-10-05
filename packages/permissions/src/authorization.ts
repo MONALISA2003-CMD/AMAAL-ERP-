@@ -33,8 +33,12 @@ export interface AuthorizationDecision {
   reason: string;
 }
 
+export function isCompanyWideRole(roles: readonly string[]): boolean {
+  return roles.includes('CEO');
+}
+
 export function authorize(context: AuthorizationContext, permission: PermissionKey, resource: ResourceScope = {}): AuthorizationDecision {
-  if (context.roles.includes('CEO')) return { allowed: true, reason: 'CEO company-wide authority' };
+  if (isCompanyWideRole(context.roles)) return { allowed: true, reason: 'Company-wide leadership authority' };
   if (!context.permissions.includes(permission)) return { allowed: false, reason: `Missing permission: ${permission}` };
   if (context.roles.includes('ADMIN')) return { allowed: true, reason: 'Admin permission within company scope' };
 

@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve('apps/web');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.join(repoRoot, 'apps', 'web');
 const files = [];
 
 function walk(dir) {
@@ -22,7 +24,7 @@ for (const file of files) {
     const name = match[1];
     const line = source.slice(0, match.index).split('\n').length;
     const previous = names.get(name);
-    if (previous) failures.push(`${path.relative(process.cwd(), file)}: duplicate function ${name} at lines ${previous} and ${line}`);
+    if (previous) failures.push(`${path.relative(repoRoot, file)}: duplicate function ${name} at lines ${previous} and ${line}`);
     else names.set(name, line);
   }
 
@@ -31,7 +33,7 @@ for (const file of files) {
     const name = match[1];
     const line = source.slice(0, match.index).split('\n').length;
     const previous = constNames.get(name);
-    if (previous) failures.push(`${path.relative(process.cwd(), file)}: duplicate arrow function ${name} at lines ${previous} and ${line}`);
+    if (previous) failures.push(`${path.relative(repoRoot, file)}: duplicate arrow function ${name} at lines ${previous} and ${line}`);
     else constNames.set(name, line);
   }
 }

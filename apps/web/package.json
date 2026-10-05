@@ -7,8 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "prebuild": "node ../../scripts/check-web-declarations.mjs && node ../../scripts/check-web-imports.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.3.6",

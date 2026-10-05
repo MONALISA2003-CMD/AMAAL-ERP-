@@ -30,7 +30,7 @@ export default function LoginPage() {
         }
         if (session?.data) router.replace('/dashboard');
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unable to continue.');
+        setError(e instanceof Error ? e.message : 'We could not check your access right now. Please try again.');
       }
     })();
   }, [router]);
@@ -42,7 +42,7 @@ export default function LoginPage() {
     clearMfaAssertion();
     try {
       const result = await authClient.signIn.email({ email: email.trim(), password });
-      if (result.error) throw new Error(result.error.message || 'Authentication failed.');
+      if (result.error) throw new Error('The email or password is not correct. Please try again.');
       const setup = await getSetupStatus();
       if (setup.stage === 'ORGANIZATION_READY') {
         router.replace('/activate');

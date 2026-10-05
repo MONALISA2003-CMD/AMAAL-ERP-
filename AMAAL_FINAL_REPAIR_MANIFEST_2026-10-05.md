@@ -41,3 +41,9 @@
 
 ## Important deployment note
 The final source package cannot be made live directly from this session because the connected GitHub integration does not permit repository writes. Upload this ZIP through the existing phone-based GitHub upload process. After the normalized commit reaches GitHub, Vercel should build it and Render should deploy the backend changes from the same commit.
+
+
+## Build architecture stabilization
+- Vercel does not execute repository validation scripts during the web build.
+- Repository validation runs from GitHub CI using paths derived from the repository root.
+- CEO authorization is explicitly company-wide by role after normal account activation and required sign-in security.

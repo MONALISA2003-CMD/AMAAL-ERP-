@@ -175,3 +175,16 @@ test('recovery page has one definition of each local helper', () => {
     assert.equal(count, 1, `${name} should be defined exactly once`);
   }
 });
+
+
+test('CEO has explicit company-wide authorization by role', () => {
+  const authorization = readFileSync('packages/permissions/src/authorization.ts', 'utf8');
+  assert.match(authorization, /function isCompanyWideRole/);
+  assert.match(authorization, /roles\.includes\('CEO'\)/);
+  assert.match(authorization, /Company-wide leadership authority/);
+});
+
+test('Vercel web build is not coupled to repository-root checks', () => {
+  const webPackage = JSON.parse(readFileSync('apps/web/package.json', 'utf8'));
+  assert.equal(webPackage.scripts.prebuild, undefined);
+});

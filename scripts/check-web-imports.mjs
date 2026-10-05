@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve('apps/web/app');
-const apiSource = fs.readFileSync(path.resolve('apps/web/lib/api.ts'), 'utf8');
-const exports = new Set([
-  ...apiSource.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g),
-].map((m) => m[1]));
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.join(repoRoot, 'apps', 'web', 'app');
+const apiSource = fs.readFileSync(path.join(repoRoot, 'apps', 'web', 'lib', 'api.ts'), 'utf8');
+const exports = new Set([...apiSource.matchAll(/export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g)].map((m) => m[1]));
 
 function walk(dir) {
   const result = [];
@@ -23,12 +23,8 @@ for (const file of walk(root)) {
   let importBlock = null;
   for (const line of lines) {
     const trimmed = line.trim();
-    if (importBlock === null && /^import\s+\{/.test(trimmed)) {
-      importBlock = trimmed;
-    } else if (importBlock !== null) {
-      importBlock += `\n${trimmed}`;
-    }
-
+    if (importBlock === null && /^import\s+\{/.test(trimmed)) importBlock = trimmed;
+    else if (importBlock !== null) importBlock += `\n${trimmed}`;
     if (importBlock !== null) {
       const fromMatch = importBlock.match(/\}\s*from\s*['"]([^'"]+)['"]/);
       if (fromMatch) {
@@ -38,7 +34,7 @@ for (const file of walk(root)) {
             for (const item of names[1].split(',').map((x) => x.trim()).filter(Boolean)) {
               if (/^type\s+/.test(item)) continue;
               const name = item.split(/\s+as\s+/)[0].trim();
-              if (name && !exports.has(name)) failures.push(`${path.relative(process.cwd(), file)} imports missing API export ${name}`);
+              if (name && !exports.has(name)) failures.push(`${path.relative(repoRoot, file)} imports missing API export ${name}`);
             }
           }
         }

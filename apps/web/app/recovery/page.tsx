@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { authClient } from '../../lib/auth';
 import { addRecoveryActivityApi, closeRecoveryCaseApi, getRecoveryCaseApi, listAgingPoliciesApi, createAgingPolicyApi, listAgingQueueApi, listRecoveryQueueApi, listRecoverySuspensionsApi, reinstateSuspendedUserApi, apiFetch } from '../../lib/api';
 import { BrandLogo } from '../../components/brand-logo';
-import { inventoryStateLabel, roleLabel, statusLabel } from '../../lib/display';
+import { roleLabel, statusLabel } from '../../lib/display';
 
 type Me={authorization:{roles:string[];permissions:string[]}};
 function bandClass(status:string){ return `chip ${status.toLowerCase()}`; }

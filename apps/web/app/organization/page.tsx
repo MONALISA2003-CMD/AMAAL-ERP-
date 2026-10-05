@@ -287,14 +287,14 @@ export default function OrganizationPage() {
                 <label>Region<select value={inviteForm.regionId} onChange={(e) => setInviteForm({ ...inviteForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 <label>Sub-region<select value={inviteForm.subregionId} onChange={(e) => setInviteForm({ ...inviteForm, subregionId: e.target.value })}><option value="">—</option>{subregions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>
                 {inviteForm.role === 'MANAGER' ? <label>Regional Manager<select value={inviteForm.regionalManagerUserId} onChange={(e) => setInviteForm({ ...inviteForm, regionalManagerUserId: e.target.value })}><option value="">Select RM</option>{regionalManagers.map((rm) => <option key={rm.userId} value={rm.userId}>{rm.displayName}{rm.regionCode ? ` — ${rm.regionCode}` : ''}</option>)}</select></label> : null}
-                {['TEAM_LEADER','AGENT','SHOP_OWNER'].includes(inviteForm.role) ? <label>Manager account<input value={inviteForm.managerUserId} onChange={(e) => setInviteForm({ ...inviteForm, managerUserId: e.target.value })} placeholder="Manager UUID" /></label> : null}
+                {['TEAM_LEADER','AGENT','SHOP_OWNER'].includes(inviteForm.role) ? <label>Manager account<input value={inviteForm.managerUserId} onChange={(e) => setInviteForm({ ...inviteForm, managerUserId: e.target.value })} placeholder="Manager account" /></label> : null}
                 <label>Team<select value={inviteForm.teamId} onChange={(e) => setInviteForm({ ...inviteForm, teamId: e.target.value })}><option value="">—</option>{teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
                 <label>Shop account<input value={inviteForm.shopId} onChange={(e) => setInviteForm({ ...inviteForm, shopId: e.target.value })} placeholder="Shop Owner only" /></label>
                 <button className="setup-primary" disabled={!!action}>{action === 'Create invitation' ? 'Creating…' : 'Create secure invite'}</button>
               </form> : <div className="card"><div className="card-label">RECRUITMENT</div><h3>No recruitment roles available</h3><p className="muted">Your current role does not have authority to create organizational logins from this workspace.</p></div>}
               {isCeo ? <form className="setup-form-grid" onSubmit={submitAdmin}>
                 <div><strong>Provision Admin</strong><p className="muted">CEO-only. Admin authority is profile-based, not automatically CEO-level.</p></div>
-                <label>Account reference<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="UUID" /></label>
+                <label>Account reference<input value={adminForm.userId} onChange={(e) => setAdminForm({ ...adminForm, userId: e.target.value })} required placeholder="Account reference" /></label>
                 <label>Display name<input value={adminForm.displayName} onChange={(e) => setAdminForm({ ...adminForm, displayName: e.target.value })} required /></label>
                 <label>Employee number<input value={adminForm.employeeNumber} onChange={(e) => setAdminForm({ ...adminForm, employeeNumber: e.target.value })} /></label>
                 <label>Admin profile<select value={adminForm.profileKey} onChange={(e) => setAdminForm({ ...adminForm, profileKey: e.target.value })}>{['SYSTEM_ADMIN','USER_ADMIN','INVENTORY_ADMIN','FINANCE_ADMIN','REPORTING_ADMIN','OPERATIONS_ADMIN','AUDIT_ADMIN'].map((r) => <option key={r} value={r}>{adminProfileLabel(r)}</option>)}</select></label>
@@ -313,7 +313,7 @@ export default function OrganizationPage() {
             <div className="grid two">
               <form className="setup-form-grid" onSubmit={submitPerson}>
                 <div><strong>Link existing account</strong><p className="muted">Use this when the person already has an Amaal account.</p></div>
-                <label>Account reference<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="UUID" /></label>
+                <label>Account reference<input value={personForm.userId} onChange={(e) => setPersonForm({ ...personForm, userId: e.target.value })} required placeholder="Account reference" /></label>
                 <label>Display name<input value={personForm.displayName} onChange={(e) => setPersonForm({ ...personForm, displayName: e.target.value })} required /></label>
                 <label>Role<select value={personForm.role} onChange={(e) => setPersonForm({ ...personForm, role: e.target.value })}>{recruitableRoles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></label>
                 <label>Region<select value={personForm.regionId} onChange={(e) => setPersonForm({ ...personForm, regionId: e.target.value })}><option value="">—</option>{regions.map((r) => <option key={r.id} value={r.id}>{r.code}</option>)}</select></label>

@@ -41,7 +41,8 @@
     "audit:stage1-9": "node scripts/audit-stage1-9.mjs",
     "sbom": "node scripts/generate-sbom.mjs",
     "preflight:production": "node scripts/preflight-production.mjs",
-    "audit:deployment": "node scripts/forensic-deployment-audit.mjs"
+    "audit:deployment": "node scripts/forensic-deployment-audit.mjs",
+    "validate:deployment-architecture": "node scripts/validate-deployment-architecture.mjs"
   },
   "devDependencies": {
     "@types/node": "24.0.0",

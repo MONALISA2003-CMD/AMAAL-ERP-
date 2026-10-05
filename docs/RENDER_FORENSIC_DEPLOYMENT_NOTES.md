@@ -9,7 +9,7 @@ The Render API and outbox worker intentionally do not depend on `tsx`. The earli
 Build:
 
 ```text
-npx --yes pnpm@11.28.0 install --no-frozen-lockfile
+npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
 ```
 
 API start:

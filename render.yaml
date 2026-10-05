@@ -5,7 +5,7 @@ services:
     region: frankfurt
     plan: starter
     autoDeploy: true
-    buildCommand: corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --no-frozen-lockfile
+    buildCommand: npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
     startCommand: AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts
     healthCheckPath: /ready
     envVars:
@@ -36,7 +36,7 @@ services:
     region: frankfurt
     plan: starter
     autoDeploy: true
-    buildCommand: corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --no-frozen-lockfile
+    buildCommand: npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile
     startCommand: node --experimental-transform-types services/outbox-worker/src/runner.ts
     envVars:
       - key: NODE_VERSION

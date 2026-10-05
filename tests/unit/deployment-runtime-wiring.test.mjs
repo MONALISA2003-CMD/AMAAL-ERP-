@@ -13,9 +13,9 @@ const api = readFileSync(join(root, 'apps/web/lib/api.ts'), 'utf8');
 const proxy = readFileSync(join(root, 'apps/web/app/api/amaal/[...path]/route.ts'), 'utf8');
 
 test('repository pins one pnpm version across deployment configuration', () => {
-  assert.equal(rootPkg.packageManager, 'pnpm@12.9.1');
-  assert.match(vercel.installCommand, /pnpm@12\.9\.1/);
-  assert.match(render, /pnpm@12\.9\.1/);
+  assert.equal(rootPkg.packageManager, 'pnpm@11.28.0');
+  assert.match(vercel.installCommand, /pnpm@11\.28\.0/);
+  assert.match(render, /pnpm@11\.28\.0/);
 });
 
 test('outbox worker declares every runtime workspace package it imports', () => {

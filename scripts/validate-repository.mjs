@@ -33,8 +33,8 @@ const required = [
 ];
 
 const packageManifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
-if (packageManifest.packageManager !== 'pnpm@12.9.1') {
-  console.error(`Invalid packageManager: expected pnpm@12.9.1, found ${packageManifest.packageManager ?? 'missing'}`);
+if (packageManifest.packageManager !== 'pnpm@11.28.0') {
+  console.error(`Invalid packageManager: expected pnpm@11.28.0, found ${packageManifest.packageManager ?? 'missing'}`);
   process.exit(1);
 }
 if (packageManifest.devEngines?.packageManager) {

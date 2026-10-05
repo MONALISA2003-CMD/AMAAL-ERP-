@@ -13,7 +13,7 @@
 - Region: Frankfurt
 - Runtime: Node 24
 - Root directory: repository root
-- Build: `npx --yes pnpm@11.28.0 install --no-frozen-lockfile`
+- Build: `npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile`
 - Start: `node --experimental-transform-types services/api/src/http.ts`
 
 ## Worker service
@@ -21,7 +21,7 @@
 - Name: `amaal-worker`
 - Region: Frankfurt
 - Runtime: Node 24
-- Build: `npx --yes pnpm@11.28.0 install --no-frozen-lockfile`
+- Build: `npm install --global pnpm@11.28.0 && pnpm install --no-frozen-lockfile`
 - Runner: `services/outbox-worker/src/runner.ts`
 - Current deployment uses a small HTTP wrapper so Render can expose `/health` while the worker loop remains continuous.
 

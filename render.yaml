@@ -1,95 +1,37 @@
 services:
   - type: web
-    name: amaal-api
-    runtime: node
-    region: frankfurt
-    plan: free
-    autoDeployTrigger: checksPass
-    buildCommand: if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi
-    startCommand: AMAAL_API_AUTOSTART=true node --experimental-transform-types services/api/src/http.ts
-    buildFilter:
-      paths:
-        - services/api/**
-        - packages/**
-        - package.json
-        - package-lock.json
-        - turbo.json
-        - tsconfig.base.json
-        - tsconfig.json
-        - .npmrc
-        - .nvmrc
-      ignoredPaths:
-        - '**/*.zip'
+    name: lexa-api
+    runtime: python
+    rootDir: apps/api
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /ready
     envVars:
-      - key: NODE_VERSION
-        value: 24
-      - key: AMAAL_VALKEY_URL
+      - key: PYTHON_VERSION
+        value: 3.13.5
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
         sync: false
-      - key: AMAAL_WEB_ORIGIN
+      - key: DATABASE_URL_UNPOOLED
         sync: false
-      - key: AMAAL_DATABASE_URL
+      - key: DATABASE_APP_ROLE
         sync: false
-      - key: AMAAL_NEON_AUTH_URL
+      - key: LEXA_NEON_PROJECT_ID
+        value: wispy-mud-75323042
+      - key: LEXA_NEON_BRANCH_ID
+        value: br-soft-star-b1dj2m2w
+      - key: REDIS_URL
         sync: false
-      - key: AMAAL_NEON_AUTH_JWKS_URL
+      - key: JWT_SECRET
         sync: false
-      - key: AMAAL_NEON_AUTH_ISSUER
+      - key: JWT_ISSUER
+        value: lexa
+      - key: JWT_AUDIENCE
+        value: lexa-web
+      - key: ACCESS_TOKEN_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_DAYS
+        value: "30"
+      - key: CORS_ORIGINS
         sync: false
-      - key: AMAAL_NEON_AUTH_AUDIENCE
-        sync: false
-      - key: NEON_AUTH_COOKIE_SECRET
-        sync: false
-      - key: AMAAL_API_AUTOSTART
-        value: 'true'
-
-  - type: web
-    name: amaal-worker
-    runtime: node
-    region: frankfurt
-    plan: free
-    autoDeployTrigger: checksPass
-    buildCommand: if [ -f package-lock.json ]; then npm ci --ignore-scripts --no-audit --no-fund; else npm install --ignore-scripts --no-audit --no-fund; fi
-    buildFilter:
-      paths:
-        - services/outbox-worker/**
-        - packages/**
-        - package.json
-        - package-lock.json
-        - turbo.json
-        - tsconfig.base.json
-        - tsconfig.json
-        - .npmrc
-        - .nvmrc
-      ignoredPaths:
-        - '**/*.zip'
-    healthCheckPath: /health
-    startCommand: node --experimental-transform-types -e "const {spawn}=require('node:child_process');const http=require('node:http');const p=spawn(process.execPath,['--experimental-transform-types','services/outbox-worker/src/runner.ts'],{stdio:'inherit',env:process.env});http.createServer((req,res)=>{if(req.url==='/health'){res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({ok:true,service:'amaal-worker'}));return;}res.writeHead(404);res.end();}).listen(Number(process.env.PORT||10000),'0.0.0.0');p.on('exit',(code)=>{if(code!==null&&code!==0)process.exit(code)});const stop=()=>p.kill('SIGTERM');process.on('SIGTERM',()=>{stop();setTimeout(()=>process.exit(0),5000)});process.on('SIGINT',()=>{stop();setTimeout(()=>process.exit(0),5000)});"
-    envVars:
-      - key: NODE_VERSION
-        value: 24
-      - key: AMAAL_VALKEY_URL
-        sync: false
-      - key: AMAAL_DATABASE_URL
-        sync: false
-
-  - type: pserv
-    name: amaal-intelligence
-    runtime: docker
-    region: frankfurt
-    plan: starter
-    dockerfilePath: ./services/intelligence/Dockerfile
-    dockerContext: .
-    autoDeployTrigger: checksPass
-    buildFilter:
-      paths:
-        - services/intelligence/**
-      ignoredPaths:
-        - '**/*.zip'
-    envVars:
-      - key: AMAAL_INTELLIGENCE_DATABASE_URL
-        sync: false
-      - key: AMAAL_INTELLIGENCE_INTERNAL_TOKEN
-        sync: false
-      - key: AMAAL_INTELLIGENCE_MODE
-        value: SHADOW_ONLY

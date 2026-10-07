@@ -1,5 +1,22 @@
-# Amaal web application
+# LEXA Web Experience
 
-The web app uses Neon Auth for sign-in and the Render API for all Amaal business operations. The browser never receives database credentials and never becomes the authority for roles, inventory, sales or approvals.
+This package contains the customer-facing LEXA web experience.
 
-CEO/Admin access uses an additional Amaal TOTP verification layer. The MFA assertion is held only in the current browser session and is sent to the API as `x-amaal-mfa-assertion`.
+## Current experience
+
+- LEXA branded public home page
+- Sign in and workspace creation
+- Multiple workspace selection
+- Responsive business workspace shell
+- Products workspace with live tenant data
+- Existing inventory workspace source retained for the next product phase
+- Customer-friendly service and authentication messaging
+
+The public experience does not display internal service diagnostics, request identifiers, database details or release tooling information.
+
+
+## Rapid development mode
+
+During active product development the web app can requires normal sign-in. The shipped build does not expose an open development workspace session.
+
+This mode does not remove database isolation or permissions; it only removes the browser authentication interruption.

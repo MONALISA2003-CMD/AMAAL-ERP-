@@ -1,29 +1,15 @@
-node_modules/
-.pnpm-store/
-.turbo/
-.next/
-dist/
-build/
-coverage/
 .env
 .env.*
 !.env.example
-.vercel/
-.DS_Store
-*.log
-supabase/.temp/
-
-# Package-manager/runtime output
-node_modules/
-.next/
-dist/
-.turbo/
-# Python/ML runtime artifacts
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-.venv/
-services/intelligence/artifacts/
-services/intelligence/runs/
+.next/
+node_modules/
+dist/
+build/
+coverage.xml
+htmlcov/
+.DS_Store

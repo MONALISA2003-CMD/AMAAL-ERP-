@@ -1,90 +1,30 @@
-'use client';
+"use client";
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { authClient } from '../../lib/auth';
-import { apiFetch, getSetupStatus } from '../../lib/api';
-import { BrandLogo } from '../../components/brand-logo';
-import { isPrivilegedRole } from '../../lib/privileged';
-import { clearMfaAssertion } from '../../lib/auth';
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { login, setAccessToken, WorkspaceSelectionError, type WorkspaceChoice } from "../../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [workspace, setWorkspace] = useState("");
+  const [choices, setChoices] = useState<WorkspaceChoice[]>([]);
+  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        const setup = await getSetupStatus();
-        const session = await authClient.getSession();
-        if (setup.stage === 'ORGANIZATION_READY') {
-          router.replace(session?.data ? '/activate' : '/setup');
-          return;
-        }
-        if (setup.stage !== 'ACTIVATED') {
-          router.replace('/setup');
-          return;
-        }
-        if (session?.data) router.replace('/dashboard');
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'We could not check your access right now. Please try again.');
-      }
-    })();
-  }, [router]);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
-    setError('');
-    clearMfaAssertion();
+    setBusy(true); setError("");
     try {
-      const result = await authClient.signIn.email({ email: email.trim(), password });
-      if (result.error) throw new Error('The email or password is not correct. Please try again.');
-      const setup = await getSetupStatus();
-      if (setup.stage === 'ORGANIZATION_READY') {
-        router.replace('/activate');
-        return;
-      }
-      const identity = await apiFetch<{ authorization: { roles: string[] }; mfaRequired: boolean; mfaVerified: boolean }>('/v1/me');
-      if (identity.mfaRequired || isPrivilegedRole(identity.authorization.roles) && !identity.mfaVerified) {
-        router.replace('/mfa');
-      } else {
-        router.replace('/dashboard');
-      }
+      const session = await login({ email, password, tenant_id: workspace || undefined });
+      setAccessToken(session.access_token);
+      router.replace("/");
     } catch (e) {
-      const message = e instanceof Error ? e.message : '';
-      const friendly = /request could not be completed|could not complete that request|internal server error|invalid or expired access token|authentication required/i.test(message)
-        ? 'We could not finish signing you in right now. Please try again.'
-        : message || 'We could not sign you in. Please check your details and try again.';
-      setError(friendly);
-      setBusy(false);
-    }
+      if (e instanceof WorkspaceSelectionError) { setChoices(e.workspaces); setError("Select the workspace you want to open."); }
+      else setError(e instanceof Error ? e.message : "We could not sign you in.");
+    } finally { setBusy(false); }
   }
 
-  return (
-    <main className="auth-shell">
-      <section className="auth-panel">
-        <BrandLogo variant="full" className="auth-logo" priority />
-        <h1>Sign in to Amaal</h1>
-        <p className="muted">Welcome back. Enter your details to continue.</p>
-        <form onSubmit={submit} className="auth-form">
-          <label>
-            Work email
-            <input autoComplete="username" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
-          <label>
-            Password
-            <input autoComplete="current-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </label>
-          {error ? <p className="error-text" role="alert">{error}</p> : null}
-          <button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          <p className="microcopy"><a href="/forgot-password">Forgot your password?</a></p>
-        </form>
-        <p className="microcopy">Your access is protected by Amaal security controls.</p>
-      </section>
-    </main>
-  );
+  return <main className="public-page"><section className="public-cta" style={{minHeight:"100vh",display:"grid",placeItems:"center"}}><form className="command-form" onSubmit={submit} style={{width:"min(460px,100%)"}}><div><span className="section-label">LEXA</span><h2>Sign in to your workspace</h2><p>Use the email and password for your LEXA account.</p></div><label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required /></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required /></label>{choices.length>0&&<label>Workspace<select value={workspace} onChange={e=>setWorkspace(e.target.value)} required><option value="">Select workspace</option>{choices.map(c=><option key={c.tenant_id} value={c.tenant_id}>{c.tenant_name}</option>)}</select></label>}{error&&<p role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?"Signing in…":"Sign in"}</button><a className="text-link" href="/register">Create a workspace</a></form></section></main>;
 }

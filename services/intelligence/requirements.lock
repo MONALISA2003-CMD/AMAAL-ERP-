@@ -1,5 +1,0 @@
-# Amaal Stage 9.5 Python runtime dependency constraints.
-# Source package metadata verified from PyPI on 2026-10-04.
-psycopg[binary]==3.3.6
-numpy==2.5.3
-scikit-learn==1.9.1
